@@ -7,7 +7,7 @@ import 'providers/bookmark_provider.dart';
 import 'providers/tts_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
-import 'screens/category_selection/category_selection_screen.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +39,7 @@ class NewsOnApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: const CategorySelectionScreen(),
+            home: const SplashScreen(),
           );
         },
       ),

@@ -10,6 +10,7 @@ class AppConstants {
   static const String themeKey = 'theme_mode';
   static const String languageKey = 'language';
   static const String countryKey = 'country';
+  static const String userNameKey = 'user_name';
   
   // Pagination
   static const int newsPerPage = 10;
