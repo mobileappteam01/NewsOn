@@ -1,0 +1,334 @@
+{
+  "parameters": {
+    "app_name": {
+      "defaultValue": {
+        "value": "NewsOnes"
+      },
+      "description": "Application name",
+      "valueType": "STRING"
+    },
+    "splash_welcome_text": {
+      "defaultValue": {
+        "value": "WELCOME TO"
+      },
+      "description": "Splash screen welcome text",
+      "valueType": "STRING"
+    },
+    "splash_app_name_text": {
+      "defaultValue": {
+        "value": "NEWSONES"
+      },
+      "description": "Splash screen app name text",
+      "valueType": "STRING"
+    },
+    "splash_swipe_text": {
+      "defaultValue": {
+        "value": "Swipe To Get Started"
+      },
+      "description": "Splash screen swipe button text",
+      "valueType": "STRING"
+    },
+    "auth_title_text" : {
+      "defaultValue": {
+        "value": "Sign In"
+      },
+      "description": "Auth screen title text",
+      "valueType": "STRING"
+    },
+    "auth_desc_text" : {
+      "defaultValue": {
+        "value": "Sign in to your account"
+      },
+      "description": "Auth screen description text",
+      "valueType": "STRING"
+    },
+    "primary_color": {
+      "defaultValue": {
+        "value": "#E31E24"
+      },
+      "description": "Primary app color (hex format)",
+      "valueType": "STRING"
+    },
+    "secondary_color": {
+      "defaultValue": {
+        "value": "#2C2C2C"
+      },
+      "description": "Secondary color (hex format)",
+      "valueType": "STRING"
+    },
+    "background_color": {
+      "defaultValue": {
+        "value": "#FFFFFF"
+      },
+      "description": "Light mode background color (hex format)",
+      "valueType": "STRING"
+    },
+    "text_primary_color": {
+      "defaultValue": {
+        "value": "#2C2C2C"
+      },
+      "description": "Primary text color (hex format)",
+      "valueType": "STRING"
+    },
+    "text_secondary_color": {
+      "defaultValue": {
+        "value": "#757575"
+      },
+      "description": "Secondary text color (hex format)",
+      "valueType": "STRING"
+    },
+    "card_background_color": {
+      "defaultValue": {
+        "value": "#FFFFFF"
+      },
+      "description": "Card background color (hex format)",
+      "valueType": "STRING"
+    },
+    "dark_background_color": {
+      "defaultValue": {
+        "value": "#121212"
+      },
+      "description": "Dark mode background color (hex format)",
+      "valueType": "STRING"
+    },
+    "splash_welcome_font_size": {
+      "defaultValue": {
+        "value": "32"
+      },
+      "description": "Splash welcome text font size",
+      "valueType": "NUMBER"
+    },
+    "splash_app_name_font_size": {
+      "defaultValue": {
+        "value": "36"
+      },
+      "description": "Splash app name text font size",
+      "valueType": "NUMBER"
+    },
+    "splash_swipe_font_size": {
+      "defaultValue": {
+        "value": "16"
+      },
+      "description": "Splash swipe button text font size",
+      "valueType": "NUMBER"
+    },
+    "display_large_font_size": {
+      "defaultValue": {
+        "value": "32"
+      },
+      "description": "Display large text size",
+      "valueType": "NUMBER"
+    },
+    "display_medium_font_size": {
+      "defaultValue": {
+        "value": "28"
+      },
+      "description": "Display medium text size",
+      "valueType": "NUMBER"
+    },
+    "display_small_font_size": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "description": "Display small text size",
+      "valueType": "NUMBER"
+    },
+    "headline_medium_font_size": {
+      "defaultValue": {
+        "value": "20"
+      },
+      "description": "Headline medium text size",
+      "valueType": "NUMBER"
+    },
+    "title_large_font_size": {
+      "defaultValue": {
+        "value": "18"
+      },
+      "description": "Title large text size",
+      "valueType": "NUMBER"
+    },
+    "title_medium_font_size": {
+      "defaultValue": {
+        "value": "16"
+      },
+      "description": "Title medium text size",
+      "valueType": "NUMBER"
+    },
+    "body_large_font_size": {
+      "defaultValue": {
+        "value": "16"
+      },
+      "description": "Body large text size",
+      "valueType": "NUMBER"
+    },
+    "body_medium_font_size": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "description": "Body medium text size",
+      "valueType": "NUMBER"
+    },
+    "body_small_font_size": {
+      "defaultValue": {
+        "value": "12"
+      },
+      "description": "Body small text size",
+      "valueType": "NUMBER"
+    },
+    "splash_welcome_font_weight": {
+      "defaultValue": {
+        "value": "700"
+      },
+      "description": "Splash welcome font weight (100-900)",
+      "valueType": "NUMBER"
+    },
+    "splash_app_name_font_weight": {
+      "defaultValue": {
+        "value": "800"
+      },
+      "description": "Splash app name font weight (100-900)",
+      "valueType": "NUMBER"
+    },
+    "splash_swipe_font_weight": {
+      "defaultValue": {
+        "value": "500"
+      },
+      "description": "Splash swipe button font weight (100-900)",
+      "valueType": "NUMBER"
+    },
+    "default_padding": {
+      "defaultValue": {
+        "value": "16"
+      },
+      "description": "Default padding in pixels",
+      "valueType": "NUMBER"
+    },
+    "small_padding": {
+      "defaultValue": {
+        "value": "8"
+      },
+      "description": "Small padding in pixels",
+      "valueType": "NUMBER"
+    },
+    "large_padding": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "description": "Large padding in pixels",
+      "valueType": "NUMBER"
+    },
+    "border_radius": {
+      "defaultValue": {
+        "value": "12"
+      },
+      "description": "Border radius for cards and buttons",
+      "valueType": "NUMBER"
+    },
+    "card_elevation": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Card elevation/shadow depth",
+      "valueType": "NUMBER"
+    },
+    "splash_button_height": {
+      "defaultValue": {
+        "value": "64"
+      },
+      "description": "Splash screen button height",
+      "valueType": "NUMBER"
+    },
+    "splash_button_border_radius": {
+      "defaultValue": {
+        "value": "40"
+      },
+      "description": "Splash screen button border radius",
+      "valueType": "NUMBER"
+    },
+    "no_internet_error": {
+      "defaultValue": {
+        "value": "No internet connection. Please check your network."
+      },
+      "description": "No internet connection error message",
+      "valueType": "STRING"
+    },
+    "server_error": {
+      "defaultValue": {
+        "value": "Server error. Please try again later."
+      },
+      "description": "Server error message",
+      "valueType": "STRING"
+    },
+    "unknown_error": {
+      "defaultValue": {
+        "value": "An unknown error occurred."
+      },
+      "description": "Unknown error message",
+      "valueType": "STRING"
+    },
+    "no_data_error": {
+      "defaultValue": {
+        "value": "No data available."
+      },
+      "description": "No data available message",
+      "valueType": "STRING"
+    },
+    "bookmark_added": {
+      "defaultValue": {
+        "value": "Added to bookmarks"
+      },
+      "description": "Bookmark added success message",
+      "valueType": "STRING"
+    },
+    "bookmark_removed": {
+      "defaultValue": {
+        "value": "Removed from bookmarks"
+      },
+      "description": "Bookmark removed success message",
+      "valueType": "STRING"
+    },
+    "short_animation_duration": {
+      "defaultValue": {
+        "value": "200"
+      },
+      "description": "Short animation duration in milliseconds",
+      "valueType": "NUMBER"
+    },
+    "medium_animation_duration": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Medium animation duration in milliseconds",
+      "valueType": "NUMBER"
+    },
+    "long_animation_duration": {
+      "defaultValue": {
+        "value": "500"
+      },
+      "description": "Long animation duration in milliseconds",
+      "valueType": "NUMBER"
+    },
+    "splash_welcome_letter_spacing": {
+      "defaultValue": {
+        "value": "1.0"
+      },
+      "description": "Splash welcome text letter spacing",
+      "valueType": "NUMBER"
+    },
+    "splash_app_name_letter_spacing": {
+      "defaultValue": {
+        "value": "1.2"
+      },
+      "description": "Splash app name text letter spacing",
+      "valueType": "NUMBER"
+    }
+  },
+  "version": {
+    "versionNumber": "1",
+    "updateTime": "2024-10-22T09:27:00Z",
+    "updateUser": {
+      "email": "admin@newson.app"
+    },
+    "description": "Initial Remote Config setup for NewsOn app - All dynamic parameters"
+  }
+}

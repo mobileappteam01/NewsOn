@@ -1,15 +1,107 @@
 import 'package:flutter/material.dart';
+import '../../data/models/remote_config_model.dart';
 
 /// Application theme configuration
 class AppTheme {
-  // Primary Colors
+  // Primary Colors (fallback values)
   static const Color primaryRed = Color(0xFFE31E24);
   static const Color darkBackground = Color(0xFF121212);
   static const Color cardBackground = Color(0xFF1E1E1E);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB0B0B0);
   
-  // Light Theme
+  // Light Theme with dynamic config
+  static ThemeData getLightTheme(RemoteConfigModel config) => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    primaryColor: config.primaryColorValue,
+    scaffoldBackgroundColor: config.backgroundColorValue,
+    colorScheme: ColorScheme.light(
+      primary: config.primaryColorValue,
+      secondary: config.secondaryColorValue,
+      surface: config.cardBackgroundColorValue,
+      error: const Color(0xFFB00020),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: config.backgroundColorValue,
+      foregroundColor: config.textPrimaryColorValue,
+      elevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        color: config.textPrimaryColorValue,
+        fontSize: config.headlineMediumFontSize,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: config.cardBackgroundColorValue,
+      elevation: config.cardElevation,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(config.borderRadius),
+      ),
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: config.backgroundColorValue,
+      selectedItemColor: config.primaryColorValue,
+      unselectedItemColor: config.textSecondaryColorValue,
+      type: BottomNavigationBarType.fixed,
+      elevation: 8,
+    ),
+    textTheme: TextTheme(
+      displayLarge: TextStyle(
+        fontSize: config.displayLargeFontSize,
+        fontWeight: FontWeight.bold,
+        color: config.textPrimaryColorValue,
+      ),
+      displayMedium: TextStyle(
+        fontSize: config.displayMediumFontSize,
+        fontWeight: FontWeight.bold,
+        color: config.textPrimaryColorValue,
+      ),
+      displaySmall: TextStyle(
+        fontSize: config.displaySmallFontSize,
+        fontWeight: FontWeight.bold,
+        color: config.textPrimaryColorValue,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: config.headlineMediumFontSize,
+        fontWeight: FontWeight.w600,
+        color: config.textPrimaryColorValue,
+      ),
+      titleLarge: TextStyle(
+        fontSize: config.titleLargeFontSize,
+        fontWeight: FontWeight.w600,
+        color: config.textPrimaryColorValue,
+      ),
+      titleMedium: TextStyle(
+        fontSize: config.titleMediumFontSize,
+        fontWeight: FontWeight.w500,
+        color: config.textPrimaryColorValue,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: config.bodyLargeFontSize,
+        color: config.textPrimaryColorValue,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: config.bodyMediumFontSize,
+        color: config.textSecondaryColorValue,
+      ),
+      bodySmall: TextStyle(
+        fontSize: config.bodySmallFontSize,
+        color: config.textSecondaryColorValue,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xFFF5F5F5),
+      selectedColor: config.primaryColorValue,
+      labelStyle: TextStyle(color: config.textPrimaryColorValue),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    ),
+  );
+  
+  // Light Theme (static fallback)
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -21,86 +113,100 @@ class AppTheme {
       surface: Colors.white,
       error: Color(0xFFB00020),
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      foregroundColor: Color(0xFF2C2C2C),
+  );
+  
+  // Dark Theme with dynamic config
+  static ThemeData getDarkTheme(RemoteConfigModel config) => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    primaryColor: config.primaryColorValue,
+    scaffoldBackgroundColor: config.darkBackgroundColorValue,
+    colorScheme: ColorScheme.dark(
+      primary: config.primaryColorValue,
+      secondary: const Color(0xFFE0E0E0),
+      surface: cardBackground,
+      error: const Color(0xFFCF6679),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: config.darkBackgroundColorValue,
+      foregroundColor: textPrimary,
       elevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        color: Color(0xFF2C2C2C),
-        fontSize: 20,
+        color: textPrimary,
+        fontSize: config.headlineMediumFontSize,
         fontWeight: FontWeight.bold,
       ),
     ),
     cardTheme: CardThemeData(
-      color: Colors.white,
-      elevation: 2,
+      color: cardBackground,
+      elevation: config.cardElevation,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(config.borderRadius),
       ),
     ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryRed,
-      unselectedItemColor: Color(0xFF757575),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: cardBackground,
+      selectedItemColor: config.primaryColorValue,
+      unselectedItemColor: textSecondary,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
-    textTheme: const TextTheme(
+    textTheme: TextTheme(
       displayLarge: TextStyle(
-        fontSize: 32,
+        fontSize: config.displayLargeFontSize,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       displayMedium: TextStyle(
-        fontSize: 28,
+        fontSize: config.displayMediumFontSize,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       displaySmall: TextStyle(
-        fontSize: 24,
+        fontSize: config.displaySmallFontSize,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       headlineMedium: TextStyle(
-        fontSize: 20,
+        fontSize: config.headlineMediumFontSize,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       titleLarge: TextStyle(
-        fontSize: 18,
+        fontSize: config.titleLargeFontSize,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       titleMedium: TextStyle(
-        fontSize: 16,
+        fontSize: config.titleMediumFontSize,
         fontWeight: FontWeight.w500,
-        color: Color(0xFF2C2C2C),
+        color: textPrimary,
       ),
       bodyLarge: TextStyle(
-        fontSize: 16,
-        color: Color(0xFF2C2C2C),
+        fontSize: config.bodyLargeFontSize,
+        color: textPrimary,
       ),
       bodyMedium: TextStyle(
-        fontSize: 14,
-        color: Color(0xFF757575),
+        fontSize: config.bodyMediumFontSize,
+        color: textSecondary,
       ),
       bodySmall: TextStyle(
-        fontSize: 12,
-        color: Color(0xFF757575),
+        fontSize: config.bodySmallFontSize,
+        color: textSecondary,
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: const Color(0xFFF5F5F5),
-      selectedColor: primaryRed,
-      labelStyle: const TextStyle(color: Color(0xFF2C2C2C)),
+      backgroundColor: cardBackground,
+      selectedColor: config.primaryColorValue,
+      labelStyle: const TextStyle(color: textPrimary),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
     ),
   );
   
-  // Dark Theme
+  // Dark Theme (static fallback)
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
@@ -111,83 +217,6 @@ class AppTheme {
       secondary: Color(0xFFE0E0E0),
       surface: cardBackground,
       error: Color(0xFFCF6679),
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: darkBackground,
-      foregroundColor: textPrimary,
-      elevation: 0,
-      centerTitle: false,
-      titleTextStyle: TextStyle(
-        color: textPrimary,
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    cardTheme: CardThemeData(
-      color: cardBackground,
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: cardBackground,
-      selectedItemColor: primaryRed,
-      unselectedItemColor: textSecondary,
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-    ),
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        color: textPrimary,
-      ),
-      displayMedium: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: textPrimary,
-      ),
-      displaySmall: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: textPrimary,
-      ),
-      headlineMedium: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: textPrimary,
-      ),
-      titleLarge: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: textPrimary,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: textPrimary,
-      ),
-      bodyLarge: TextStyle(
-        fontSize: 16,
-        color: textPrimary,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: textSecondary,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: textSecondary,
-      ),
-    ),
-    chipTheme: ChipThemeData(
-      backgroundColor: cardBackground,
-      selectedColor: primaryRed,
-      labelStyle: const TextStyle(color: textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
     ),
   );
 }

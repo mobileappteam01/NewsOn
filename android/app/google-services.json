@@ -1,0 +1,77 @@
+{
+  "project_info": {
+    "project_number": "127869269941",
+    "firebase_url": "https://newson-dea6b-default-rtdb.firebaseio.com",
+    "project_id": "newson-dea6b",
+    "storage_bucket": "newson-dea6b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127869269941:android:b172efb70ab1c8b4ca4bfc",
+        "android_client_info": {
+          "package_name": "com.app.n"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDje4TYPs2XPUz6RAnkQMkafCycudv69vM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127869269941:android:67d8fb0ae0545978ca4bfc",
+        "android_client_info": {
+          "package_name": "com.app.newson"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "78008bbfcfdab2ae163e7cba25e8fdf80739363d"
+          }
+        },
+        {
+          "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDje4TYPs2XPUz6RAnkQMkafCycudv69vM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

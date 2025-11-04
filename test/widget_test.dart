@@ -9,11 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:newson/main.dart';
+import 'package:newson/providers/remote_config_provider.dart';
 
 void main() {
   testWidgets('NewsOn app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const NewsOnApp());
+    final remoteConfigProvider = RemoteConfigProvider();
+  await remoteConfigProvider.initialize();
+    await tester.pumpWidget( NewsOnApp(remoteConfigProvider: remoteConfigProvider,));
 
     // Verify that the app builds without crashing
     expect(find.byType(MaterialApp), findsOneWidget);
