@@ -43,7 +43,11 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: remoteConfigProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => NewsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => NewsProvider(
+            remoteConfigProvider: remoteConfigProvider,
+          ),
+        ),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
       ],

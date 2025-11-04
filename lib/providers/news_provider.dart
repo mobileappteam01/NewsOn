@@ -3,12 +3,21 @@ import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/repositories/news_repository.dart';
 
+import 'remote_config_provider.dart';
+
 /// Provider for managing news state
 class NewsProvider with ChangeNotifier {
   final NewsRepository _repository;
+  final RemoteConfigProvider _remoteConfigProvider;
 
-  NewsProvider({NewsRepository? repository})
-      : _repository = repository ?? NewsRepository();
+  NewsProvider({
+    required RemoteConfigProvider remoteConfigProvider,
+    NewsRepository? repository,
+  })  : _remoteConfigProvider = remoteConfigProvider,
+        _repository = repository ??
+            NewsRepository(
+              apiKey: remoteConfigProvider.config.newsApiKey,
+            );
 
   // State variables
   List<NewsArticle> _articles = [];

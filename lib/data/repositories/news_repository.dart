@@ -8,8 +8,8 @@ import '../services/storage_service.dart';
 class NewsRepository {
   final NewsApiService _apiService;
 
-  NewsRepository({NewsApiService? apiService})
-      : _apiService = apiService ?? NewsApiService();
+  NewsRepository({required String apiKey, NewsApiService? apiService})
+      : _apiService = apiService ?? NewsApiService(apiKey: apiKey);
 
   /// Fetch news with optional filters
   Future<NewsResponse> fetchNews({

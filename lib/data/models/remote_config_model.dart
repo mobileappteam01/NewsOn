@@ -64,6 +64,9 @@ class RemoteConfigModel {
   final double splashWelcomeLetterSpacing;
   final double splashAppNameLetterSpacing;
 
+  // API Keys
+  final String newsApiKey;
+
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -126,6 +129,9 @@ class RemoteConfigModel {
     // Letter Spacing
     this.splashWelcomeLetterSpacing = 1.0,
     this.splashAppNameLetterSpacing = 1.2,
+
+    // API Keys
+    this.newsApiKey = '',
   });
 
   // Helper method to convert hex string to Color
