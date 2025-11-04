@@ -1,7 +1,16 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
+import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/shared_functions.dart';
+import '../../core/utils/shared_variables.dart';
+import '../../data/models/remote_config_model.dart';
 import '../../data/services/storage_service.dart';
+import '../../providers/remote_config_provider.dart';
 import '../category_selection/category_selection_screen.dart';
 import '../welcome/welcome_screen.dart';
 
@@ -16,6 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   final _nameController = TextEditingController();
   int _index = 0;
+  List<_OnboardPage> onBoardingContent = [];
 
   @override
   void dispose() {
@@ -35,9 +45,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (name.isNotEmpty) {
       await StorageService.saveSetting(AppConstants.userNameKey, name);
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const WelcomeScreen()));
   }
 
   void _next() {
@@ -52,32 +62,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   @override
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final configProvider = Provider.of<RemoteConfigProvider>(
+        context,
+        listen: false,
+      );
+      if (configProvider.isInitialized) {
+        _loadOnboarding(configProvider.config);
+      } else {
+        configProvider.initialize().then((_) {
+          _loadOnboarding(configProvider.config);
+        });
+      }
+    });
+  }
+
+  void _loadOnboarding(RemoteConfigModel config) {
+    try {
+      final jsonString = config.onboardingFeatures;
+      if (jsonString.isEmpty) return;
+
+      final List<dynamic> decoded = jsonDecode(jsonString);
+
+      setState(() {
+        onBoardingContent =
+            decoded.asMap().entries.map((entry) {
+              final index = entry.key;
+              final e = entry.value;
+              return _OnboardPage(
+                image: e['image'],
+                title: e['title'],
+                showNameInput:
+                    index == decoded.length - 1, // ✅ Show on last page
+                nameController:
+                    index == decoded.length - 1 ? _nameController : null,
+              );
+            }).toList();
+      });
+    } catch (e) {
+      debugPrint("Error parsing onboarding: $e");
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
-    final pages = <_OnboardPage>[
-      const _OnboardPage(
-        image: 'assets/images/App_Images/Welcoming screen.png',
-        title: 'WELCOME TO NEWSON',
-      ),
-      const _OnboardPage(
-        image: 'assets/images/App_Images/Splash Screen.png',
-        title: 'LATEST HEADLINES AT YOUR FINGERTIPS',
-      ),
-      const _OnboardPage(
-        image: 'assets/images/App_Images/About_Screen_01.png',
-        title: 'WELCOME  ABOARD, NEWS\nENTHUSIAST!',
-      ),
-      const _OnboardPage(
-        image: 'assets/images/App_Images/Headlines screen.png',
-        title: 'READ NEWS WITH ONLY ONE\nAPP, HEADNEWS!',
-      ),
-      _OnboardPage(
-        image: 'assets/images/App_Images/Headlines screen.png',
-        title: 'GET READY TO EXPLORE THE WORLD OF NEWS!',
-        showNameInput: true,
-        nameController: _nameController,
-      ),
-    ];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -100,15 +132,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: PageView(
               controller: _pageController,
               onPageChanged: (i) => setState(() => _index = i),
-              children: pages,
+              children: onBoardingContent,
             ),
           ),
           const SizedBox(height: 8),
-          _Dots(count: pages.length, index: _index, activeColor: red),
+          _Dots(
+            count: onBoardingContent.length,
+            index: _index,
+            activeColor: red,
+          ),
           const SizedBox(height: 16),
           _BottomCta(
             red: red,
-            label: _index == pages.length - 1 ? 'Get started' : 'Continue',
+            label:
+                _index == onBoardingContent.length - 1
+                    ? 'Get started'
+                    : 'Continue',
             onTap: _next,
           ),
           const SizedBox(height: 16),
@@ -140,11 +179,14 @@ class _OnboardPage extends StatelessWidget {
         return Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
+              child: showImage(
                 image,
-                fit: BoxFit.cover,
+                BoxFit.contain, // or BoxFit.fill if you prefer full stretch
+                width: MediaQuery.of(context).size.width,
+                height: c.maxHeight,
               ),
             ),
+
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -162,7 +204,7 @@ class _OnboardPage extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: const Alignment(0, 0.3),
+              alignment: Alignment(0, showNameInput ? 0.6 : 0.9),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
@@ -179,7 +221,7 @@ class _OnboardPage extends StatelessWidget {
             ),
             if (showNameInput)
               Align(
-                alignment: const Alignment(0, 0.6),
+                alignment: const Alignment(0, 0.9),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _NameField(controller: nameController!, red: red),
@@ -248,7 +290,11 @@ class _BottomCta extends StatelessWidget {
             color: red,
             borderRadius: BorderRadius.circular(40),
             boxShadow: const [
-              BoxShadow(color: Colors.black12, offset: Offset(0, 4), blurRadius: 10),
+              BoxShadow(
+                color: Colors.black12,
+                offset: Offset(0, 4),
+                blurRadius: 10,
+              ),
             ],
           ),
           child: Row(
@@ -256,7 +302,11 @@ class _BottomCta extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(width: 12),
               const Icon(Icons.chevron_right, color: Colors.white),
@@ -296,15 +346,22 @@ class _NameField extends StatelessWidget {
               controller: controller,
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Enter your nick name   & Swipe to get started',
-                hintStyle: TextStyle(color: Colors.black54, fontSize: 15, fontWeight: FontWeight.w600),
+                hintText: 'Enter your nick name',
+                hintStyle: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
           Container(
             height: 36,
             width: 36,
-            decoration: BoxDecoration(color: red.withOpacity(0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: red.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
             child: Icon(Icons.person, color: red),
           ),
         ],

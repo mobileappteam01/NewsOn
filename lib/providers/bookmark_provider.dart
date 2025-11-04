@@ -7,7 +7,7 @@ class BookmarkProvider with ChangeNotifier {
   final NewsRepository _repository;
 
   BookmarkProvider({NewsRepository? repository})
-      : _repository = repository ?? NewsRepository();
+    : _repository = repository ?? NewsRepository(apiKey: '');
 
   List<NewsArticle> _bookmarks = [];
   bool _isLoading = false;

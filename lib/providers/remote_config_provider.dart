@@ -44,7 +44,7 @@ class RemoteConfigProvider extends ChangeNotifier {
   Future<void> refresh() async {
     await fetchAndUpdate();
   }
-  
+
   /// Force refresh config (bypasses minimum fetch interval)
   Future<void> forceRefresh() async {
     try {

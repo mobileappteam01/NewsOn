@@ -9,7 +9,9 @@ class RemoteConfigModel {
   final String splashSwipeText;
   final String authTitleText;
   final String authDescText;
-  
+  // OnBoarding
+  final String onboardingFeatures;
+
   // Colors (stored as hex strings)
   final String primaryColor;
   final String secondaryColor;
@@ -18,7 +20,7 @@ class RemoteConfigModel {
   final String textSecondaryColor;
   final String cardBackgroundColor;
   final String darkBackgroundColor;
-  
+
   // Text Sizes
   final double splashWelcomeFontSize;
   final double splashAppNameFontSize;
@@ -32,12 +34,12 @@ class RemoteConfigModel {
   final double bodyLargeFontSize;
   final double bodyMediumFontSize;
   final double bodySmallFontSize;
-  
+
   // Font Weights (stored as int: 100-900)
   final int splashWelcomeFontWeight;
   final int splashAppNameFontWeight;
   final int splashSwipeFontWeight;
-  
+
   // UI Dimensions
   final double defaultPadding;
   final double smallPadding;
@@ -46,7 +48,7 @@ class RemoteConfigModel {
   final double cardElevation;
   final double splashButtonHeight;
   final double splashButtonBorderRadius;
-  
+
   // Messages
   final String noInternetError;
   final String serverError;
@@ -54,12 +56,12 @@ class RemoteConfigModel {
   final String noDataError;
   final String bookmarkAdded;
   final String bookmarkRemoved;
-  
+
   // Animation Durations (in milliseconds)
   final int shortAnimationDuration;
   final int mediumAnimationDuration;
   final int longAnimationDuration;
-  
+
   // Letter Spacing
   final double splashWelcomeLetterSpacing;
   final double splashAppNameLetterSpacing;
@@ -67,6 +69,12 @@ class RemoteConfigModel {
   // API Keys
   final String newsApiKey;
 
+  ///No Results Found
+  final String? noResultsFound;
+
+  // Images
+  final String? getStartedImg;
+  final String? splashAnimatedGif;
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -75,16 +83,17 @@ class RemoteConfigModel {
     this.splashSwipeText = 'Swipe To Get Started',
     this.authTitleText = 'Sign In',
     this.authDescText = 'Sign in to your account',
-    
+    // OnBoarding
+    this.onboardingFeatures = '',
     // Colors
-    this.primaryColor = '#E31E24',
+    this.primaryColor = '#C70000',
     this.secondaryColor = '#2C2C2C',
     this.backgroundColor = '#FFFFFF',
     this.textPrimaryColor = '#2C2C2C',
     this.textSecondaryColor = '#757575',
     this.cardBackgroundColor = '#FFFFFF',
     this.darkBackgroundColor = '#121212',
-    
+
     // Text Sizes
     this.splashWelcomeFontSize = 32.0,
     this.splashAppNameFontSize = 36.0,
@@ -98,12 +107,12 @@ class RemoteConfigModel {
     this.bodyLargeFontSize = 16.0,
     this.bodyMediumFontSize = 14.0,
     this.bodySmallFontSize = 12.0,
-    
+
     // Font Weights
     this.splashWelcomeFontWeight = 700,
     this.splashAppNameFontWeight = 800,
     this.splashSwipeFontWeight = 500,
-    
+
     // UI Dimensions
     this.defaultPadding = 16.0,
     this.smallPadding = 8.0,
@@ -112,7 +121,7 @@ class RemoteConfigModel {
     this.cardElevation = 2.0,
     this.splashButtonHeight = 64.0,
     this.splashButtonBorderRadius = 40.0,
-    
+
     // Messages
     this.noInternetError = 'No internet connection. Please check your network.',
     this.serverError = 'Server error. Please try again later.',
@@ -120,18 +129,24 @@ class RemoteConfigModel {
     this.noDataError = 'No data available.',
     this.bookmarkAdded = 'Added to bookmarks',
     this.bookmarkRemoved = 'Removed from bookmarks',
-    
+
     // Animation Durations
     this.shortAnimationDuration = 200,
     this.mediumAnimationDuration = 300,
     this.longAnimationDuration = 500,
-    
+
     // Letter Spacing
     this.splashWelcomeLetterSpacing = 1.0,
     this.splashAppNameLetterSpacing = 1.2,
 
     // API Keys
     this.newsApiKey = '',
+    //No Results Found
+    this.noResultsFound,
+
+    // Images
+    this.getStartedImg,
+    this.splashAnimatedGif,
   });
 
   // Helper method to convert hex string to Color
@@ -176,14 +191,20 @@ class RemoteConfigModel {
   Color get textSecondaryColorValue => hexToColor(textSecondaryColor);
   Color get cardBackgroundColorValue => hexToColor(cardBackgroundColor);
   Color get darkBackgroundColorValue => hexToColor(darkBackgroundColor);
-  
+
   // Getters for FontWeight objects
-  FontWeight get splashWelcomeFontWeightValue => intToFontWeight(splashWelcomeFontWeight);
-  FontWeight get splashAppNameFontWeightValue => intToFontWeight(splashAppNameFontWeight);
-  FontWeight get splashSwipeFontWeightValue => intToFontWeight(splashSwipeFontWeight);
-  
+  FontWeight get splashWelcomeFontWeightValue =>
+      intToFontWeight(splashWelcomeFontWeight);
+  FontWeight get splashAppNameFontWeightValue =>
+      intToFontWeight(splashAppNameFontWeight);
+  FontWeight get splashSwipeFontWeightValue =>
+      intToFontWeight(splashSwipeFontWeight);
+
   // Getters for Duration objects
-  Duration get shortAnimationDurationValue => Duration(milliseconds: shortAnimationDuration);
-  Duration get mediumAnimationDurationValue => Duration(milliseconds: mediumAnimationDuration);
-  Duration get longAnimationDurationValue => Duration(milliseconds: longAnimationDuration);
+  Duration get shortAnimationDurationValue =>
+      Duration(milliseconds: shortAnimationDuration);
+  Duration get mediumAnimationDurationValue =>
+      Duration(milliseconds: mediumAnimationDuration);
+  Duration get longAnimationDurationValue =>
+      Duration(milliseconds: longAnimationDuration);
 }

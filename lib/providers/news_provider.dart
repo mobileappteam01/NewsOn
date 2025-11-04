@@ -3,21 +3,12 @@ import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/repositories/news_repository.dart';
 
-import 'remote_config_provider.dart';
-
 /// Provider for managing news state
 class NewsProvider with ChangeNotifier {
   final NewsRepository _repository;
-  final RemoteConfigProvider _remoteConfigProvider;
 
-  NewsProvider({
-    required RemoteConfigProvider remoteConfigProvider,
-    NewsRepository? repository,
-  })  : _remoteConfigProvider = remoteConfigProvider,
-        _repository = repository ??
-            NewsRepository(
-              apiKey: remoteConfigProvider.config.newsApiKey,
-            );
+  NewsProvider({NewsRepository? repository})
+    : _repository = repository ?? NewsRepository(apiKey: "");
 
   // State variables
   List<NewsArticle> _articles = [];
@@ -58,7 +49,10 @@ class NewsProvider with ChangeNotifier {
   }
 
   /// Fetch news by category
-  Future<void> fetchNewsByCategory(String category, {bool refresh = false}) async {
+  Future<void> fetchNewsByCategory(
+    String category, {
+    bool refresh = false,
+  }) async {
     try {
       if (refresh) {
         _articles = [];
@@ -92,11 +86,17 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
 
       NewsResponse response;
-      
+
       if (_currentQuery != null) {
-        response = await _repository.searchNews(_currentQuery!, nextPage: _nextPage);
+        response = await _repository.searchNews(
+          _currentQuery!,
+          nextPage: _nextPage,
+        );
       } else if (_currentCategory != null) {
-        response = await _repository.fetchNewsByCategory(_currentCategory!, nextPage: _nextPage);
+        response = await _repository.fetchNewsByCategory(
+          _currentCategory!,
+          nextPage: _nextPage,
+        );
       } else {
         response = await _repository.fetchBreakingNews(nextPage: _nextPage);
       }
@@ -156,10 +156,10 @@ class NewsProvider with ChangeNotifier {
   Future<bool> toggleBookmark(NewsArticle article) async {
     try {
       final isBookmarked = await _repository.toggleBookmark(article);
-      
+
       // Update article in lists
       _updateArticleInLists(article, isBookmarked);
-      
+
       notifyListeners();
       return isBookmarked;
     } catch (e) {
@@ -172,7 +172,7 @@ class NewsProvider with ChangeNotifier {
   /// Update article bookmark status in all lists
   void _updateArticleInLists(NewsArticle article, bool isBookmarked) {
     final key = article.articleId ?? article.title;
-    
+
     // Update in articles list
     final articleIndex = _articles.indexWhere(
       (a) => (a.articleId ?? a.title) == key,

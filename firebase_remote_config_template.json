@@ -2,7 +2,7 @@
   "parameters": {
     "app_name": {
       "defaultValue": {
-        "value": "NewsOnes"
+        "value": "NewsOn"
       },
       "description": "Application name",
       "valueType": "STRING"
@@ -16,7 +16,7 @@
     },
     "splash_app_name_text": {
       "defaultValue": {
-        "value": "NEWSONES"
+        "value": "NEWSON"
       },
       "description": "Splash screen app name text",
       "valueType": "STRING"
@@ -28,23 +28,37 @@
       "description": "Splash screen swipe button text",
       "valueType": "STRING"
     },
-    "auth_title_text" : {
+    "splash_animated_gif": {
+      "defaultValue": {
+        "value": " https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/splashscreen%2F41874d131716b3123a95cae1a7c2d04531e582cb.gif?alt=media&token=49abcf8a-f82c-4566-96f8-b02c9b45f785"
+      },
+      "description": "Splash screen swipe button text",
+      "valueType": "STRING"
+    },
+    "auth_title_text": {
       "defaultValue": {
         "value": "Sign In"
       },
       "description": "Auth screen title text",
       "valueType": "STRING"
     },
-    "auth_desc_text" : {
+    "auth_desc_text": {
       "defaultValue": {
-        "value": "Sign in to your account"
+        "value": "Login to explore trending and up-to-date news effortlessly"
       },
-      "description": "Auth screen description text",
+      "description": "Sign In Content",
+      "valueType": "STRING"
+    },
+    "onboarding_features": {
+      "defaultValue": {
+        "value": "[{\"title\":\"Welcome  aboard, news enthusiast!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025.png?alt=media&token=a71a3046-ab5f-4f56-bf7c-360040a81ede\"},{\"title\":\"Read news with only one app, Headnews!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(1).png?alt=media&token=5d5468d7-0c12-4324-ac41-ecb582c9d67a\"},{\"title\":\"Get ready to explore the world of news!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(2).png?alt=media&token=434a419d-1f13-40e6-bd7a-c6f5f1ef13a3\"}]"
+      },
+      "description": "List of Onboarding news categories",
       "valueType": "STRING"
     },
     "primary_color": {
       "defaultValue": {
-        "value": "#E31E24"
+        "value": "#C70000"
       },
       "description": "Primary app color (hex format)",
       "valueType": "STRING"
@@ -327,6 +341,13 @@
         "value": "YOUR_API_KEY"
       },
       "description": "API key for the news service",
+      "valueType": "STRING"
+    },
+    "no_results_found": {
+      "defaultValue": {
+        "value": "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nnh0ZDcwM2oxY2x6ODN6bHB0ZDU2NjI5eG11emRhaGRnam8zcnBqNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Dsh7K7cew1Yb9vjY8b/giphy.gif"
+      },
+      "description": "No Results Found",
       "valueType": "STRING"
     }
   },

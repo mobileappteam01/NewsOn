@@ -5,7 +5,6 @@ import 'package:newson/screens/auth/auth_screen.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
-import '../onboarding/onboarding_screen.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,14 +16,13 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   void _goNext() {
-    // Navigator.of(context).pushReplacement(
-    //   MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-    // );
-    Navigator.push(context, MaterialPageRoute(builder: (context)=> const AuthScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
+    );
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
-    // Navigate on a right-to-left swipe with some velocity
     if (details.primaryVelocity != null && details.primaryVelocity! < -150) {
       _goNext();
     }
@@ -37,53 +35,62 @@ class _SplashScreenState extends State<SplashScreen> {
         final config = configProvider.config;
         final primaryColor = config.primaryColorValue;
         final textColor = config.textPrimaryColorValue;
-
+        debugPrint("eflrvrgh : ${config.splashAnimatedGif}");
         return Scaffold(
           backgroundColor: config.backgroundColorValue,
           body: SafeArea(
             child: GestureDetector(
               onHorizontalDragEnd: _onHorizontalDragEnd,
-              child: Stack(
+              child: ListView(
                 children: [
-                  // Debug: Refresh button (remove in production)
+                  /// 🖼️ 1️⃣ Top Image Section
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.45,
+                    width: double.infinity,
+                    child: showImage(config.splashAnimatedGif!, BoxFit.cover),
+                  ),
 
-                  // Centered welcome text near the bottom like the mock
-                  Align(
-                    alignment: const Alignment(0.8, 0.50),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          config.splashWelcomeText,
-                          style: GoogleFonts.playfair(
-                            fontSize: config.splashWelcomeFontSize,
-                            fontWeight: config.splashWelcomeFontWeightValue,
-                            color: textColor,
-                            letterSpacing: config.splashWelcomeLetterSpacing,
+                  /// 2️⃣ Center Welcome Text
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: 12.0,
+                        top: MediaQuery.of(context).size.height / 5.2,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            config.splashWelcomeText,
+                            style: GoogleFonts.playfair(
+                              fontSize: config.splashWelcomeFontSize,
+                              fontWeight: config.splashWelcomeFontWeightValue,
+                              color: textColor,
+                              letterSpacing: config.splashWelcomeLetterSpacing,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        giveHeight(6),
-                        Text(
-                          config.appName,
-                          style: GoogleFonts.playfair(
-                            fontSize: config.splashAppNameFontSize,
-                            fontWeight: config.splashAppNameFontWeightValue,
-                            color: primaryColor,
-                            letterSpacing: config.splashAppNameLetterSpacing,
+                          giveHeight(6),
+                          Text(
+                            config.appName,
+                            style: GoogleFonts.playfair(
+                              fontSize: config.splashAppNameFontSize,
+                              fontWeight: config.splashAppNameFontWeightValue,
+                              color: primaryColor,
+                              letterSpacing: config.splashAppNameLetterSpacing,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
+                  giveHeight(32),
 
-                  // Bottom CTA pill
-                  Align(
-                    alignment: const Alignment(0, 0.92),
-                    child: _SwipeCta(config: config, onTap: _goNext),
-                  ),
+                  /// 3️⃣ Bottom Swipe Button
+                  _SwipeCta(config: config, onTap: _goNext),
+                  giveHeight(32),
                 ],
               ),
             ),
@@ -107,14 +114,11 @@ class _SwipeCta extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: SwipeButton(
-        thumb: Icon(Icons.double_arrow_rounded, color: Colors.white),
-        activeThumbColor: Colors.red,
+        thumb: const Icon(Icons.double_arrow_rounded, color: Colors.white),
+        activeThumbColor: config.primaryColorValue,
         activeTrackColor: const Color(0xFF4A4A4A),
-        onSwipe: () {
-          onTap();
-        },
+        onSwipe: onTap,
         height: config.splashButtonHeight,
-         
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -125,7 +129,7 @@ class _SwipeCta extends StatelessWidget {
                 fontSize: config.splashSwipeFontSize,
                 fontWeight: config.splashSwipeFontWeightValue,
               ),
-            ), 
+            ),
             Row(
               children: [
                 Icon(Icons.chevron_right, color: primaryColor),

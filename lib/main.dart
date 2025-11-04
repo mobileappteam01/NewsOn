@@ -12,28 +12,27 @@ import 'providers/language_provider.dart';
 import 'providers/remote_config_provider.dart';
 import 'screens/splash/splash_screen.dart';
 
-
-    final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+final GoogleSignIn googleSignIn = GoogleSignIn.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   await Firebase.initializeApp();
-  
+
   // Initialize local storage
   await StorageService.initialize();
-  
+
   // Initialize Remote Config
   final remoteConfigProvider = RemoteConfigProvider();
   await remoteConfigProvider.initialize();
-  
+
   runApp(NewsOnApp(remoteConfigProvider: remoteConfigProvider));
 }
 
 class NewsOnApp extends StatelessWidget {
   final RemoteConfigProvider remoteConfigProvider;
-  
+
   const NewsOnApp({super.key, required this.remoteConfigProvider});
 
   @override
@@ -43,11 +42,7 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: remoteConfigProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(
-          create: (_) => NewsProvider(
-            remoteConfigProvider: remoteConfigProvider,
-          ),
-        ),
+        ChangeNotifierProvider(create: (_) => NewsProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
       ],
