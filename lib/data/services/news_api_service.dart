@@ -6,8 +6,11 @@ import '../models/news_response.dart';
 /// Service class for handling News API requests
 class NewsApiService {
   final http.Client _client;
+  final String _apiKey;
 
-  NewsApiService({http.Client? client}) : _client = client ?? http.Client();
+  NewsApiService({required String apiKey, http.Client? client})
+      : _apiKey = apiKey,
+        _client = client ?? http.Client();
 
   /// Fetch latest news with optional filters
   Future<NewsResponse> fetchNews({
@@ -85,7 +88,7 @@ class NewsApiService {
     String? nextPage,
   }) {
     final queryParameters = <String, String>{
-      ApiConstants.apiKeyParam: ApiConstants.apiKey,
+      ApiConstants.apiKeyParam: _apiKey,
     };
 
     // If nextPage is provided, use it directly

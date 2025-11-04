@@ -321,6 +321,13 @@
       },
       "description": "Splash app name text letter spacing",
       "valueType": "NUMBER"
+    },
+    "news_api_key": {
+      "defaultValue": {
+        "value": "YOUR_API_KEY"
+      },
+      "description": "API key for the news service",
+      "valueType": "STRING"
     }
   },
   "version": {

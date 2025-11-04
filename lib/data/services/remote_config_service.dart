@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import '../models/remote_config_model.dart';
 
@@ -22,9 +24,10 @@ class RemoteConfigService {
         ),
       );
 
-      // Set default values
-      await _remoteConfig.setDefaults(_getDefaultValues());
-      print('✅ Default values set');
+      // Set default values from JSON file
+      final defaults = await _getDefaultValuesFromAsset();
+      await _remoteConfig.setDefaults(defaults);
+      print('✅ Default values set from JSON');
 
       // Fetch and activate
       final activated = await _remoteConfig.fetchAndActivate();
@@ -39,71 +42,16 @@ class RemoteConfigService {
     }
   }
 
-  /// Get default values for Remote Config
-  Map<String, dynamic> _getDefaultValues() {
-    return {
-      // App Texts
-      'app_name': 'NewsOn',
-      'splash_welcome_text': 'WELCOME TO',
-      'splash_app_name_text': 'NEWSON',
-      'splash_swipe_text': 'Swipe To Get Started',
-      'auth_title_text': 'Sign In',
-      'auth_desc_text': 'Sign in to your account',
-      
-      // Colors (hex strings)
-      'primary_color': '#E31E24',
-      'secondary_color': '#2C2C2C',
-      'background_color': '#FFFFFF',
-      'text_primary_color': '#2C2C2C',
-      'text_secondary_color': '#757575',
-      'card_background_color': '#FFFFFF',
-      'dark_background_color': '#121212',
-      
-      // Text Sizes
-      'splash_welcome_font_size': 32.0,
-      'splash_app_name_font_size': 36.0,
-      'splash_swipe_font_size': 16.0,
-      'display_large_font_size': 32.0,
-      'display_medium_font_size': 28.0,
-      'display_small_font_size': 24.0,
-      'headline_medium_font_size': 20.0,
-      'title_large_font_size': 18.0,
-      'title_medium_font_size': 16.0,
-      'body_large_font_size': 16.0,
-      'body_medium_font_size': 14.0,
-      'body_small_font_size': 12.0,
-      
-      // Font Weights (100-900)
-      'splash_welcome_font_weight': 700,
-      'splash_app_name_font_weight': 800,
-      'splash_swipe_font_weight': 500,
-      
-      // UI Dimensions
-      'default_padding': 16.0,
-      'small_padding': 8.0,
-      'large_padding': 24.0,
-      'border_radius': 12.0,
-      'card_elevation': 2.0,
-      'splash_button_height': 64.0,
-      'splash_button_border_radius': 40.0,
-      
-      // Messages
-      'no_internet_error': 'No internet connection. Please check your network.',
-      'server_error': 'Server error. Please try again later.',
-      'unknown_error': 'An unknown error occurred.',
-      'no_data_error': 'No data available.',
-      'bookmark_added': 'Added to bookmarks',
-      'bookmark_removed': 'Removed from bookmarks',
-      
-      // Animation Durations (milliseconds)
-      'short_animation_duration': 200,
-      'medium_animation_duration': 300,
-      'long_animation_duration': 500,
-      
-      // Letter Spacing
-      'splash_welcome_letter_spacing': 1.0,
-      'splash_app_name_letter_spacing': 1.2,
-    };
+  /// Load default values from asset JSON file
+  Future<Map<String, dynamic>> _getDefaultValuesFromAsset() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/remote_config_defaults.json');
+      final Map<String, dynamic> jsonMap = json.decode(jsonString);
+      return jsonMap;
+    } catch (e) {
+      print('❌ Error loading default values from asset: $e');
+      return {};
+    }
   }
 
   /// Get current config as RemoteConfigModel
@@ -170,6 +118,9 @@ class RemoteConfigService {
       // Letter Spacing
       splashWelcomeLetterSpacing: _remoteConfig.getDouble('splash_welcome_letter_spacing'),
       splashAppNameLetterSpacing: _remoteConfig.getDouble('splash_app_name_letter_spacing'),
+
+      // API Keys
+      newsApiKey: _remoteConfig.getString('news_api_key'),
     );
   }
 
