@@ -4,12 +4,12 @@ import '../../data/models/remote_config_model.dart';
 /// Application theme configuration
 class AppTheme {
   // Primary Colors (fallback values)
-  static const Color primaryRed = Color(0xFFE31E24);
+  static const Color primaryRed = Color(0xFFC70000);
   static const Color darkBackground = Color(0xFF121212);
   static const Color cardBackground = Color(0xFF1E1E1E);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB0B0B0);
-  
+
   // Light Theme with dynamic config
   static ThemeData getLightTheme(RemoteConfigModel config) => ThemeData(
     useMaterial3: true,
@@ -20,7 +20,7 @@ class AppTheme {
       primary: config.primaryColorValue,
       secondary: config.secondaryColorValue,
       surface: config.cardBackgroundColorValue,
-      error: const Color(0xFFB00020),
+      error: const Color(0xFFC70000),
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: config.backgroundColorValue,
@@ -95,12 +95,10 @@ class AppTheme {
       backgroundColor: const Color(0xFFF5F5F5),
       selectedColor: config.primaryColorValue,
       labelStyle: TextStyle(color: config.textPrimaryColorValue),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
   );
-  
+
   // Light Theme (static fallback)
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -114,7 +112,7 @@ class AppTheme {
       error: Color(0xFFB00020),
     ),
   );
-  
+
   // Dark Theme with dynamic config
   static ThemeData getDarkTheme(RemoteConfigModel config) => ThemeData(
     useMaterial3: true,
@@ -200,12 +198,10 @@ class AppTheme {
       backgroundColor: cardBackground,
       selectedColor: config.primaryColorValue,
       labelStyle: const TextStyle(color: textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
   );
-  
+
   // Dark Theme (static fallback)
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,

@@ -111,47 +111,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return SafeArea(
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: _skip,
-            child: Text(
-              'Skip',
-              style: TextStyle(color: red, fontWeight: FontWeight.w700),
+
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (i) => setState(() => _index = i),
+                    children: onBoardingContent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _Dots(
+                  count: onBoardingContent.length,
+                  index: _index,
+                  activeColor: red,
+                ),
+                const SizedBox(height: 16),
+                _BottomCta(
+                  red: red,
+                  label:
+                      _index == onBoardingContent.length - 1
+                          ? 'Get started'
+                          : 'Continue',
+                  onTap: _next,
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (i) => setState(() => _index = i),
-              children: onBoardingContent,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _skip,
+                  child: Text(
+                    'Skip',
+                    style: TextStyle(color: red, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          _Dots(
-            count: onBoardingContent.length,
-            index: _index,
-            activeColor: red,
-          ),
-          const SizedBox(height: 16),
-          _BottomCta(
-            red: red,
-            label:
-                _index == onBoardingContent.length - 1
-                    ? 'Get started'
-                    : 'Continue',
-            onTap: _next,
-          ),
-          const SizedBox(height: 16),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -173,20 +179,33 @@ class _OnboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
+    final cleanUrl = image.trim();
 
     return LayoutBuilder(
-      builder: (context, c) {
+      builder: (context, constraints) {
         return Stack(
           children: [
+            /// ✅ Full-width image with proper scaling
             Positioned.fill(
-              child: showImage(
-                image,
-                BoxFit.contain, // or BoxFit.fill if you prefer full stretch
-                width: MediaQuery.of(context).size.width,
-                height: c.maxHeight,
-              ),
+              child:
+                  cleanUrl.isNotEmpty
+                      ? Image.network(
+                        cleanUrl,
+                        fit: BoxFit.cover, // or BoxFit.fitWidth
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(
+                            child: Icon(Icons.broken_image, size: 48),
+                          );
+                        },
+                      )
+                      : const Center(
+                        child: Icon(Icons.image_not_supported, size: 48),
+                      ),
             ),
 
+            /// ✅ Gradient overlay
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -203,6 +222,8 @@ class _OnboardPage extends StatelessWidget {
                 ),
               ),
             ),
+
+            /// ✅ Title
             Align(
               alignment: Alignment(0, showNameInput ? 0.6 : 0.9),
               child: Padding(
@@ -219,6 +240,8 @@ class _OnboardPage extends StatelessWidget {
                 ),
               ),
             ),
+
+            /// ✅ Nickname input (only on last page)
             if (showNameInput)
               Align(
                 alignment: const Alignment(0, 0.9),
