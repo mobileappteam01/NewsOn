@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:newson/core/utils/shared_functions.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
@@ -36,13 +38,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
-
+    final theme = Theme.of(context);
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
 
         return Scaffold(
-          backgroundColor: Colors.white,
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, c) {
@@ -52,11 +55,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       left: 0,
                       top: 0,
                       width: c.maxWidth * 0.4,
-                      height: c.maxHeight * 0.50,
-                      child: Container(color: const Color(0xFF4A4A4A)),
+                      height: c.maxHeight * 0.55,
+                      child: Container(
+                        color: isDark ? Colors.white : const Color(0xFF4A4A4A),
+                      ),
                     ),
                     Align(
-                      alignment: const Alignment(0, -0.2),
+                      alignment: const Alignment(0, -0.7),
                       child: Container(
                         width: c.maxWidth * 0.7,
                         height: c.maxWidth * 0.7,
@@ -72,46 +77,40 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ],
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: Image.asset(
-                          'assets/images/App_Images/Welcoming screen.png',
-                          fit: BoxFit.cover,
-                        ),
+                        child: showImage(config.welcomeBgImg, BoxFit.cover),
                       ),
                     ),
                     Align(
-                      alignment: const Alignment(0, 0.35),
+                      alignment: const Alignment(0.7, 0.50),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            config.splashAppNameText,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black87,
-                              letterSpacing: 0.8,
+                            config.welcomeTitleText,
+                            style: GoogleFonts.playfair(
+                              fontSize: config.displayLargeFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.secondary,
                             ),
                           ),
-                          const SizedBox(height: 10),
+
                           Text(
-                            config.appName.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w900,
-                              color: red,
-                              letterSpacing: 1.2,
+                            'JOHN PAUL',
+                            style: GoogleFonts.playfair(
+                              color: config.primaryColorValue,
+                              fontSize: 50,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'LETS GET STARTED',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
+
+                          Text(
+                            config.welcomeDescText,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.playfair(
+                              fontSize: config.displaySmallFontSize,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.tertiary,
                             ),
                           ),
                         ],
@@ -119,7 +118,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ),
                     Align(
                       alignment: const Alignment(0, 0.9),
-                      child: _SlideToStart(red: red, onCompleted: _finish),
+                      child: _SlideToStart(
+                        red: red,
+                        onCompleted: _finish,
+                        text: config.splashSwipeText,
+                      ),
                     ),
                   ],
                 );
@@ -134,9 +137,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
 class _SlideToStart extends StatefulWidget {
   final Color red;
+  final String text;
   final VoidCallback onCompleted;
 
-  const _SlideToStart({required this.red, required this.onCompleted});
+  const _SlideToStart({
+    required this.red,
+    required this.onCompleted,
+    required this.text,
+  });
 
   @override
   State<_SlideToStart> createState() => _SlideToStartState();
@@ -245,8 +253,9 @@ class _SlideToStartState extends State<_SlideToStart>
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Swipe To Get Started',
+                      giveWidth(48),
+                      Text(
+                        widget.text,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

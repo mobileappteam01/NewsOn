@@ -3,9 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/screens/auth/auth_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_swipe_button/flutter_swipe_button.dart';
+
 import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
-import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,9 +15,39 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  bool _showGif = false;
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Delay showing the GIF with animation
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _showGif = true;
+        });
+        _controller.forward();
+      }
+    });
+
+    // Slide-up animation
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3), // slightly below
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
   void _goNext() {
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const AuthScreen()),
     );
@@ -34,20 +65,35 @@ class _SplashScreenState extends State<SplashScreen> {
       builder: (context, configProvider, child) {
         final config = configProvider.config;
         final primaryColor = config.primaryColorValue;
-        final textColor = config.textPrimaryColorValue;
-        debugPrint("eflrvrgh : ${config.splashAnimatedGif}");
+        final theme = Theme.of(context);
+
+        final isDark = theme.brightness == Brightness.dark;
+        debugPrint(
+          "Dark secondary color: ${Theme.of(context).colorScheme.secondary} and $isDark",
+        );
+
         return Scaffold(
-          backgroundColor: config.backgroundColorValue,
           body: SafeArea(
             child: GestureDetector(
               onHorizontalDragEnd: _onHorizontalDragEnd,
               child: ListView(
                 children: [
-                  /// 🖼️ 1️⃣ Top Image Section
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.45,
-                    width: double.infinity,
-                    child: showImage(config.splashAnimatedGif!, BoxFit.cover),
+                  /// 🖼️ 1️⃣ Top Image Section with fade + slide animation
+                  AnimatedOpacity(
+                    opacity: _showGif ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeInOut,
+                    child: SlideTransition(
+                      position: _offsetAnimation,
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.45,
+                        width: double.infinity,
+                        child: showImage(
+                          config.splashAnimatedGif!,
+                          BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   ),
 
                   /// 2️⃣ Center Welcome Text
@@ -66,7 +112,8 @@ class _SplashScreenState extends State<SplashScreen> {
                             style: GoogleFonts.playfair(
                               fontSize: config.splashWelcomeFontSize,
                               fontWeight: config.splashWelcomeFontWeightValue,
-                              color: textColor,
+                              color: theme.colorScheme.secondary,
+
                               letterSpacing: config.splashWelcomeLetterSpacing,
                             ),
                             textAlign: TextAlign.center,
@@ -86,10 +133,12 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ),
                   ),
+
                   giveHeight(32),
 
                   /// 3️⃣ Bottom Swipe Button
                   _SwipeCta(config: config, onTap: _goNext),
+
                   giveHeight(32),
                 ],
               ),
@@ -98,6 +147,12 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
 
@@ -115,29 +170,32 @@ class _SwipeCta extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: SwipeButton(
         thumb: const Icon(Icons.double_arrow_rounded, color: Colors.white),
-        activeThumbColor: config.primaryColorValue,
+        activeThumbColor: primaryColor,
         activeTrackColor: const Color(0xFF4A4A4A),
         onSwipe: onTap,
         height: config.splashButtonHeight,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              config.splashSwipeText,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: config.splashSwipeFontSize,
-                fontWeight: config.splashSwipeFontWeightValue,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                config.splashSwipeText,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: config.splashSwipeFontSize,
+                  fontWeight: config.splashSwipeFontWeightValue,
+                ),
               ),
-            ),
-            Row(
-              children: [
-                Icon(Icons.chevron_right, color: primaryColor),
-                Icon(Icons.chevron_right, color: primaryColor),
-                Icon(Icons.chevron_right, color: primaryColor),
-              ],
-            ),
-          ],
+              Row(
+                children: [
+                  Icon(Icons.chevron_right, color: primaryColor),
+                  Icon(Icons.chevron_right, color: primaryColor),
+                  Icon(Icons.chevron_right, color: primaryColor),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

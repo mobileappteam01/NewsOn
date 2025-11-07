@@ -1,4 +1,5 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/material.dart';
 import '../models/remote_config_model.dart';
 
 /// Service to manage Firebase Remote Config
@@ -126,6 +127,14 @@ class RemoteConfigService {
       // onBoarding
       onboardingFeatures: _remoteConfig.getString('onboarding_features'),
 
+      // Welcome
+      welcomeBgImg: _remoteConfig.getString('welcome_bg_img'),
+      welcomeTitleText: _remoteConfig.getString('welcome_title_text'),
+      welcomeDescText: _remoteConfig.getString('welcome_desc_text'),
+
+      // Select Category
+      selectCategoryTitle: _remoteConfig.getString('categroy_selection_title'),
+      selectCategoryDesc: _remoteConfig.getString('categroy_selection_desc'),
       // Colors
       primaryColor: _remoteConfig.getString('primary_color'),
       secondaryColor: _remoteConfig.getString('secondary_color'),
@@ -203,6 +212,12 @@ class RemoteConfigService {
       // No Results Found
       noResultsFound: _remoteConfig.getString('no_results_found'),
       splashAnimatedGif: _remoteConfig.getString('splash_animated_gif'),
+
+      // App Common Images
+      appNameLogo: _remoteConfig.getString('app_name_logo'),
+      languageImg: _remoteConfig.getString('language_img'),
+      headlineImg: _remoteConfig.getString('headline_img'),
+      listenIcon: _remoteConfig.getString('listen_img'),
     );
   }
 

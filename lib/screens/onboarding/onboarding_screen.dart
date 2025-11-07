@@ -110,11 +110,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
-
+    final theme = Theme.of(context);
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Colors.white,
-
         body: Stack(
           children: [
             Column(

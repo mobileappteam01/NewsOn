@@ -12,6 +12,15 @@ class RemoteConfigModel {
   // OnBoarding
   final String onboardingFeatures;
 
+  // Welcome Image
+  final String welcomeBgImg;
+  final String welcomeTitleText;
+  final String welcomeDescText;
+
+  // Select Category
+  final String selectCategoryTitle;
+  final String selectCategoryDesc;
+
   // Colors (stored as hex strings)
   final String primaryColor;
   final String secondaryColor;
@@ -75,6 +84,12 @@ class RemoteConfigModel {
   // Images
   final String? getStartedImg;
   final String? splashAnimatedGif;
+
+  // App Common Images
+  final String appNameLogo;
+  final String languageImg;
+  final String headlineImg;
+  final String listenIcon;
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -85,6 +100,15 @@ class RemoteConfigModel {
     this.authDescText = 'Sign in to your account',
     // OnBoarding
     this.onboardingFeatures = '',
+
+    // Welcome
+    this.welcomeBgImg = '',
+    this.welcomeTitleText = '',
+    this.welcomeDescText = '',
+
+    // Select Category
+    this.selectCategoryTitle = '',
+    this.selectCategoryDesc = '',
     // Colors
     this.primaryColor = '#C70000',
     this.secondaryColor = '#2C2C2C',
@@ -147,6 +171,12 @@ class RemoteConfigModel {
     // Images
     this.getStartedImg,
     this.splashAnimatedGif,
+
+    // App Common Images
+    this.appNameLogo = '',
+    this.languageImg = '',
+    this.headlineImg = '',
+    this.listenIcon = '',
   });
 
   // Helper method to convert hex string to Color

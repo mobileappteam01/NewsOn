@@ -1,12 +1,10 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, depend_on_referenced_packages
 
-import 'dart:convert';
-import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/remote_config_provider.dart';
 
 showRefreshButton() {
@@ -92,4 +90,22 @@ Widget showImage(String url, BoxFit fit, {double? height, double? width}) {
       );
     },
   );
+}
+
+Future fetchDBCollection(String collectionName) async {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  try {
+    QuerySnapshot snapshot = await firestore.collection(collectionName).get();
+
+    // for (var doc in snapshot.docs) {
+    //   debugPrint('News Title: ${doc['title']}');
+    //   debugPrint('News Content: ${doc['content']}');
+    // }
+    debugPrint("theeee fetched data is : ${snapshot.docs}");
+    final decodedDetails = snapshot.docs.map((doc) => doc.data());
+    return decodedDetails.first;
+  } catch (e) {
+    debugPrint('Error fetching news: $e');
+  }
 }

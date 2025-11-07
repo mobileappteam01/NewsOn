@@ -78,10 +78,9 @@ class _AuthScreenState extends State<AuthScreen> {
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
+        final theme = Theme.of(context);
 
-        final textColor = config.textPrimaryColorValue;
         return Scaffold(
-          backgroundColor: config.backgroundColorValue,
           body: ListView(
             children: [
               giveHeight(32),
@@ -108,7 +107,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             style: GoogleFonts.playfair(
                               fontSize: config.splashWelcomeFontSize,
                               fontWeight: config.splashWelcomeFontWeightValue,
-                              color: textColor,
+                              color: theme.colorScheme.secondary,
                               letterSpacing: config.splashWelcomeLetterSpacing,
                             ),
                             textAlign: TextAlign.center,
@@ -136,7 +135,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         style: GoogleFonts.inriaSerif(
                           fontSize: 14,
 
-                          color: config.textSecondaryColorValue,
+                          color: theme.colorScheme.tertiary,
                           letterSpacing: config.splashAppNameLetterSpacing,
                         ),
                         textAlign: TextAlign.center,
@@ -153,14 +152,14 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: _handleGoogleSignIn,
                     isLoading: _isLoading,
                     backgroundColor: config.cardBackgroundColorValue,
-                    textColor: textColor,
+                    textColor: Colors.black,
                   ),
                   giveHeight(16),
                   Text(
                     'By continuing, you agree to our Terms & Privacy Policy',
                     style: GoogleFonts.roboto(
                       fontSize: 12,
-                      color: config.textSecondaryColorValue,
+                      color: theme.colorScheme.tertiary,
                     ),
                     textAlign: TextAlign.center,
                   ),

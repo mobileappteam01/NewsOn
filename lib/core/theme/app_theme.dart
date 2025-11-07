@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../../data/models/remote_config_model.dart';
 
@@ -19,9 +21,12 @@ class AppTheme {
     colorScheme: ColorScheme.light(
       primary: config.primaryColorValue,
       secondary: config.secondaryColorValue,
+      tertiary: Color(0xff757575),
       surface: config.cardBackgroundColorValue,
+      background: config.backgroundColorValue,
       error: const Color(0xFFC70000),
     ),
+
     appBarTheme: AppBarTheme(
       backgroundColor: config.backgroundColorValue,
       foregroundColor: config.textPrimaryColorValue,
@@ -105,8 +110,8 @@ class AppTheme {
     brightness: Brightness.light,
     primaryColor: primaryRed,
     scaffoldBackgroundColor: Colors.white,
-    colorScheme: const ColorScheme.light(
-      primary: primaryRed,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primaryRed,
       secondary: Color(0xFF2C2C2C),
       surface: Colors.white,
       error: Color(0xFFB00020),
@@ -119,12 +124,18 @@ class AppTheme {
     brightness: Brightness.dark,
     primaryColor: config.primaryColorValue,
     scaffoldBackgroundColor: config.darkBackgroundColorValue,
-    colorScheme: ColorScheme.dark(
-      primary: config.primaryColorValue,
-      secondary: const Color(0xFFE0E0E0),
-      surface: cardBackground,
-      error: const Color(0xFFCF6679),
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: config.primaryColorValue,
+      brightness: Brightness.dark,
+      secondary: Color.fromARGB(
+        242,
+        255,
+        255,
+        255,
+      ), // 👈 ensures your grey tone stays secondary
+      tertiary: Color.fromARGB(255, 255, 255, 255),
     ),
+
     appBarTheme: AppBarTheme(
       backgroundColor: config.darkBackgroundColorValue,
       foregroundColor: textPrimary,

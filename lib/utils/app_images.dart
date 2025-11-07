@@ -30,7 +30,8 @@ class AppImages {
 
 class AppIcons {
   static const baseURL = 'assets/icons';
-  static const coupons = '$baseURL/coupons.png';
+
+  static const isCheck = '$baseURL/is_checked.png';
   static const dropLocation = '$baseURL/drop_location.png';
   static const history = '$baseURL/history.png';
   static const location = '$baseURL/location.png';

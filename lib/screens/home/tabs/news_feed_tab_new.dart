@@ -1,38 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/widgets/news_card.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../providers/news_provider.dart';
+import '../../../providers/remote_config_provider.dart';
 import '../../../providers/tts_provider.dart';
 import '../../../providers/bookmark_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../data/models/news_article.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
+import '../../../widgets/news_grid_views.dart';
 import '../../news_detail/news_detail_screen.dart';
 
 /// News feed tab matching the exact UI design
 class NewsFeedTabNew extends StatefulWidget {
   final List<String> selectedCategories;
+  final List newsList;
 
   const NewsFeedTabNew({
     super.key,
     required this.selectedCategories,
+    required this.newsList,
   });
 
   @override
   State<NewsFeedTabNew> createState() => _NewsFeedTabNewState();
 }
 
-class _NewsFeedTabNewState extends State<NewsFeedTabNew> 
+class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
   final PageController _breakingNewsController = PageController();
   final PageController _flashNewsController = PageController();
   String _selectedCategory = 'All';
   DateTime _selectedDate = DateTime.now();
-  
-  final List<String> categories = ['All', 'Politics', 'Sports', 'Education', 'Business'];
+
+  final List<String> categories = [
+    'All',
+    'Politics',
+    'Sports',
+    'Education',
+    'Business',
+  ];
 
   @override
   void initState() {
@@ -59,298 +71,288 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            // Top Bar: Logo + Date + Language
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Logo
-                    Row(
+      body: Consumer<RemoteConfigProvider>(
+        builder: (context, configProvider, child) {
+          final config = configProvider.config;
+          final theme = Theme.of(context);
+          return SafeArea(
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Top Bar: Logo + Date + Language
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE31E24),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'NEWS',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
+                        // Logo
+                        showImage(
+                          config.appNameLogo,
+                          BoxFit.contain,
+                          height: 60,
+                          width: 80,
                         ),
-                        const SizedBox(width: 2),
-                        const Text(
-                          'ON',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+
+                        // Date Selector + Language Selector
+                        Row(
+                          children: [
+                            // Date Selector
+                            GestureDetector(
+                              onTap: () => _selectDate(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_month_outlined,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      DateFormat(
+                                        'dd MMM',
+                                      ).format(_selectedDate),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    giveWidth(8),
+                                    Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.white,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Language Selector Icon
+                            Consumer<LanguageProvider>(
+                              builder: (context, languageProvider, child) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    showLanguageSelectorDialog(context);
+                                  },
+                                  child: showImage(
+                                    config.languageImg,
+                                    BoxFit.contain,
+                                    height: 20,
+                                    width: 30,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    
-                    // Date Selector + Language Selector
-                    Row(
-                      children: [
-                        // Date Selector
-                        GestureDetector(
-                          onTap: () => _selectDate(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  DateFormat('dd MMM').format(_selectedDate),
+                  ),
+                ),
+
+                // Breaking News Section
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Breaking News',
+                          style: TextStyle(
+                            color: Color(0xFFE31E24),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBreakingNewsSlider(newsProvider),
+                    ],
+                  ),
+                ),
+
+                // Category Tabs
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: SizedBox(
+                      height: 36,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          final isSelected = _selectedCategory == category;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedCategory = category;
+                              });
+                              if (category != 'All') {
+                                newsProvider.fetchNewsByCategory(
+                                  category.toLowerCase(),
+                                );
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    isSelected
+                                        ? const Color(0xFFE31E24)
+                                        : Colors.black,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  category,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Language Selector Icon
-                        Consumer<LanguageProvider>(
-                          builder: (context, languageProvider, child) {
-                            return GestureDetector(
-                              onTap: () {
-                                showLanguageSelectorDialog(context);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE31E24),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.language,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Breaking News Section
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Breaking News',
-                      style: TextStyle(
-                        color: Color(0xFFE31E24),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildBreakingNewsSlider(newsProvider),
-                ],
-              ),
-            ),
-
-            // Category Tabs
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: SizedBox(
-                  height: 36,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) {
-                      final category = categories[index];
-                      final isSelected = _selectedCategory == category;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = category;
-                          });
-                          if (category != 'All') {
-                            newsProvider.fetchNewsByCategory(category.toLowerCase());
-                          }
+                            ),
+                          );
                         },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFE31E24) : Colors.black,
-                            borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Today Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Today',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
-                          child: Center(
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'Read more',
+                            style: TextStyle(
+                              color: Color(0xFFE31E24),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Today News Cards
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final details = widget.newsList[index];
+                    return NewsGridView(type: 'listview', newsDetails: details);
+                  }, childCount: widget.newsList.length),
+                ),
+
+                // Flash News Section
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Flash news',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-
-            // Today Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Today',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'Read more',
-                        style: TextStyle(
-                          color: Color(0xFFE31E24),
-                          fontSize: 13,
+                            TextButton(
+                              onPressed: () {},
+                              child: const Text(
+                                'View all',
+                                style: TextStyle(
+                                  color: Color(0xFFE31E24),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      _buildFlashNewsSlider(newsProvider),
+                    ],
+                  ),
                 ),
-              ),
-            ),
 
-            // Today News Cards
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (newsProvider.articles.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  if (index >= 5) return null; // Show only 5 items
-                  final article = newsProvider.articles[index];
-                  return _buildTodayNewsCard(article, context);
-                },
-                childCount: newsProvider.articles.length > 5 ? 5 : newsProvider.articles.length,
-              ),
-            ),
-
-            // Flash News Section
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Flash news',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            'View all',
-                            style: TextStyle(
-                              color: Color(0xFFE31E24),
-                              fontSize: 13,
+                // Live Cricket Score
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Live cricket score',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFlashNewsSlider(newsProvider),
-                ],
-              ),
-            ),
-
-            // Live Cricket Score
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Live cricket score',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            'View all',
-                            style: TextStyle(
-                              color: Color(0xFFE31E24),
-                              fontSize: 13,
+                            TextButton(
+                              onPressed: () {},
+                              child: const Text(
+                                'View all',
+                                style: TextStyle(
+                                  color: Color(0xFFE31E24),
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCricketScoreCard(),
+                      const SizedBox(height: 80), // Space for bottom nav
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildCricketScoreCard(),
-                  const SizedBox(height: 80), // Space for bottom nav
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -389,20 +391,19 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               CachedNetworkImage(
                 imageUrl: article.imageUrl!,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(color: Colors.grey[300]),
-                errorWidget: (context, url, error) => Container(color: Colors.grey[300]),
+                placeholder:
+                    (context, url) => Container(color: Colors.grey[300]),
+                errorWidget:
+                    (context, url, error) => Container(color: Colors.grey[300]),
               ),
-            
+
             // Gradient Overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                 ),
               ),
             ),
@@ -435,12 +436,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ttsProvider.playArticle(article);
                       }
                     },
-                    icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 16),
+                    icon: Icon(
+                      isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: 16,
+                    ),
                     label: const Text('Listen'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE31E24),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -483,21 +490,23 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                 width: 90,
                 height: 90,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  width: 90,
-                  height: 90,
-                  color: Colors.grey[300],
-                ),
-                errorWidget: (context, url, error) => Container(
-                  width: 90,
-                  height: 90,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image),
-                ),
+                placeholder:
+                    (context, url) => Container(
+                      width: 90,
+                      height: 90,
+                      color: Colors.grey[300],
+                    ),
+                errorWidget:
+                    (context, url, error) => Container(
+                      width: 90,
+                      height: 90,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image),
+                    ),
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Content
             Expanded(
               child: Column(
@@ -514,7 +523,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       ),
                     ),
                   const SizedBox(height: 4),
-                  
+
                   // Title
                   Text(
                     article.title,
@@ -527,7 +536,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  
+
                   // Actions
                   Row(
                     children: [
@@ -541,7 +550,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE31E24),
                             borderRadius: BorderRadius.circular(12),
@@ -568,7 +580,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
                       const Spacer(),
-                      
+
                       // Bookmark
                       IconButton(
                         onPressed: () {
@@ -582,7 +594,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         constraints: const BoxConstraints(),
                       ),
                       const SizedBox(width: 8),
-                      
+
                       // Share
                       IconButton(
                         onPressed: () {
@@ -635,19 +647,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               CachedNetworkImage(
                 imageUrl: article.imageUrl!,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(color: Colors.grey[300]),
-                errorWidget: (context, url, error) => Container(color: Colors.grey[300]),
+                placeholder:
+                    (context, url) => Container(color: Colors.grey[300]),
+                errorWidget:
+                    (context, url, error) => Container(color: Colors.grey[300]),
               ),
-            
+
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                 ),
               ),
             ),
@@ -720,15 +731,12 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               const SizedBox(width: 8),
               const Text(
                 'World T20 - T20 16 of 45',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // India
           Row(
             children: [
@@ -746,23 +754,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               const SizedBox(width: 12),
               const Text(
                 'IND',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               const Text(
                 '172-8 (20)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // Pakistan
           Row(
             children: [
@@ -780,23 +782,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               const SizedBox(width: 12),
               const Text(
                 'PAK',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               const Text(
                 '152/3 (15.4)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // VS Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),

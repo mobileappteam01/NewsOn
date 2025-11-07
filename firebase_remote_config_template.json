@@ -56,6 +56,41 @@
       "description": "List of Onboarding news categories",
       "valueType": "STRING"
     },
+    "welcome_bg_img": {
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/welcome%2Fc0f05fa3f648932ca1460032243f0a5903ba0118.gif?alt=media&token=90e95261-96d8-4d36-b94d-5a1d13746550"
+      },
+      "description": "Welcome BG Image",
+      "valueType": "STRING"
+    },
+    "welcome_title_text": {
+      "defaultValue": {
+        "value": "WELCOME TO NEWSON"
+      },
+      "description": "Welcome Text",
+      "valueType": "STRING"
+    },
+    "welcome_desc_text": {
+      "defaultValue": {
+        "value": "Let's Get Started"
+      },
+      "description": "Welcome Text",
+      "valueType": "STRING"
+    },
+    "categroy_selection_title": {
+      "defaultValue": {
+        "value": "Select News Categories"
+      },
+      "description": "Select News Categories",
+      "valueType": "STRING"
+    },
+    "categroy_selection_desc": {
+      "defaultValue": {
+        "value": "Choose your interests to personalize your news feed"
+      },
+      "description": "Choose your interests",
+      "valueType": "STRING"
+    },
     "primary_color": {
       "defaultValue": {
         "value": "#C70000"
@@ -348,6 +383,34 @@
         "value": "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nnh0ZDcwM2oxY2x6ODN6bHB0ZDU2NjI5eG11emRhaGRnam8zcnBqNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Dsh7K7cew1Yb9vjY8b/giphy.gif"
       },
       "description": "No Results Found",
+      "valueType": "STRING"
+    },
+    "app_name_logo": {
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0"
+      },
+      "description": "App Name Logo",
+      "valueType": "STRING"
+    },
+    "language_img": {
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.51%20PM.jpeg?alt=media&token=890b0146-974e-4b6e-9ec8-4a88e2261c12"
+      },
+      "description": "Language Logo",
+      "valueType": "STRING"
+    },
+    "headline_img": {
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM%20(1).jpeg?alt=media&token=a016fa53-8791-4957-a752-1a0900057fe8"
+      },
+      "description": "Headline Logo",
+      "valueType": "STRING"
+    },
+    "listen_img": {
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fremoved_listen_icon.png?alt=media&token=2a8fcf4a-bb00-4db1-9a04-e271bbeb133c"
+      },
+      "description": "App Name Logo",
       "valueType": "STRING"
     }
   },
