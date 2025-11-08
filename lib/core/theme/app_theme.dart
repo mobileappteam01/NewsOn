@@ -114,7 +114,7 @@ class AppTheme {
       seedColor: primaryRed,
       secondary: Color(0xFF2C2C2C),
       surface: Colors.white,
-      error: Color(0xFFB00020),
+      error: primaryRed,
     ),
   );
 
@@ -122,7 +122,7 @@ class AppTheme {
   static ThemeData getDarkTheme(RemoteConfigModel config) => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    primaryColor: config.primaryColorValue,
+    primaryColor: primaryRed,
     scaffoldBackgroundColor: config.darkBackgroundColorValue,
     colorScheme: ColorScheme.fromSeed(
       seedColor: config.primaryColorValue,
@@ -223,7 +223,7 @@ class AppTheme {
       primary: primaryRed,
       secondary: Color(0xFFE0E0E0),
       surface: cardBackground,
-      error: Color(0xFFCF6679),
+      error: primaryRed,
     ),
   );
 }
