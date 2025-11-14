@@ -1,45 +1,67 @@
-/// API Configuration and Constants for Newsdata.IO
+import 'package:newson/data/models/api_config_model.dart';
+import 'package:newson/data/services/api_config_service.dart';
+
+/// API Configuration and Constants - Now Dynamic from Firebase Remote Config
+/// This class provides access to API configuration loaded from Firebase Remote Config
+/// or Realtime Database. Falls back to default values if not configured.
 class ApiConstants {
-  // Base URL for Newsdata.IO API
-  static const String baseUrl = 'https://newsdata.io/api/1';
-  
-  // API Key - Replace with your actual API key from newsdata.io
-  static const String apiKey = 'YOUR_API_KEY_HERE';
-  
-  // Endpoints
-  static const String latestNewsEndpoint = '/news';
-  static const String archiveNewsEndpoint = '/archive';
-  
-  // Query Parameters
-  static const String apiKeyParam = 'apikey';
-  static const String categoryParam = 'category';
-  static const String countryParam = 'country';
-  static const String languageParam = 'language';
-  static const String queryParam = 'q';
-  static const String pageParam = 'page';
-  static const String sizeParam = 'size';
-  
-  // Default Values
-  static const String defaultLanguage = 'en';
-  static const String defaultCountry = 'us';
-  static const int defaultPageSize = 10;
-  
-  // Categories available in Newsdata.IO
-  static const List<String> categories = [
-    'top',
-    'business',
-    'entertainment',
-    'environment',
-    'food',
-    'health',
-    'politics',
-    'science',
-    'sports',
-    'technology',
-    'tourism',
-    'world',
-  ];
-  
-  // Request timeout
-  static const Duration requestTimeout = Duration(seconds: 30);
+  // Singleton instance of API Config Service
+  static final ApiConfigService _apiConfigService = ApiConfigService();
+
+  // Get current API config (cached or default)
+  static ApiConfigModel get _config => _apiConfigService.getConfig();
+
+  // Base URL - Dynamic
+  static String get baseUrl => _config.baseUrl;
+
+  // Endpoints - Dynamic
+  static String get breakingNewsEndPoint => _config.breakingNewsEndPoint;
+  static String get latestNewsEndpoint => _config.latestNewsEndpoint;
+  static String get archiveNewsEndpoint => _config.archiveNewsEndpoint;
+  static String get searchEndpoint => _config.searchEndpoint;
+
+  // Query Parameters - Dynamic
+  static String get apiKeyParam => _config.apiKeyParam;
+  static String get categoryParam => _config.categoryParam;
+  static String get countryParam => _config.countryParam;
+  static String get languageParam => _config.languageParam;
+  static String get queryParam => _config.queryParam;
+  static String get pageParam => _config.pageParam;
+  static String get sizeParam => _config.sizeParam;
+
+  // Default Values - Dynamic
+  static String get defaultLanguage => _config.defaultLanguage;
+  static String get defaultCountry => _config.defaultCountry;
+  static int get defaultPageSize => _config.defaultPageSize;
+
+  // Categories - Dynamic from Remote Config
+  static List<String> get categories => _config.categories;
+
+  // Request timeout - Dynamic
+  static Duration get requestTimeout => _config.requestTimeout;
+
+  /// Initialize API config from Remote Config
+  /// Call this during app initialization
+  static Future<void> initialize() async {
+    await _apiConfigService.initializeFromRemoteConfig();
+  }
+
+  /// Initialize API config from Realtime Database (with real-time updates)
+  /// Call this if you want real-time API config updates
+  static Future<void> initializeFromRealtimeDatabase() async {
+    await _apiConfigService.initializeFromRealtimeDatabase();
+  }
+
+  /// Refresh API config from Remote Config
+  static Future<void> refresh() async {
+    await _apiConfigService.refreshFromRemoteConfig();
+  }
+
+  /// Force refresh API config (bypasses minimum fetch interval)
+  static Future<void> forceRefresh() async {
+    await _apiConfigService.forceRefreshFromRemoteConfig();
+  }
+
+  /// Get the full API config model
+  static ApiConfigModel getConfig() => _config;
 }

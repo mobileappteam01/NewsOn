@@ -7,9 +7,10 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/news_article.dart';
+import '../../core/constants/app_constants.dart';
+import '../../data/services/storage_service.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
-import '../../providers/tts_provider.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsArticle article;
@@ -19,11 +20,63 @@ class NewsDetailScreen extends StatefulWidget {
   State<NewsDetailScreen> createState() => _NewsDetailScreenState();
 }
 
-class _NewsDetailScreenState extends State<NewsDetailScreen> {
+class _NewsDetailScreenState extends State<NewsDetailScreen>
+    with WidgetsBindingObserver {
+  double _contentTextSize = AppConstants.defaultTextSize;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadTextSize();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadTextSize();
+    }
+  }
+
+  void _loadTextSize() {
+    final savedSize = StorageService.getSetting(
+      AppConstants.textSizeKey,
+      defaultValue: AppConstants.defaultTextSize,
+    );
+    if (mounted) {
+      setState(() {
+        _contentTextSize =
+            (savedSize is double) ? savedSize : AppConstants.defaultTextSize;
+      });
+    }
+  }
+
+  /// Get the article content text to display
+  String _getArticleContent() {
+    // First try to use actual content if available and valid
+    if (widget.article.content != null &&
+        widget.article.content!.isNotEmpty &&
+        widget.article.content != 'ONLY AVAILABLE IN PAID PLANS') {
+      return widget.article.content!;
+    }
+    // Fallback to description
+    if (widget.article.description != null &&
+        widget.article.description!.isNotEmpty) {
+      return widget.article.description!;
+    }
+    // Final fallback to placeholder text
+    return 'White House trade adviser Peter Navarro accused India of helping finance Russia\'s war in Ukraine through continued oil imports, describing the conflict as "Modi\'s war."';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
-    final ttsProvider = Provider.of<TtsProvider>(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -225,47 +278,76 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                         const SizedBox(height: 20),
 
                         /// ARTICLE CONTENT
+                        // Display the main article content/description with saved text size
                         Text(
-                          'White House trade adviser Peter Navarro accused India of helping finance Russia’s war in Ukraine through continued oil imports, describing the conflict as “Modi’s war.”',
+                          _getArticleContent(),
                           style: GoogleFonts.inriaSerif(
-                            fontSize: 16,
+                            fontSize: _contentTextSize,
                             fontWeight: FontWeight.w500,
                             height: 1.6,
                             color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '“I mean Modi’s war because the road to peace runs, in part, through New Delhi,” Navarro told Bloomberg Television’s Balance of Power on Wednesday.',
-                          style: GoogleFonts.inriaSerif(
-                            fontSize: 15,
-                            height: 1.6,
-                            color: Colors.black87,
+                        // Additional content paragraphs if available
+                        if (widget.article.content != null &&
+                            widget.article.content!.isNotEmpty &&
+                            widget.article.content !=
+                                'ONLY AVAILABLE IN PAID PLANS' &&
+                            widget.article.content !=
+                                widget.article.description) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            '"I mean Modi\'s war because the road to peace runs, in part, through New Delhi," Navarro told Bloomberg Television\'s Balance of Power on Wednesday.',
+                            style: GoogleFonts.inriaSerif(
+                              fontSize: _contentTextSize,
+                              height: 1.6,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'He argued that buying discounted Russian crude directly strengthens Moscow’s military effort. “By purchasing Russian oil at a discount, Russia uses the money it gets to fund its war machine,” he said. “Everybody in America loses because of what India is doing.”',
-                          style: GoogleFonts.inriaSerif(
-                            fontSize: 15,
-                            height: 1.6,
-                            color: Colors.black87,
+                          const SizedBox(height: 16),
+                          Text(
+                            'He argued that buying discounted Russian crude directly strengthens Moscow\'s military effort. "By purchasing Russian oil at a discount, Russia uses the money it gets to fund its war machine," he said. "Everybody in America loses because of what India is doing."',
+                            style: GoogleFonts.inriaSerif(
+                              fontSize: _contentTextSize,
+                              height: 1.6,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            '"I mean Modi\'s war because the road to peace runs, in part, through New Delhi," Navarro told Bloomberg Television\'s Balance of Power on Wednesday.',
+                            style: GoogleFonts.inriaSerif(
+                              fontSize: _contentTextSize,
+                              height: 1.6,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'He argued that buying discounted Russian crude directly strengthens Moscow\'s military effort. "By purchasing Russian oil at a discount, Russia uses the money it gets to fund its war machine," he said. "Everybody in America loses because of what India is doing."',
+                            style: GoogleFonts.inriaSerif(
+                              fontSize: _contentTextSize,
+                              height: 1.6,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 22),
+                        // Subheading with slightly larger text
                         Text(
                           'India-US tariffs: 50 percent tariffs come into force',
                           style: GoogleFonts.inriaSerif(
-                            fontSize: 17,
+                            fontSize: _contentTextSize + 1,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'The criticism coincided with the start of new tariffs on Indian goods ordered by President Donald Trump. The additional 25 percent duty has doubled the rate to 50 percent, hitting more than 55 percent of India’s exports to the US.',
+                          'The criticism coincided with the start of new tariffs on Indian goods ordered by President Donald Trump. The additional 25 percent duty has doubled the rate to 50 percent, hitting more than 55 percent of India\'s exports to the US.',
                           style: GoogleFonts.inriaSerif(
-                            fontSize: 15,
+                            fontSize: _contentTextSize,
                             height: 1.7,
                             color: Colors.black87,
                           ),

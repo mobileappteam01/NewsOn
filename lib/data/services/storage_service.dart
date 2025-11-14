@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/news_article.dart';
+import '../models/remote_config_model.dart';
+import '../models/api_config_model.dart';
 
 /// Local storage service using Hive for bookmarks and settings
 class StorageService {
@@ -10,14 +13,16 @@ class StorageService {
   /// Initialize Hive and open boxes
   static Future<void> initialize() async {
     await Hive.initFlutter();
-    
+
     // Register adapters
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(NewsArticleAdapter());
     }
 
     // Open boxes
-    _bookmarksBox = await Hive.openBox<NewsArticle>(AppConstants.bookmarksBoxName);
+    _bookmarksBox = await Hive.openBox<NewsArticle>(
+      AppConstants.bookmarksBoxName,
+    );
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
   }
 
@@ -26,13 +31,16 @@ class StorageService {
   /// Add article to bookmarks
   static Future<void> addBookmark(NewsArticle article) async {
     if (_bookmarksBox == null) await initialize();
-    
+
     final bookmarkedArticle = article.copyWith(
       isBookmarked: true,
       bookmarkedAt: DateTime.now(),
     );
-    
-    await _bookmarksBox!.put(article.articleId ?? article.title, bookmarkedArticle);
+
+    await _bookmarksBox!.put(
+      article.articleId ?? article.title,
+      bookmarkedArticle,
+    );
   }
 
   /// Remove article from bookmarks
@@ -125,6 +133,78 @@ class StorageService {
   static Future<void> clearAllSettings() async {
     if (_settingsBox == null) await initialize();
     await _settingsBox!.clear();
+  }
+
+  // ==================== Remote Config Cache ====================
+
+  /// Save Remote Config Model to local cache
+  static Future<void> saveRemoteConfigCache(RemoteConfigModel config) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonString = jsonEncode(config.toJson());
+      await _settingsBox!.put(AppConstants.remoteConfigCacheKey, jsonString);
+      print('💾 Remote Config cached locally');
+    } catch (e) {
+      print('❌ Error saving Remote Config cache: $e');
+    }
+  }
+
+  /// Get cached Remote Config Model
+  static RemoteConfigModel? getRemoteConfigCache() {
+    if (_settingsBox == null) return null;
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.remoteConfigCacheKey) as String?;
+      if (jsonString != null) {
+        final json = jsonDecode(jsonString) as Map<String, dynamic>;
+        return RemoteConfigModel.fromJson(json);
+      }
+    } catch (e) {
+      print('❌ Error loading Remote Config cache: $e');
+    }
+    return null;
+  }
+
+  /// Clear Remote Config cache
+  static Future<void> clearRemoteConfigCache() async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.delete(AppConstants.remoteConfigCacheKey);
+  }
+
+  // ==================== API Config Cache ====================
+
+  /// Save API Config Model to local cache
+  static Future<void> saveApiConfigCache(ApiConfigModel config) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonString = jsonEncode(config.toJson());
+      await _settingsBox!.put(AppConstants.apiConfigCacheKey, jsonString);
+      print('💾 API Config cached locally');
+    } catch (e) {
+      print('❌ Error saving API Config cache: $e');
+    }
+  }
+
+  /// Get cached API Config Model
+  static ApiConfigModel? getApiConfigCache() {
+    if (_settingsBox == null) return null;
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.apiConfigCacheKey) as String?;
+      if (jsonString != null) {
+        final json = jsonDecode(jsonString) as Map<String, dynamic>;
+        return ApiConfigModel.fromJson(json);
+      }
+    } catch (e) {
+      print('❌ Error loading API Config cache: $e');
+    }
+    return null;
+  }
+
+  /// Clear API Config cache
+  static Future<void> clearApiConfigCache() async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.delete(AppConstants.apiConfigCacheKey);
   }
 
   // ==================== Cleanup ====================

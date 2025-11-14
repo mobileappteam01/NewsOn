@@ -5,12 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:provider/provider.dart';
 
+import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
 
 class NewsGridView extends StatelessWidget {
   final String type;
-  final Map newsDetails;
+  final NewsArticle newsDetails;
   Function onListenTapped;
   Function onNewsTapped;
   Function onSaveTapped;
@@ -48,10 +49,14 @@ class NewsGridView extends StatelessWidget {
     );
   }
 
-  showCommonWidget(RemoteConfigModel config, String type, Map newsDetails) {
+  showCommonWidget(
+    RemoteConfigModel config,
+    String type,
+    NewsArticle newsDetails,
+  ) {
     return type.toLowerCase() == 'category'
         ? Text(
-          newsDetails['category'],
+          newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
           style: GoogleFonts.inter(
             color: config.primaryColorValue,
             fontWeight: FontWeight.w500,
@@ -60,7 +65,7 @@ class NewsGridView extends StatelessWidget {
         )
         : type.toLowerCase() == 'postedtime'
         ? Text(
-          newsDetails['updatedAt'],
+          newsDetails.pubDate!,
           style: GoogleFonts.inter(color: config.primaryColorValue),
         )
         : GestureDetector(
@@ -135,7 +140,7 @@ class NewsGridView extends StatelessWidget {
 
   showListView(
     RemoteConfigModel config,
-    Map newsDetails,
+    NewsArticle newsDetails,
     BuildContext context,
   ) {
     return GestureDetector(
@@ -147,7 +152,7 @@ class NewsGridView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             showImage(
-              newsDetails['img'],
+              newsDetails.sourceName! + newsDetails.sourceIcon!,
               BoxFit.contain,
               height: 200,
               width: MediaQuery.of(context).size.width / 2.5,
@@ -163,7 +168,7 @@ class NewsGridView extends StatelessWidget {
                     height: 90,
 
                     child: Text(
-                      newsDetails['headLines'],
+                      newsDetails.title,
                       style: GoogleFonts.inriaSerif(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
@@ -193,7 +198,7 @@ class NewsGridView extends StatelessWidget {
 
   showCardView(
     RemoteConfigModel config,
-    Map newsDetails,
+    NewsArticle newsDetails,
     BuildContext context,
   ) {
     return GestureDetector(
@@ -217,7 +222,7 @@ class NewsGridView extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // 🖼 Background image
-              showImage(newsDetails['img'], BoxFit.cover),
+              showImage(newsDetails.sourceIcon!, BoxFit.cover),
 
               // 🌑 Gradient overlay for readability
               Container(
@@ -242,7 +247,9 @@ class NewsGridView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      newsDetails['category'] ?? "Hot News",
+                      newsDetails.category!.isNotEmpty
+                          ? newsDetails.category![0]
+                          : "",
                       style: GoogleFonts.inter(
                         color: const Color(0xFFE31E24),
                         fontWeight: FontWeight.bold,
@@ -251,7 +258,7 @@ class NewsGridView extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      newsDetails['headLines'] ?? '',
+                      newsDetails.title,
                       style: GoogleFonts.playfairDisplay(
                         fontSize: 20,
                         color: Colors.white,
@@ -292,7 +299,7 @@ class NewsGridView extends StatelessWidget {
 
   showBannerView(
     RemoteConfigModel config,
-    Map newsDetails,
+    NewsArticle newsDetails,
     BuildContext context,
   ) {
     return GestureDetector(
@@ -316,7 +323,7 @@ class NewsGridView extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // 🖼 Background image
-              showImage(newsDetails['img'], BoxFit.cover),
+              showImage(newsDetails.sourceIcon!, BoxFit.cover),
 
               // 🌑 Gradient overlay for readability
               Container(
@@ -343,7 +350,7 @@ class NewsGridView extends StatelessWidget {
                     showRoundedListenButton(config, context),
                     const SizedBox(height: 14),
                     Text(
-                      newsDetails['headLines'] ?? '',
+                      newsDetails.title,
                       style: GoogleFonts.playfairDisplay(
                         fontSize: 16,
                         color: Colors.white,
@@ -365,13 +372,13 @@ class NewsGridView extends StatelessWidget {
 
   showThumbNailView(
     RemoteConfigModel config,
-    Map newsDetails,
+    NewsArticle newsDetails,
     BuildContext context,
   ) {}
 
   showDetailedView(
     RemoteConfigModel config,
-    Map newsDetails,
+    NewsArticle newsDetails,
     BuildContext context,
   ) {}
 }

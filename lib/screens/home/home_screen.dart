@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List newsList = [
     {
       "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
+          "https://www.hindustantimes.com/ht-img/img/2025/11/07/550x309/donald_trump_us_boycott_g20_summit_south_africa_1762556620255_1762556620523.jpg",
       "category": "Politics",
       "headLines":
           "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
+          "https://www.hindustantimes.com/ht-img/img/2025/11/07/550x309/donald_trump_us_boycott_g20_summit_south_africa_1762556620255_1762556620523.jpg",
       "category": "Politics",
       "headLines":
           "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
@@ -49,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      context.read<NewsProvider>().fetchBreakingNews();
+      context.read<NewsProvider>().fetchBreakingNews();
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<BookmarkProvider>().loadBookmarks();
       context.read<RemoteConfigProvider>().initialize();
@@ -85,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const CategoriesTab(),
 
                   const BookmarksTab(),
+                  const SearchTab(),
                 ],
               ),
 
@@ -233,7 +236,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               _buildBottomNavItem(
-                const Icon(Icons.search),
+                Icon(
+                  Icons.search,
+                  color:
+                      _currentIndex == 3
+                          ? config.primaryColorValue
+                          : theme.colorScheme.secondary,
+                ),
                 'Search',
                 onTap: () => setState(() => _currentIndex = 3),
               ),

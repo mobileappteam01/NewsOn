@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, depend_on_referenced_packages
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/data/models/remote_config_model.dart';
@@ -9,7 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/remote_config_provider.dart';
-import '../../screens/news_detail/news_detail_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 showRefreshButton() {
   return Consumer<RemoteConfigProvider>(
@@ -191,7 +192,7 @@ showMatchVS(String teamA, String teamB, RemoteConfigModel config) {
 
 showShareButton(Function() onTapped) {
   return GestureDetector(
-    onTap: onTapped(),
+    onTap: () => onTapped(),
     child: Transform(
       alignment: Alignment.center,
       transform: Matrix4.rotationY(3.1416), // 180° flip horizontally
@@ -202,10 +203,38 @@ showShareButton(Function() onTapped) {
 
 showSaveButton(bool isSaved, Function() onTapped) {
   return GestureDetector(
-    onTap: onTapped(),
+    onTap: () => onTapped(),
     child: Icon(
       isSaved ? Icons.bookmark : Icons.bookmark_border,
       color: Colors.black,
+    ),
+  );
+}
+
+showListenButton(RemoteConfigModel config, Function() onListenTapped) {
+  return GestureDetector(
+    onTap: () => onListenTapped(), // ✅ FIXED
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: config.primaryColorValue,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
+          giveWidth(12),
+          Text(
+            'Listen',
+            style: GoogleFonts.playfair(
+              color: Colors.white,
+              fontWeight: FontWeight.w400,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -247,5 +276,94 @@ closeButton(Widget content, Function() onPressed) {
       ),
       child: content,
     ),
+  );
+}
+
+commonappBar(imgURL, Function() backPressed) {
+  return Row(
+    children: [
+      IconButton(
+        onPressed: () {
+          backPressed();
+        },
+        icon: Icon(Icons.arrow_back_ios),
+      ),
+      showImage(imgURL, BoxFit.contain, height: 60, width: 80),
+    ],
+  );
+}
+
+Future fetchDBData(String key) async {
+  await Firebase.initializeApp();
+  final dbRef = FirebaseDatabase.instance.ref();
+  final snapshot = await dbRef.child(key).get();
+  if (snapshot.exists) {
+    debugPrint("$key has dataaa : ${snapshot.value}");
+    return snapshot.value;
+  } else {
+    debugPrint("$key has no dataaa");
+    return null;
+  }
+}
+
+showLogoutModalBottomSheet(context) {
+  RemoteConfigModel config = RemoteConfigModel();
+  final theme = Theme.of(context);
+  return Stack(
+    children: [
+      SizedBox(
+        height: 180,
+        width: double.infinity,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Are you sure you want to logout?',
+                style: GoogleFonts.playfair(
+                  fontSize: 20,
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              giveHeight(12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < 2; i++)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 12,
+                        ),
+                        margin: EdgeInsets.only(left: 8),
+                        decoration: BoxDecoration(
+                          color: i == 0 ? Color(0xff505050) : Colors.white,
+                          border: Border.all(color: Color(0xff505050)),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Center(
+                          child: Text(
+                            i == 0 ? "Yes" : "No",
+                            style: GoogleFonts.inriaSerif(
+                              fontSize: 15,
+                              color: i == 0 ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
   );
 }

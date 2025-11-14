@@ -1,6 +1,8 @@
+import 'dart:convert';
+
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/material.dart';
 import '../models/remote_config_model.dart';
+import '../services/storage_service.dart';
 
 /// Service to manage Firebase Remote Config
 class RemoteConfigService {
@@ -11,15 +13,21 @@ class RemoteConfigService {
   final FirebaseRemoteConfig _remoteConfig = FirebaseRemoteConfig.instance;
 
   /// Initialize Remote Config with default values and fetch settings
+  /// Loads cached data first, then tries to fetch new data
   Future<void> initialize() async {
     try {
       print('🔥 Initializing Firebase Remote Config...');
+
+      // Step 1: Load cached data first (for offline support)
+      final cachedConfig = StorageService.getRemoteConfigCache();
+      if (cachedConfig != null) {
+        print('📦 Loaded cached Remote Config from local storage');
+      }
 
       // Set config settings
       await _remoteConfig.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 10),
-
           minimumFetchInterval: const Duration(
             minutes: 1,
           ), // Fetch new values every hour
@@ -30,15 +38,40 @@ class RemoteConfigService {
       await _remoteConfig.setDefaults(_getDefaultValues());
       print('✅ Default values set');
 
-      // Fetch and activate
-      final activated = await _remoteConfig.fetchAndActivate();
-      print('✅ Remote Config fetch and activate: $activated');
+      // Step 2: Try to fetch and activate new config
+      try {
+        final activated = await _remoteConfig.fetchAndActivate();
+        if (activated) {
+          print('✅ Remote Config fetched and activated from Firebase');
+
+          // Step 3: Save to local cache after successful fetch
+          final config = getConfig();
+          await StorageService.saveRemoteConfigCache(config);
+          print('💾 Remote Config saved to local cache');
+        } else {
+          print(
+            'ℹ️ Remote Config already up to date (using cached or default)',
+          );
+        }
+      } catch (fetchError) {
+        // If fetch fails (offline), use cached data or defaults
+        print('⚠️ Failed to fetch Remote Config (offline?): $fetchError');
+        print('📦 Using cached Remote Config or defaults');
+
+        // If we have cached data, it will be used via getConfig()
+        // Firebase Remote Config automatically uses cached values when offline
+      }
 
       // Log the app name to verify
       final appName = _remoteConfig.getString('app_name');
       print('📱 App Name from Remote Config: $appName');
     } catch (e) {
       print('❌ Error initializing Remote Config: $e');
+      // Even if initialization fails, try to use cached data
+      final cachedConfig = StorageService.getRemoteConfigCache();
+      if (cachedConfig != null) {
+        print('📦 Fallback: Using cached Remote Config');
+      }
     }
   }
 
@@ -56,6 +89,40 @@ class RemoteConfigService {
       // OnBoarding
       'onboarding_features':
           '[{"title":"Welcome aboard, news enthusiast!","image":"https://example.com/1.png"},{"title":"Read news with only one app, Headnews!","image":"https://example.com/2.png"},{"title":"Get ready to explore the world of news!","image":"https://example.com/3.png"}]',
+
+      // API Configuration (as JSON string)
+      'api_config_json': jsonEncode({
+        'base_url': 'https://newsdata.io/api/1',
+        'breaking_news_endpoint': '/latest',
+        'latest_news_endpoint': '/news',
+        'archive_news_endpoint': '/archive',
+        'search_endpoint': '/news',
+        'api_key_param': 'apikey',
+        'category_param': 'category',
+        'country_param': 'country',
+        'language_param': 'language',
+        'query_param': 'q',
+        'page_param': 'page',
+        'size_param': 'size',
+        'default_language': 'en',
+        'default_country': 'us',
+        'default_page_size': 10,
+        'request_timeout_seconds': 30,
+        'categories_json': jsonEncode([
+          'top',
+          'business',
+          'entertainment',
+          'environment',
+          'food',
+          'health',
+          'politics',
+          'science',
+          'sports',
+          'technology',
+          'tourism',
+          'world',
+        ]),
+      }),
 
       // Colors (hex strings)
       'primary_color': '#C70000',
@@ -101,6 +168,9 @@ class RemoteConfigService {
       'no_data_error': 'No data available.',
       'bookmark_added': 'Added to bookmarks',
       'bookmark_removed': 'Removed from bookmarks',
+      'no_news_for_date': 'No news found for this date',
+      'text_size_preview_text':
+          'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\nIt has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.\n\nLorem Ipsum is simply dummy text of the printing and typesetting industry.',
 
       // Animation Durations (milliseconds)
       'short_animation_duration': 200,
@@ -114,7 +184,27 @@ class RemoteConfigService {
   }
 
   /// Get current config as RemoteConfigModel
+  /// Returns cached data if available, otherwise uses Firebase Remote Config
   RemoteConfigModel getConfig() {
+    // First, try to get from Firebase Remote Config (works offline with cached values)
+    try {
+      return _buildConfigFromRemoteConfig();
+    } catch (e) {
+      print('⚠️ Error getting config from Remote Config: $e');
+      // Fallback to cached data
+      final cachedConfig = StorageService.getRemoteConfigCache();
+      if (cachedConfig != null) {
+        print('📦 Using cached Remote Config');
+        return cachedConfig;
+      }
+      // Last resort: return default config
+      print('📦 Using default Remote Config');
+      return RemoteConfigModel();
+    }
+  }
+
+  /// Build RemoteConfigModel from Firebase Remote Config
+  RemoteConfigModel _buildConfigFromRemoteConfig() {
     return RemoteConfigModel(
       // App Texts
       appName: _remoteConfig.getString('app_name'),
@@ -211,6 +301,8 @@ class RemoteConfigService {
 
       // No Results Found
       noResultsFound: _remoteConfig.getString('no_results_found'),
+      noNewsForDate: _remoteConfig.getString('no_news_for_date'),
+      textSizePreviewText: _remoteConfig.getString('text_size_preview_text'),
       splashAnimatedGif: _remoteConfig.getString('splash_animated_gif'),
 
       // App Common Images
@@ -218,21 +310,30 @@ class RemoteConfigService {
       languageImg: _remoteConfig.getString('language_img'),
       headlineImg: _remoteConfig.getString('headline_img'),
       listenIcon: _remoteConfig.getString('listen_img'),
+
+      // Drawer Content
+      drawerMenu: jsonDecode(_remoteConfig.getString('drawer_menu')),
     );
   }
 
   /// Fetch latest config values
+  /// Saves to cache after successful fetch
   Future<bool> fetchConfig() async {
     try {
       final updated = await _remoteConfig.fetchAndActivate();
       if (updated) {
         print('🔄 Remote Config updated with new values');
+        // Save to cache after successful fetch
+        final config = getConfig();
+        await StorageService.saveRemoteConfigCache(config);
+        print('💾 Updated Remote Config saved to cache');
       } else {
         print('ℹ️ Remote Config already up to date');
       }
       return updated;
     } catch (e) {
       print('❌ Error fetching Remote Config: $e');
+      print('📦 Using cached Remote Config (if available)');
       return false;
     }
   }
@@ -260,6 +361,10 @@ class RemoteConfigService {
 
       if (updated) {
         print('🔄 Remote Config force updated with new values');
+        // Save to cache after successful fetch
+        final config = getConfig();
+        await StorageService.saveRemoteConfigCache(config);
+        print('💾 Force updated Remote Config saved to cache');
       }
       return updated;
     } catch (e) {

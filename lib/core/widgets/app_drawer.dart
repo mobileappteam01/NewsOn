@@ -1,10 +1,17 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:newson/screens/category_selection/category_selection_screen.dart';
+import 'package:newson/screens/drawer_widgets/account_settings.dart';
+import 'package:newson/screens/drawer_widgets/application_settings.dart';
+import 'package:newson/screens/drawer_widgets/bookmark.dart';
+import 'package:newson/screens/drawer_widgets/privacy_policy.dart';
+import 'package:newson/screens/drawer_widgets/terms_and_conditions.dart';
 import 'package:provider/provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../screens/drawer_widgets/notification.dart';
 import '../utils/shared_functions.dart';
 
 /// App drawer/sidebar menu
@@ -14,10 +21,34 @@ class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, this.onNavigate});
 
   @override
+  IconData getIconFromString(String? iconName) {
+    switch (iconName) {
+      case 'Icons.lock_outline':
+        return Icons.lock_outline;
+      case 'Icons.notifications':
+        return Icons.notifications;
+      case 'Icons.bookmark_border':
+        return Icons.bookmark_border;
+      case 'Icons.settings':
+        return Icons.settings;
+      case 'Icons.description_outlined':
+        return Icons.description_outlined;
+      case 'Icons.privacy_tip_outlined':
+        return Icons.privacy_tip_outlined;
+      case 'Icons.list_alt_outlined':
+        return Icons.list_alt_outlined;
+      case 'Icons.logout':
+        return Icons.logout;
+      default:
+        return Icons.help_outline; // fallback
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final languageProvider = Provider.of<LanguageProvider>(context);
+    Provider.of<ThemeProvider>(context);
+    Provider.of<LanguageProvider>(context);
 
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
@@ -27,29 +58,22 @@ class AppDrawer extends StatelessWidget {
             child: Column(
               children: [
                 // Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(color: theme.colorScheme.primary),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      showImage(
-                        config.appNameLogo,
-                        BoxFit.contain,
-                        height: 60,
-                        width: 80,
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.arrow_back_ios,
+                        color: theme.colorScheme.secondary,
                       ),
-
-                      Text(
-                        config.welcomeDescText,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    showImage(
+                      config.appNameLogo,
+                      BoxFit.contain,
+                      height: 60,
+                      width: 80,
+                    ),
+                  ],
                 ),
 
                 // Menu Items
@@ -57,80 +81,40 @@ class AppDrawer extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     children: [
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.home_outlined,
-                        title: 'Home',
-                        onTap: () {
-                          Navigator.pop(context);
-                          onNavigate?.call(0);
-                        },
-                      ),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.category_outlined,
-                        title: 'Categories',
-                        onTap: () {
-                          Navigator.pop(context);
-                          onNavigate?.call(1);
-                        },
-                      ),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.bookmark_border,
-                        title: 'Bookmarks',
-                        onTap: () {
-                          Navigator.pop(context);
-                          onNavigate?.call(2);
-                        },
-                      ),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.language,
-                        title: 'Language: ${languageProvider.selectedLanguage}',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showLanguageDialog(context);
-                        },
-                      ),
-                      const Divider(),
-                      _buildMenuItem(
-                        context,
-                        icon:
-                            themeProvider.themeMode == ThemeMode.dark
-                                ? Icons.light_mode
-                                : Icons.dark_mode,
-                        title: 'Theme',
-                        trailing: Switch(
-                          value: themeProvider.themeMode == ThemeMode.dark,
-                          onChanged: (value) {
-                            themeProvider.toggleTheme();
+                      for (int i = 0; i < config.drawerMenu.length; i++)
+                        _buildMenuItem(
+                          context,
+                          icon: getIconFromString(config.drawerMenu[i]['icon']),
+                          title: config.drawerMenu[i]['title'].toString(),
+                          onTap: () {
+                            Navigator.pop(context); // Close the drawer first
+                            Future.delayed(
+                              const Duration(milliseconds: 200),
+                              () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (c) =>
+                                            i == 0
+                                                ? const AccountSettings()
+                                                : i == 1
+                                                ? const NotificationView()
+                                                : i == 2
+                                                ? BookMark()
+                                                : i == 3
+                                                ? ApplicationSettings()
+                                                : i == 4
+                                                ? TermsAndConditions()
+                                                : i == 5
+                                                ? PrivacyPolicy()
+                                                : CategorySelectionScreen(),
+                                  ),
+                                );
+                              },
+                            );
                           },
-                          activeColor: theme.colorScheme.primary,
+                          iconColor: config.primaryColorValue,
                         ),
-                        onTap: () {
-                          themeProvider.toggleTheme();
-                        },
-                      ),
-                      const Divider(),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.settings_outlined,
-                        title: 'Settings',
-                        onTap: () {
-                          Navigator.pop(context);
-                          // Navigate to settings
-                        },
-                      ),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.info_outline,
-                        title: 'About',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showAboutDialog(context);
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -157,9 +141,10 @@ class AppDrawer extends StatelessWidget {
     required String title,
     required VoidCallback onTap,
     Widget? trailing,
+    Color? iconColor,
   }) {
     return ListTile(
-      leading: Icon(icon),
+      leading: Icon(icon, color: iconColor),
       title: Text(title),
       trailing: trailing,
       onTap: onTap,

@@ -42,7 +42,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                       Text(
                         config.selectCategoryTitle,
                         style: GoogleFonts.playfair(
-                          color: config.primaryColorValue,
+                          color: theme.colorScheme.secondary,
                           fontSize: config.displayMediumFontSize,
                         ),
                         // style: theme.textTheme.displaySmall,

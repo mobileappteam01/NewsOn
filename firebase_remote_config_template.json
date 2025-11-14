@@ -30,9 +30,9 @@
     },
     "splash_animated_gif": {
       "defaultValue": {
-        "value": " https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/splashscreen%2F41874d131716b3123a95cae1a7c2d04531e582cb.gif?alt=media&token=49abcf8a-f82c-4566-96f8-b02c9b45f785"
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/splashscreen%2F41874d131716b3123a95cae1a7c2d04531e582cb.gif?alt=media&token=49abcf8a-f82c-4566-96f8-b02c9b45f785"
       },
-      "description": "Splash screen swipe button text",
+      "description": "Splash screen animated GIF",
       "valueType": "STRING"
     },
     "auth_title_text": {
@@ -51,44 +51,30 @@
     },
     "onboarding_features": {
       "defaultValue": {
-        "value": "[{\"title\":\"Welcome  aboard, news enthusiast!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025.png?alt=media&token=a71a3046-ab5f-4f56-bf7c-360040a81ede\"},{\"title\":\"Read news with only one app, Headnews!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(1).png?alt=media&token=5d5468d7-0c12-4324-ac41-ecb582c9d67a\"},{\"title\":\"Get ready to explore the world of news!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(2).png?alt=media&token=434a419d-1f13-40e6-bd7a-c6f5f1ef13a3\"}]"
+        "value": "[{\"title\":\"Welcome aboard, news enthusiast!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025.png?alt=media&token=a71a3046-ab5f-4f56-bf7c-360040a81ede\"},{\"title\":\"Read news with only one app, Headnews!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(1).png?alt=media&token=5d5468d7-0c12-4324-ac41-ecb582c9d67a\"},{\"title\":\"Get ready to explore the world of news!\",\"image\":\"https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/onboarding%2Fimage%2025%20(2).png?alt=media&token=434a419d-1f13-40e6-bd7a-c6f5f1ef13a3\"}]"
       },
-      "description": "List of Onboarding news categories",
+      "description": "List of Onboarding slides",
       "valueType": "STRING"
     },
     "welcome_bg_img": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/welcome%2Fc0f05fa3f648932ca1460032243f0a5903ba0118.gif?alt=media&token=90e95261-96d8-4d36-b94d-5a1d13746550"
       },
-      "description": "Welcome BG Image",
+      "description": "Welcome screen background image",
       "valueType": "STRING"
     },
     "welcome_title_text": {
       "defaultValue": {
         "value": "WELCOME TO NEWSON"
       },
-      "description": "Welcome Text",
+      "description": "Welcome title text",
       "valueType": "STRING"
     },
     "welcome_desc_text": {
       "defaultValue": {
         "value": "Let's Get Started"
       },
-      "description": "Welcome Text",
-      "valueType": "STRING"
-    },
-    "categroy_selection_title": {
-      "defaultValue": {
-        "value": "Select News Categories"
-      },
-      "description": "Select News Categories",
-      "valueType": "STRING"
-    },
-    "categroy_selection_desc": {
-      "defaultValue": {
-        "value": "Choose your interests to personalize your news feed"
-      },
-      "description": "Choose your interests",
+      "description": "Welcome subtitle text",
       "valueType": "STRING"
     },
     "primary_color": {
@@ -105,286 +91,6 @@
       "description": "Secondary color (hex format)",
       "valueType": "STRING"
     },
-    "background_color": {
-      "defaultValue": {
-        "value": "#FFFFFF"
-      },
-      "description": "Light mode background color (hex format)",
-      "valueType": "STRING"
-    },
-    "text_primary_color": {
-      "defaultValue": {
-        "value": "#2C2C2C"
-      },
-      "description": "Primary text color (hex format)",
-      "valueType": "STRING"
-    },
-    "text_secondary_color": {
-      "defaultValue": {
-        "value": "#757575"
-      },
-      "description": "Secondary text color (hex format)",
-      "valueType": "STRING"
-    },
-    "card_background_color": {
-      "defaultValue": {
-        "value": "#FFFFFF"
-      },
-      "description": "Card background color (hex format)",
-      "valueType": "STRING"
-    },
-    "dark_background_color": {
-      "defaultValue": {
-        "value": "#121212"
-      },
-      "description": "Dark mode background color (hex format)",
-      "valueType": "STRING"
-    },
-    "splash_welcome_font_size": {
-      "defaultValue": {
-        "value": "32"
-      },
-      "description": "Splash welcome text font size",
-      "valueType": "NUMBER"
-    },
-    "splash_app_name_font_size": {
-      "defaultValue": {
-        "value": "36"
-      },
-      "description": "Splash app name text font size",
-      "valueType": "NUMBER"
-    },
-    "splash_swipe_font_size": {
-      "defaultValue": {
-        "value": "16"
-      },
-      "description": "Splash swipe button text font size",
-      "valueType": "NUMBER"
-    },
-    "display_large_font_size": {
-      "defaultValue": {
-        "value": "32"
-      },
-      "description": "Display large text size",
-      "valueType": "NUMBER"
-    },
-    "display_medium_font_size": {
-      "defaultValue": {
-        "value": "28"
-      },
-      "description": "Display medium text size",
-      "valueType": "NUMBER"
-    },
-    "display_small_font_size": {
-      "defaultValue": {
-        "value": "24"
-      },
-      "description": "Display small text size",
-      "valueType": "NUMBER"
-    },
-    "headline_medium_font_size": {
-      "defaultValue": {
-        "value": "20"
-      },
-      "description": "Headline medium text size",
-      "valueType": "NUMBER"
-    },
-    "title_large_font_size": {
-      "defaultValue": {
-        "value": "18"
-      },
-      "description": "Title large text size",
-      "valueType": "NUMBER"
-    },
-    "title_medium_font_size": {
-      "defaultValue": {
-        "value": "16"
-      },
-      "description": "Title medium text size",
-      "valueType": "NUMBER"
-    },
-    "body_large_font_size": {
-      "defaultValue": {
-        "value": "16"
-      },
-      "description": "Body large text size",
-      "valueType": "NUMBER"
-    },
-    "body_medium_font_size": {
-      "defaultValue": {
-        "value": "14"
-      },
-      "description": "Body medium text size",
-      "valueType": "NUMBER"
-    },
-    "body_small_font_size": {
-      "defaultValue": {
-        "value": "12"
-      },
-      "description": "Body small text size",
-      "valueType": "NUMBER"
-    },
-    "splash_welcome_font_weight": {
-      "defaultValue": {
-        "value": "700"
-      },
-      "description": "Splash welcome font weight (100-900)",
-      "valueType": "NUMBER"
-    },
-    "splash_app_name_font_weight": {
-      "defaultValue": {
-        "value": "800"
-      },
-      "description": "Splash app name font weight (100-900)",
-      "valueType": "NUMBER"
-    },
-    "splash_swipe_font_weight": {
-      "defaultValue": {
-        "value": "500"
-      },
-      "description": "Splash swipe button font weight (100-900)",
-      "valueType": "NUMBER"
-    },
-    "default_padding": {
-      "defaultValue": {
-        "value": "16"
-      },
-      "description": "Default padding in pixels",
-      "valueType": "NUMBER"
-    },
-    "small_padding": {
-      "defaultValue": {
-        "value": "8"
-      },
-      "description": "Small padding in pixels",
-      "valueType": "NUMBER"
-    },
-    "large_padding": {
-      "defaultValue": {
-        "value": "24"
-      },
-      "description": "Large padding in pixels",
-      "valueType": "NUMBER"
-    },
-    "border_radius": {
-      "defaultValue": {
-        "value": "12"
-      },
-      "description": "Border radius for cards and buttons",
-      "valueType": "NUMBER"
-    },
-    "card_elevation": {
-      "defaultValue": {
-        "value": "2"
-      },
-      "description": "Card elevation/shadow depth",
-      "valueType": "NUMBER"
-    },
-    "splash_button_height": {
-      "defaultValue": {
-        "value": "64"
-      },
-      "description": "Splash screen button height",
-      "valueType": "NUMBER"
-    },
-    "splash_button_border_radius": {
-      "defaultValue": {
-        "value": "40"
-      },
-      "description": "Splash screen button border radius",
-      "valueType": "NUMBER"
-    },
-    "no_internet_error": {
-      "defaultValue": {
-        "value": "No internet connection. Please check your network."
-      },
-      "description": "No internet connection error message",
-      "valueType": "STRING"
-    },
-    "server_error": {
-      "defaultValue": {
-        "value": "Server error. Please try again later."
-      },
-      "description": "Server error message",
-      "valueType": "STRING"
-    },
-    "unknown_error": {
-      "defaultValue": {
-        "value": "An unknown error occurred."
-      },
-      "description": "Unknown error message",
-      "valueType": "STRING"
-    },
-    "no_data_error": {
-      "defaultValue": {
-        "value": "No data available."
-      },
-      "description": "No data available message",
-      "valueType": "STRING"
-    },
-    "bookmark_added": {
-      "defaultValue": {
-        "value": "Added to bookmarks"
-      },
-      "description": "Bookmark added success message",
-      "valueType": "STRING"
-    },
-    "bookmark_removed": {
-      "defaultValue": {
-        "value": "Removed from bookmarks"
-      },
-      "description": "Bookmark removed success message",
-      "valueType": "STRING"
-    },
-    "short_animation_duration": {
-      "defaultValue": {
-        "value": "200"
-      },
-      "description": "Short animation duration in milliseconds",
-      "valueType": "NUMBER"
-    },
-    "medium_animation_duration": {
-      "defaultValue": {
-        "value": "300"
-      },
-      "description": "Medium animation duration in milliseconds",
-      "valueType": "NUMBER"
-    },
-    "long_animation_duration": {
-      "defaultValue": {
-        "value": "500"
-      },
-      "description": "Long animation duration in milliseconds",
-      "valueType": "NUMBER"
-    },
-    "splash_welcome_letter_spacing": {
-      "defaultValue": {
-        "value": "1.0"
-      },
-      "description": "Splash welcome text letter spacing",
-      "valueType": "NUMBER"
-    },
-    "splash_app_name_letter_spacing": {
-      "defaultValue": {
-        "value": "1.2"
-      },
-      "description": "Splash app name text letter spacing",
-      "valueType": "NUMBER"
-    },
-    "news_api_key": {
-      "defaultValue": {
-        "value": "YOUR_API_KEY"
-      },
-      "description": "API key for the news service",
-      "valueType": "STRING"
-    },
-    "no_results_found": {
-      "defaultValue": {
-        "value": "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nnh0ZDcwM2oxY2x6ODN6bHB0ZDU2NjI5eG11emRhaGRnam8zcnBqNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Dsh7K7cew1Yb9vjY8b/giphy.gif"
-      },
-      "description": "No Results Found",
-      "valueType": "STRING"
-    },
     "app_name_logo": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0"
@@ -396,21 +102,49 @@
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.51%20PM.jpeg?alt=media&token=890b0146-974e-4b6e-9ec8-4a88e2261c12"
       },
-      "description": "Language Logo",
+      "description": "Language selector flag icon",
       "valueType": "STRING"
     },
     "headline_img": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM%20(1).jpeg?alt=media&token=a016fa53-8791-4957-a752-1a0900057fe8"
       },
-      "description": "Headline Logo",
+      "description": "Headline tab icon",
       "valueType": "STRING"
     },
     "listen_img": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fremoved_listen_icon.png?alt=media&token=2a8fcf4a-bb00-4db1-9a04-e271bbeb133c"
       },
-      "description": "App Name Logo",
+      "description": "Listen button icon",
+      "valueType": "STRING"
+    },
+    "drawer_menu": {
+      "defaultValue": {
+        "value": "[{\"title\":\"Account settings\",\"icon\":\"Icons.lock_outline\",\"route\":\"/account_settings\"},{\"title\":\"Notification inbox\",\"icon\":\"Icons.notifications\",\"badgeCount\":2,\"route\":\"/notifications\"},{\"title\":\"Bookmark\",\"icon\":\"Icons.bookmark_border\",\"route\":\"/bookmarks\"},{\"title\":\"Application settings\",\"icon\":\"Icons.settings\",\"route\":\"/settings\"},{\"title\":\"Terms of use\",\"icon\":\"Icons.description_outlined\",\"route\":\"/terms\"},{\"title\":\"Privacy policy\",\"icon\":\"Icons.privacy_tip_outlined\",\"route\":\"/privacy\"},{\"title\":\"News categories\",\"icon\":\"Icons.list_alt_outlined\",\"route\":\"/categories\"}]"
+      },
+      "description": "Drawer menu items loaded dynamically",
+      "valueType": "STRING"
+    },
+    "no_news_for_date": {
+      "defaultValue": {
+        "value": "No news found for this date"
+      },
+      "description": "Message shown when no news is found for selected date",
+      "valueType": "STRING"
+    },
+    "text_size_preview_text": {
+      "defaultValue": {
+        "value": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\nIt has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.\n\nLorem Ipsum is simply dummy text of the printing and typesetting industry."
+      },
+      "description": "Preview text shown in text size settings screen",
+      "valueType": "STRING"
+    },
+    "api_config_json": {
+      "defaultValue": {
+        "value": "{\"base_url\":\"https://newsdata.io/api/1\",\"breaking_news_endpoint\":\"/latest\",\"latest_news_endpoint\":\"/news\",\"archive_news_endpoint\":\"/archive\",\"search_endpoint\":\"/news\",\"api_key_param\":\"apikey\",\"category_param\":\"category\",\"country_param\":\"country\",\"language_param\":\"language\",\"query_param\":\"q\",\"page_param\":\"page\",\"size_param\":\"size\",\"default_language\":\"en\",\"default_country\":\"us\",\"default_page_size\":10,\"request_timeout_seconds\":30,\"categories_json\":\"[\\\"top\\\",\\\"business\\\",\\\"entertainment\\\",\\\"environment\\\",\\\"food\\\",\\\"health\\\",\\\"politics\\\",\\\"science\\\",\\\"sports\\\",\\\"technology\\\",\\\"tourism\\\",\\\"world\\\"]\"}"
+      },
+      "description": "Dynamic API Configuration - All API endpoints, parameters, and settings. Can be updated without app update.",
       "valueType": "STRING"
     }
   },
@@ -420,6 +154,6 @@
     "updateUser": {
       "email": "admin@newson.app"
     },
-    "description": "Initial Remote Config setup for NewsOn app - All dynamic parameters"
+    "description": "Initial Remote Config setup for NewsOn app - All dynamic parameters + Drawer Menu Support"
   }
 }

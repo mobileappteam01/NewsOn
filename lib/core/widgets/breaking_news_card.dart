@@ -39,16 +39,16 @@ class BreakingNewsCard extends StatelessWidget {
                 CachedNetworkImage(
                   imageUrl: article.imageUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: theme.colorScheme.surface,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: theme.colorScheme.surface,
-                    child: const Icon(Icons.image_not_supported, size: 48),
-                  ),
+                  placeholder:
+                      (context, url) => Container(
+                        color: theme.colorScheme.surface,
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                  errorWidget:
+                      (context, url, error) => Container(
+                        color: theme.colorScheme.surface,
+                        child: const Icon(Icons.image_not_supported, size: 48),
+                      ),
                 )
               else
                 Container(
@@ -62,10 +62,7 @@ class BreakingNewsCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.8),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                   ),
                 ),
               ),
@@ -82,7 +79,8 @@ class BreakingNewsCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Category badges
-                      if (article.category != null && article.category!.isNotEmpty)
+                      if (article.category != null &&
+                          article.category!.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -101,7 +99,7 @@ class BreakingNewsCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      
+
                       const SizedBox(height: AppConstants.smallPadding),
 
                       // Title
@@ -116,14 +114,14 @@ class BreakingNewsCard extends StatelessWidget {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      
+
                       const SizedBox(height: AppConstants.smallPadding),
 
                       // Metadata
                       Row(
                         children: [
                           Text(
-                            article.authorName,
+                            article.creator![0],
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 12,
@@ -136,7 +134,7 @@ class BreakingNewsCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            article.formattedDate,
+                            article.pubDate!,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 12,

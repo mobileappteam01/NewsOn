@@ -50,23 +50,25 @@ class NewsCard extends StatelessWidget {
                   height: 100,
                   width: 100,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    height: 100,
-                    width: 100,
-                    color: theme.colorScheme.surface,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    height: 100,
-                    width: 100,
-                    color: theme.colorScheme.surface,
-                    child: const Icon(Icons.image_not_supported, size: 32),
-                  ),
+                  placeholder:
+                      (context, url) => Container(
+                        height: 100,
+                        width: 100,
+                        color: theme.colorScheme.surface,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                  errorWidget:
+                      (context, url, error) => Container(
+                        height: 100,
+                        width: 100,
+                        color: theme.colorScheme.surface,
+                        child: const Icon(Icons.image_not_supported, size: 32),
+                      ),
                 ),
               ),
-            
+
             const SizedBox(width: 12),
 
             // Content section (right side)
@@ -84,7 +86,7 @@ class NewsCard extends StatelessWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  
+
                   const SizedBox(height: 8),
 
                   // Metadata row
@@ -93,21 +95,27 @@ class NewsCard extends StatelessWidget {
                       // Source
                       Expanded(
                         child: Text(
-                          article.authorName,
+                          article.creator != null && article.creator!.isNotEmpty
+                              ? article.creator![0]
+                              : article.sourceName ?? 'Unknown Source',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                            color: theme.textTheme.bodySmall?.color
+                                ?.withOpacity(0.7),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      
+
                       const SizedBox(width: 8),
-                      
+
                       // Listen button with red background
                       if (showPlayButton)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.primary,
                             borderRadius: BorderRadius.circular(4),
@@ -132,9 +140,9 @@ class NewsCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                      
+
                       const SizedBox(width: 4),
-                      
+
                       // Bookmark icon
                       InkWell(
                         onTap: () {
@@ -153,13 +161,16 @@ class NewsCard extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(4),
                           child: Icon(
-                            isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                            isBookmarked
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
                             size: 18,
-                            color: isBookmarked ? theme.colorScheme.primary : null,
+                            color:
+                                isBookmarked ? theme.colorScheme.primary : null,
                           ),
                         ),
                       ),
-                      
+
                       // Share icon
                       InkWell(
                         onTap: () {

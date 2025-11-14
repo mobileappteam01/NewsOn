@@ -67,11 +67,6 @@ class _SplashScreenState extends State<SplashScreen>
         final primaryColor = config.primaryColorValue;
         final theme = Theme.of(context);
 
-        final isDark = theme.brightness == Brightness.dark;
-        debugPrint(
-          "Dark secondary color: ${Theme.of(context).colorScheme.secondary} and $isDark",
-        );
-
         return Scaffold(
           body: SafeArea(
             child: GestureDetector(

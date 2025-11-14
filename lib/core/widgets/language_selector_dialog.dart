@@ -165,7 +165,6 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),

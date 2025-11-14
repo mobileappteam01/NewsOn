@@ -13,22 +13,28 @@ class NewsProvider with ChangeNotifier {
   // State variables
   List<NewsArticle> _articles = [];
   List<NewsArticle> _breakingNews = [];
+  List<NewsArticle> _todayNews = []; // News for selected date
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  bool _isLoadingToday = false;
   String? _error;
   String? _nextPage;
   String? _currentCategory;
   String? _currentQuery;
+  DateTime? _selectedDate; // Selected date for archive news
 
   // Getters
   List<NewsArticle> get articles => _articles;
   List<NewsArticle> get breakingNews => _breakingNews;
+  List<NewsArticle> get todayNews => _todayNews;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
+  bool get isLoadingToday => _isLoadingToday;
   String? get error => _error;
   bool get hasNextPage => _nextPage != null;
   String? get currentCategory => _currentCategory;
   String? get currentQuery => _currentQuery;
+  DateTime? get selectedDate => _selectedDate;
 
   /// Fetch breaking/top news
   Future<void> fetchBreakingNews() async {
@@ -205,6 +211,40 @@ class NewsProvider with ChangeNotifier {
     } else {
       await fetchBreakingNews();
     }
+  }
+
+  /// Fetch news for a specific date (archive)
+  /// date: The date to fetch news for (defaults to today if null)
+  Future<void> fetchNewsByDate(DateTime? date) async {
+    try {
+      _isLoadingToday = true;
+      _error = null;
+      _selectedDate = date ?? DateTime.now();
+      notifyListeners();
+
+      // Format date as YYYY-MM-DD
+      final fromDate = _formatDate(_selectedDate!);
+      final toDate = fromDate; // Same date for single day
+
+      final response = await _repository.fetchArchiveNews(
+        fromDate: fromDate,
+        toDate: toDate,
+        language: 'en', // You can make this dynamic
+      );
+
+      _todayNews = response.results;
+      _isLoadingToday = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoadingToday = false;
+      notifyListeners();
+    }
+  }
+
+  /// Format DateTime to YYYY-MM-DD string
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   /// Clear error

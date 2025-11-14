@@ -12,16 +12,29 @@ class RemoteConfigProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   /// Initialize Remote Config
+  /// Loads cached data immediately, then tries to fetch new data
   Future<void> initialize() async {
     try {
+      // Load cached config first for immediate UI update (if available)
+      // The getConfig() method will automatically use cached data if available
+      final cachedConfig = _remoteConfigService.getConfig();
+      if (cachedConfig.appName.isNotEmpty) {
+        _config = cachedConfig;
+        _isInitialized = true;
+        notifyListeners(); // Notify immediately with cached data
+        print('📦 RemoteConfigProvider initialized with cached data');
+      }
+
+      // Then try to initialize and fetch new data
       await _remoteConfigService.initialize();
       _config = _remoteConfigService.getConfig();
       _isInitialized = true;
-      notifyListeners();
+      notifyListeners(); // Notify again with fresh data (if fetched)
     } catch (e) {
       print('Error initializing RemoteConfigProvider: $e');
-      // Use default values if initialization fails
-      _config = RemoteConfigModel();
+      // Try to use cached data if initialization fails
+      final cachedConfig = _remoteConfigService.getConfig();
+      _config = cachedConfig;
       _isInitialized = true;
       notifyListeners();
     }

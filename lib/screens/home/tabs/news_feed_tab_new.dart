@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:newson/screens/news_detail/news_detail_screen.dart';
 import 'package:provider/provider.dart';
@@ -11,12 +12,10 @@ import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../core/utils/shared_functions.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
+import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
-import '../../../providers/tts_provider.dart';
-import '../../../providers/bookmark_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
 class NewsFeedTabNew extends StatefulWidget {
   final List<String> selectedCategories;
@@ -56,10 +55,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   @override
   void initState() {
     super.initState();
+    // Fetch today's news on initialization
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<NewsProvider>().fetchBreakingNews();
-      context.read<NewsProvider>().fetchNewsByCategory('top');
+      if (mounted) {
+        context.read<NewsProvider>().fetchNewsByDate(_selectedDate);
+      }
     });
   }
 
@@ -95,69 +95,6 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     );
   }
 
-  showSharModalBottomSheet() {
-    RemoteConfigModel config = RemoteConfigModel();
-    return Stack(
-      children: [
-        SizedBox(
-          height: 180,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (int i = 0; i < 4; i++)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 12.0),
-                      child: Row(
-                        children: [
-                          i == 0
-                              ? Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.rotationY(
-                                  3.1416,
-                                ), // 180° flip horizontally
-                                child: Icon(
-                                  Icons.reply_outlined,
-                                  size: 24,
-                                  color: config.primaryColorValue,
-                                ),
-                              )
-                              : Icon(
-                                i == 1
-                                    ? Icons.bookmark_border_outlined
-                                    : i == 2
-                                    ? Icons.block
-                                    : Icons.flag_outlined,
-                                color: config.primaryColorValue,
-                              ),
-                          giveWidth(12),
-                          Text(
-                            i == 0
-                                ? "Share"
-                                : i == 1
-                                ? "Bookmark"
-                                : i == 2
-                                ? "Block relevant News"
-                                : "Report",
-                            style: TextStyle(color: config.primaryColorValue),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -165,424 +102,802 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     final remoteConfig = context.read<RemoteConfigProvider>().config;
     final newsProvider = context.watch<NewsProvider>();
 
+    // Show shimmer while breaking news is loading initially
+    if (newsProvider.isLoading && newsProvider.breakingNews.isEmpty) {
+      return const NewsFeedShimmer();
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      floatingActionButton: _buildRefreshButton(
+        context,
+        newsProvider,
+        remoteConfig,
+      ),
       body: SafeArea(
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            // Header: logo + date + language
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    showImage(
-                      remoteConfig.appNameLogo,
-                      BoxFit.contain,
-                      height: 60,
-                      width: 80,
-                    ),
-                    Row(
-                      children: [
-                        _buildDatePicker(context),
-                        const SizedBox(width: 12),
-                        Consumer<LanguageProvider>(
-                          builder: (context, languageProvider, _) {
-                            return GestureDetector(
-                              onTap: () => showLanguageSelectorDialog(context),
-                              child: showImage(
-                                remoteConfig.languageImg,
-                                BoxFit.contain,
-                                height: 20,
-                                width: 30,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Section title - Breaking News
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: const Text(
-                  'Breaking News',
-                  style: TextStyle(
-                    color: Color(0xFFE31E24),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Refresh breaking news
+            await newsProvider.fetchBreakingNews();
+            // Refresh today's news
+            await newsProvider.fetchNewsByDate(_selectedDate);
+          },
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              // Header: logo + date + language
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      showImage(
+                        remoteConfig.appNameLogo,
+                        BoxFit.contain,
+                        height: 60,
+                        width: 80,
+                      ),
+                      Row(
+                        children: [
+                          _buildDatePicker(context),
+                          const SizedBox(width: 12),
+                          Consumer<LanguageProvider>(
+                            builder: (context, languageProvider, _) {
+                              return GestureDetector(
+                                onTap:
+                                    () => showLanguageSelectorDialog(context),
+                                child: showImage(
+                                  remoteConfig.languageImg,
+                                  BoxFit.contain,
+                                  height: 20,
+                                  width: 30,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              // Section title - Breaking News (Centered)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'Breaking News',
+                    style: GoogleFonts.playfair(
+                      color: Color(0xFFE31E24),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
 
-            // Breaking News PageView (as normal widget inside SliverToBoxAdapter)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 320,
-                child: PageView.builder(
-                  controller: _breakingNewsController,
-                  itemCount:
-                      newsProvider.breakingNews.isNotEmpty
-                          ? newsProvider.breakingNews.length
-                          : widget.newsList.length,
-                  itemBuilder: (context, index) {
-                    final article =
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              // Breaking News CarouselSlider
+              if (newsProvider.isLoading && newsProvider.breakingNews.isEmpty)
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 400,
+                    child: _buildBreakingNewsShimmer(theme),
+                  ),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: CarouselSlider.builder(
+                    itemCount:
                         newsProvider.breakingNews.isNotEmpty
-                            ? newsProvider.breakingNews[index]
-                            : _mapToArticle(widget.newsList[index]);
-                    // Use NewsGridView for the card display
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: NewsGridView(
-                        key: ValueKey('breaking_$index'),
-                        type: 'cardview',
-                        newsDetails: _articleToMap(article),
+                            ? newsProvider.breakingNews.length
+                            : widget.newsList.length,
+                    itemBuilder: (context, index, realIndex) {
+                      final article =
+                          newsProvider.breakingNews.isNotEmpty
+                              ? newsProvider.breakingNews[index]
+                              : _mapToArticle(widget.newsList[index]);
+                      return _buildBreakingNewsCard(
+                        context,
+                        article,
+                        remoteConfig,
+                      );
+                    },
+                    options: CarouselOptions(
+                      height: 400,
+                      viewportFraction: 0.85,
+                      initialPage: 0,
+                      enableInfiniteScroll: false,
+                      reverse: false,
+                      autoPlay: false,
+                      enlargeCenterPage: true,
+                      enlargeFactor: 0.3,
+                      onPageChanged: (index, reason) {
+                        // Optional: Handle page change
+                      },
+                      scrollDirection: Axis.horizontal,
+                    ),
+                  ),
+                ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+              // Category tabs
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: SizedBox(
+                    height: 36,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
+                        final isSelected = _selectedCategory == category;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedCategory = category);
+                            if (category != 'All') {
+                              context.read<NewsProvider>().fetchNewsByCategory(
+                                category.toLowerCase(),
+                              );
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? const Color(0xFFE31E24)
+                                      : Colors.black,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Center(
+                              child: Text(
+                                category,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              // Today heading (dynamic based on selected date)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: showHeadingText(
+                    _getDateHeadingText(
+                      newsProvider.selectedDate ?? _selectedDate,
+                    ),
+                    theme,
+                  ),
+                ),
+              ),
+
+              // Today list items (from API)
+              if (newsProvider.isLoadingToday)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _buildTodayNewsShimmer(theme),
+                        );
+                      },
+                      childCount: 3, // Show 3 shimmer items
+                    ),
+                  ),
+                )
+              else if (newsProvider.todayNews.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Center(
+                      child: Text(
+                        remoteConfig.noNewsForDate,
+                        style: TextStyle(
+                          color: theme.colorScheme.secondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final article = newsProvider.todayNews[index];
+                      return NewsGridView(
+                        key: ValueKey('today_${article.articleId ?? index}'),
+                        type: 'listview',
+                        newsDetails: article,
                         onListenTapped: () {
                           // context.read<TtsProvider>().playArticle(article);
                         },
                         onSaveTapped: () {
-                          // context.read<BookmarkProvider>().toggleBookmark(
-                          //   article,
-                          // );
+                          context.read<NewsProvider>().toggleBookmark(article);
                         },
-                        onNewsTapped: () async {
-                          NewsArticle newsArticle = await getNewsDetail();
-
+                        onNewsTapped: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
                                   (context) =>
-                                      NewsDetailScreen(article: newsArticle!),
+                                      NewsDetailScreen(article: article),
                             ),
                           );
-
-                          // navigate to detail (if you have a detail screen)
                         },
                         onShareTapped: () {
                           showModalBottomSheet(
                             context: context,
                             builder: (c) {
-                              return showSharModalBottomSheet();
+                              return showShareModalBottomSheet(context);
                             },
                           );
                         },
-                      ),
-                    );
-                  },
+                      );
+                    }, childCount: newsProvider.todayNews.length),
+                  ),
+                ),
+
+              // Flash news section title
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: showHeadingText("Flash News", theme),
                 ),
               ),
-            ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            // Category tabs
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+              // Flash news PageView (no nested sliver)
+              SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 36,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: categories.length,
+                  height: 200,
+                  child: PageView.builder(
+                    controller: _flashNewsController,
+                    itemCount: newsProvider.breakingNews.length,
                     itemBuilder: (context, index) {
-                      final category = categories[index];
-                      final isSelected = _selectedCategory == category;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedCategory = category);
-                          if (category != 'All') {
-                            context.read<NewsProvider>().fetchNewsByCategory(
-                              category.toLowerCase(),
-                            );
-                          }
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? const Color(0xFFE31E24)
-                                    : Colors.black,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      final data = newsProvider.breakingNews[index];
+                      return NewsGridView(
+                        key: ValueKey('flash_$index'),
+                        type: 'bannerview',
+                        newsDetails: data,
+                        onListenTapped: () {},
+                        onSaveTapped: () {},
+                        onNewsTapped: () async {
+                          NewsArticle newsArticle = await getNewsDetail();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      NewsDetailScreen(article: newsArticle),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                        onShareTapped: () {
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (c) {
+                              return showShareModalBottomSheet(context);
+                            },
+                          );
+                        },
                       );
                     },
                   ),
                 ),
               ),
-            ),
 
-            // Today heading
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: showHeadingText("Today", theme),
-              ),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Today list items
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final data = widget.newsList[index];
-                  return NewsGridView(
-                    key: ValueKey('today_$index'),
-                    type: 'listview',
-                    newsDetails: data,
-                    onListenTapped: () {},
-                    onSaveTapped: () {},
-                    onNewsTapped: () async {
-                      NewsArticle newsArticle = await getNewsDetail();
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  NewsDetailScreen(article: newsArticle!),
+              // Live Cricket Score Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      showHeadingText("Live Cricket Score", theme),
+                      const SizedBox(height: 12),
+                      // card
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                    onShareTapped: () {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (c) {
-                          return showSharModalBottomSheet();
-                        },
-                      );
-                    },
-                  );
-                }, childCount: widget.newsList.length),
-              ),
-            ),
-
-            // Flash news section title
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: showHeadingText("Flash News", theme),
-              ),
-            ),
-
-            // Flash news PageView (no nested sliver)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 200,
-                child: PageView.builder(
-                  controller: _flashNewsController,
-                  itemCount:
-                      newsProvider.articles.isNotEmpty
-                          ? newsProvider.articles.length
-                          : widget.newsList.length,
-                  itemBuilder: (context, index) {
-                    final data = widget.newsList[index];
-                    return NewsGridView(
-                      key: ValueKey('today_$index'),
-                      type: 'bannerview',
-                      newsDetails: data,
-                      onListenTapped: () {},
-                      onSaveTapped: () {},
-                      onNewsTapped: () async {
-                        NewsArticle newsArticle = await getNewsDetail();
-
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    NewsDetailScreen(article: newsArticle!),
-                          ),
-                        );
-                      },
-                      onShareTapped: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (c) {
-                            return showSharModalBottomSheet();
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // Live Cricket Score Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    showHeadingText("Live Cricket Score", theme),
-                    const SizedBox(height: 12),
-                    // card
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE31E24),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'LIVE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE31E24),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'LIVE',
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'World T20 - T20 16 of 45',
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // India row
+                            Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: Colors.orange,
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      '🇮🇳',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'IND',
+                                  style: TextStyle(
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'World T20 - T20 16 of 45',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // India row
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Colors.orange,
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '🇮🇳',
-                                    style: TextStyle(fontSize: 16),
+                                const Spacer(),
+                                const Text(
+                                  '172-8 (20)',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'IND',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Spacer(),
-                              const Text(
-                                '172-8 (20)',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Pakistan row
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Colors.green,
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '🇵🇰',
-                                    style: TextStyle(fontSize: 16),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Pakistan row
+                            Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: Colors.green,
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      '🇵🇰',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'PAK',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'PAK',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              const Text(
-                                '152/3 (15.4)',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                const Spacer(),
+                                const Text(
+                                  '152/3 (15.4)',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          showMatchVS("AUS", "IND", remoteConfig),
-                        ],
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            showMatchVS("AUS", "IND", remoteConfig),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24), // bottom spacing for nav
-                  ],
+                      const SizedBox(height: 24), // bottom spacing for nav
+                    ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build refresh button
+  Widget _buildRefreshButton(
+    BuildContext context,
+    NewsProvider newsProvider,
+    RemoteConfigModel remoteConfig,
+  ) {
+    final isRefreshing = newsProvider.isLoading || newsProvider.isLoadingToday;
+
+    return FloatingActionButton(
+      onPressed:
+          isRefreshing
+              ? null
+              : () async {
+                // Refresh breaking news
+                await newsProvider.fetchBreakingNews();
+                // Refresh today's news
+                await newsProvider.fetchNewsByDate(_selectedDate);
+              },
+      backgroundColor: remoteConfig.primaryColorValue,
+      child:
+          isRefreshing
+              ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+              : const Icon(Icons.refresh, color: Colors.white),
+    );
+  }
+
+  /// Build breaking news card with exact design
+  Widget _buildBreakingNewsCard(
+    BuildContext context,
+    NewsArticle article,
+    RemoteConfigModel config,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NewsDetailScreen(article: article),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background image
+              _buildCardImage(article),
+
+              // Gradient overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                  ),
+                ),
+              ),
+
+              // Content at bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // "Hot News" label
+                      Text(
+                        'Hot News',
+                        style: GoogleFonts.inter(
+                          color: Color(0xFFE31E24),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Title - split into multiple lines
+                      _buildTitleText(article.title),
+                      const SizedBox(height: 16),
+
+                      // Listen button at bottom right
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: showListenButton(config, () {
+                          // context.read<TtsProvider>().playArticle(article);
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bookmark icon at top right
+              Positioned(
+                top: 16,
+                right: 16,
+                child: GestureDetector(
+                  onTap: () {
+                    context.read<NewsProvider>().toggleBookmark(article);
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      article.isBookmarked
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build card image with proper handling
+  Widget _buildCardImage(NewsArticle article) {
+    final imageUrl = article.imageUrl ?? article.sourceIcon ?? '';
+
+    if (imageUrl.isEmpty) {
+      return Container(
+        color: Colors.grey[300],
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported,
+            size: 50,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey[300],
+          child: Center(
+            child: Icon(
+              Icons.image_not_supported,
+              size: 50,
+              color: Colors.grey[600],
+            ),
+          ),
+        );
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[300],
+          child: Center(
+            child: CircularProgressIndicator(
+              value:
+                  loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build title text split into multiple lines
+  Widget _buildTitleText(String title) {
+    // Split title into words and create multiple lines
+    final words = title.split(' ');
+    if (words.length <= 3) {
+      return Text(
+        title,
+        style: GoogleFonts.playfair(
+          fontSize: 28,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          height: 1.2,
+        ),
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // Try to split into 2-3 lines for better visual effect
+    final midPoint = (words.length / 2).ceil();
+    final firstLine = words.sublist(0, midPoint).join(' ');
+    final secondLine = words.sublist(midPoint).join(' ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          firstLine,
+          style: GoogleFonts.playfair(
+            fontSize: 28,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            height: 1.2,
+          ),
+        ),
+        if (secondLine.isNotEmpty)
+          Text(
+            secondLine,
+            style: GoogleFonts.playfair(
+              fontSize: 28,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Build shimmer for breaking news carousel
+  Widget _buildBreakingNewsShimmer(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Shimmer.fromColors(
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              decoration: BoxDecoration(
+                color: baseColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build shimmer for today's news list items
+  Widget _buildTodayNewsShimmer(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder
+          Container(
+            width: 100,
+            height: 80,
+            decoration: BoxDecoration(
+              color: baseColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Text placeholders
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 16,
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 12,
+                  width: MediaQuery.of(context).size.width * 0.3,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -598,18 +913,19 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     );
   }
 
-  // Helper: convert NewsArticle to Map used by NewsGridView
-  Map _articleToMap(NewsArticle a) {
-    return {
-      'img': a.imageUrl ?? '',
-      'category':
-          (a.category != null && a.category!.isNotEmpty)
-              ? a.category!.first
-              : '',
-      'headLines': a.title ?? '',
-      'updatedAt': '', // fill if available
-      'link': a.link ?? '',
-    };
+  /// Get heading text based on date
+  String _getDateHeadingText(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = DateTime(date.year, date.month, date.day);
+
+    if (selected == today) {
+      return 'Today';
+    } else if (selected == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('dd MMM yyyy').format(date);
+    }
   }
 
   Widget _buildDatePicker(BuildContext context) {
@@ -623,6 +939,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         );
         if (picked != null && picked != _selectedDate) {
           setState(() => _selectedDate = picked);
+          // Fetch news for the selected date
+          if (mounted) {
+            context.read<NewsProvider>().fetchNewsByDate(picked);
+          }
         }
       },
       child: Container(
@@ -657,4 +977,67 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+showShareModalBottomSheet(context) {
+  RemoteConfigModel config = RemoteConfigModel();
+  return Stack(
+    children: [
+      SizedBox(
+        height: 180,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (int i = 0; i < 4; i++)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Row(
+                      children: [
+                        i == 0
+                            ? Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationY(
+                                3.1416,
+                              ), // 180° flip horizontally
+                              child: Icon(
+                                Icons.reply_outlined,
+                                size: 24,
+                                color: config.primaryColorValue,
+                              ),
+                            )
+                            : Icon(
+                              i == 1
+                                  ? Icons.bookmark_border_outlined
+                                  : i == 2
+                                  ? Icons.block
+                                  : Icons.flag_outlined,
+                              color: config.primaryColorValue,
+                            ),
+                        giveWidth(12),
+                        Text(
+                          i == 0
+                              ? "Share"
+                              : i == 1
+                              ? "Bookmark"
+                              : i == 2
+                              ? "Block relevant News"
+                              : "Report",
+                          style: TextStyle(color: config.primaryColorValue),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
 }

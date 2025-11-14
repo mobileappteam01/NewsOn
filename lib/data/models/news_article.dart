@@ -2,59 +2,95 @@ import 'package:hive/hive.dart';
 
 part 'news_article.g.dart';
 
-/// News Article Model for Newsdata.IO API
 @HiveType(typeId: 0)
 class NewsArticle {
   @HiveField(0)
   final String? articleId;
-  
+
   @HiveField(1)
   final String title;
-  
+
   @HiveField(2)
   final String? link;
-  
+
   @HiveField(3)
   final List<String>? keywords;
-  
+
   @HiveField(4)
   final List<String>? creator;
-  
+
   @HiveField(5)
   final String? videoUrl;
-  
+
   @HiveField(6)
   final String? description;
-  
+
   @HiveField(7)
   final String? content;
-  
+
   @HiveField(8)
   final String? pubDate;
-  
+
   @HiveField(9)
   final String? imageUrl;
-  
+
   @HiveField(10)
   final String? sourceId;
-  
+
   @HiveField(11)
   final String? sourcePriority;
-  
+
   @HiveField(12)
   final List<String>? country;
-  
+
   @HiveField(13)
   final List<String>? category;
-  
+
   @HiveField(14)
   final String? language;
-  
+
   @HiveField(15)
   final bool isBookmarked;
-  
+
   @HiveField(16)
   final DateTime? bookmarkedAt;
+
+  // -------------------------
+  // NEW FIELDS BELOW
+  // -------------------------
+
+  @HiveField(17)
+  final String? pubDateTZ;
+
+  @HiveField(18)
+  final String? sourceName;
+
+  @HiveField(19)
+  final String? sourceUrl;
+
+  @HiveField(20)
+  final String? sourceIcon;
+
+  @HiveField(21)
+  final String? sentiment;
+
+  @HiveField(22)
+  final String? sentimentStats;
+
+  @HiveField(23)
+  final String? aiTag;
+
+  @HiveField(24)
+  final String? aiRegion;
+
+  @HiveField(25)
+  final String? aiOrg;
+
+  @HiveField(26)
+  final String? aiSummary;
+
+  @HiveField(27)
+  final bool duplicate;
 
   NewsArticle({
     this.articleId,
@@ -74,16 +110,42 @@ class NewsArticle {
     this.language,
     this.isBookmarked = false,
     this.bookmarkedAt,
+    this.pubDateTZ,
+    this.sourceName,
+    this.sourceUrl,
+    this.sourceIcon,
+    this.sentiment,
+    this.sentimentStats,
+    this.aiTag,
+    this.aiRegion,
+    this.aiOrg,
+    this.aiSummary,
+    this.duplicate = false,
   });
 
-  /// Factory constructor to create NewsArticle from JSON
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
+    DateTime? bookmarked;
+    // Support ISO string or epoch (int) if provided
+    if (json.containsKey('bookmarkedAt') && json['bookmarkedAt'] != null) {
+      final val = json['bookmarkedAt'];
+      if (val is String) {
+        try {
+          bookmarked = DateTime.tryParse(val);
+        } catch (_) {
+          bookmarked = null;
+        }
+      } else if (val is int) {
+        // assume epoch millis
+        bookmarked = DateTime.fromMillisecondsSinceEpoch(val);
+      }
+    }
+
     return NewsArticle(
       articleId: json['article_id'] as String?,
-      title: json['title'] as String? ?? 'No Title',
+      title: (json['title'] as String?) ?? 'No Title',
       link: json['link'] as String?,
-      keywords: (json['keywords'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
-      creator: (json['creator'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      keywords: (json['keywords'] as List?)?.map((e) => e.toString()).toList(),
+      creator: (json['creator'] as List?)?.map((e) => e.toString()).toList(),
       videoUrl: json['video_url'] as String?,
       description: json['description'] as String?,
       content: json['content'] as String?,
@@ -91,14 +153,28 @@ class NewsArticle {
       imageUrl: json['image_url'] as String?,
       sourceId: json['source_id'] as String?,
       sourcePriority: json['source_priority']?.toString(),
-      country: (json['country'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
-      category: (json['category'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      country: (json['country'] as List?)?.map((e) => e.toString()).toList(),
+      category: (json['category'] as List?)?.map((e) => e.toString()).toList(),
       language: json['language'] as String?,
-      isBookmarked: false,
+      isBookmarked:
+          json['isBookmarked'] == true ||
+          json['is_bookmarked'] == true ||
+          false,
+      bookmarkedAt: bookmarked,
+      pubDateTZ: json['pubDateTZ'] as String?,
+      sourceName: json['source_name'] as String?,
+      sourceUrl: json['source_url'] as String?,
+      sourceIcon: json['source_icon'] as String?,
+      sentiment: json['sentiment'] as String?,
+      sentimentStats: json['sentiment_stats'] as String?,
+      aiTag: json['ai_tag'] as String?,
+      aiRegion: json['ai_region'] as String?,
+      aiOrg: json['ai_org'] as String?,
+      aiSummary: json['ai_summary'] as String?,
+      duplicate: json['duplicate'] == true,
     );
   }
 
-  /// Convert NewsArticle to JSON
   Map<String, dynamic> toJson() {
     return {
       'article_id': articleId,
@@ -116,10 +192,23 @@ class NewsArticle {
       'country': country,
       'category': category,
       'language': language,
+      'isBookmarked': isBookmarked,
+      // bookmarkedAt as ISO string to be safe
+      'bookmarkedAt': bookmarkedAt?.toIso8601String(),
+      'pubDateTZ': pubDateTZ,
+      'source_name': sourceName,
+      'source_url': sourceUrl,
+      'source_icon': sourceIcon,
+      'sentiment': sentiment,
+      'sentiment_stats': sentimentStats,
+      'ai_tag': aiTag,
+      'ai_region': aiRegion,
+      'ai_org': aiOrg,
+      'ai_summary': aiSummary,
+      'duplicate': duplicate,
     };
   }
 
-  /// Copy with method for immutability
   NewsArticle copyWith({
     String? articleId,
     String? title,
@@ -138,6 +227,17 @@ class NewsArticle {
     String? language,
     bool? isBookmarked,
     DateTime? bookmarkedAt,
+    String? pubDateTZ,
+    String? sourceName,
+    String? sourceUrl,
+    String? sourceIcon,
+    String? sentiment,
+    String? sentimentStats,
+    String? aiTag,
+    String? aiRegion,
+    String? aiOrg,
+    String? aiSummary,
+    bool? duplicate,
   }) {
     return NewsArticle(
       articleId: articleId ?? this.articleId,
@@ -157,46 +257,19 @@ class NewsArticle {
       language: language ?? this.language,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       bookmarkedAt: bookmarkedAt ?? this.bookmarkedAt,
+      pubDateTZ: pubDateTZ ?? this.pubDateTZ,
+      sourceName: sourceName ?? this.sourceName,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      sourceIcon: sourceIcon ?? this.sourceIcon,
+      sentiment: sentiment ?? this.sentiment,
+      sentimentStats: sentimentStats ?? this.sentimentStats,
+      aiTag: aiTag ?? this.aiTag,
+      aiRegion: aiRegion ?? this.aiRegion,
+      aiOrg: aiOrg ?? this.aiOrg,
+      aiSummary: aiSummary ?? this.aiSummary,
+      duplicate: duplicate ?? this.duplicate,
     );
   }
 
-  /// Get formatted publish date
-  String get formattedDate {
-    if (pubDate == null) return 'Unknown date';
-    try {
-      final date = DateTime.parse(pubDate!);
-      final now = DateTime.now();
-      final difference = now.difference(date);
-
-      if (difference.inDays > 7) {
-        return '${date.day}/${date.month}/${date.year}';
-      } else if (difference.inDays > 0) {
-        return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
-      } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-      } else {
-        return 'Just now';
-      }
-    } catch (e) {
-      return pubDate ?? 'Unknown date';
-    }
-  }
-
-  /// Get author name
-  String get authorName {
-    if (creator != null && creator!.isNotEmpty) {
-      return creator!.first;
-    }
-    return sourceId ?? 'Unknown';
-  }
-
-  /// Get reading time estimate
-  String get readingTime {
-    final text = content ?? description ?? '';
-    final wordCount = text.split(' ').length;
-    final minutes = (wordCount / 200).ceil(); // Average reading speed: 200 words/min
-    return '$minutes min read';
-  }
+  /// formattedDate, authorName, readingTime helpers can be re-added here if needed
 }

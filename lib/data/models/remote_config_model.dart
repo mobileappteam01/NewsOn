@@ -81,6 +81,12 @@ class RemoteConfigModel {
   ///No Results Found
   final String? noResultsFound;
 
+  /// No news found for selected date
+  final String noNewsForDate;
+
+  /// Text size preview text
+  final String textSizePreviewText;
+
   // Images
   final String? getStartedImg;
   final String? splashAnimatedGif;
@@ -90,6 +96,9 @@ class RemoteConfigModel {
   final String languageImg;
   final String headlineImg;
   final String listenIcon;
+
+  // Drawer Contents
+  final List<dynamic> drawerMenu;
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -167,6 +176,11 @@ class RemoteConfigModel {
     this.newsApiKey = '',
     //No Results Found
     this.noResultsFound,
+    // No news for date
+    this.noNewsForDate = 'No news found for this date',
+    // Text size preview text
+    this.textSizePreviewText =
+        'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\nIt has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.\n\nLorem Ipsum is simply dummy text of the printing and typesetting industry.',
 
     // Images
     this.getStartedImg,
@@ -177,6 +191,9 @@ class RemoteConfigModel {
     this.languageImg = '',
     this.headlineImg = '',
     this.listenIcon = '',
+
+    // Drawer Contents
+    this.drawerMenu = const [],
   });
 
   // Helper method to convert hex string to Color
@@ -237,4 +254,169 @@ class RemoteConfigModel {
       Duration(milliseconds: mediumAnimationDuration);
   Duration get longAnimationDurationValue =>
       Duration(milliseconds: longAnimationDuration);
+
+  /// Convert to JSON for local storage
+  Map<String, dynamic> toJson() {
+    return {
+      'appName': appName,
+      'splashWelcomeText': splashWelcomeText,
+      'splashAppNameText': splashAppNameText,
+      'splashSwipeText': splashSwipeText,
+      'authTitleText': authTitleText,
+      'authDescText': authDescText,
+      'onboardingFeatures': onboardingFeatures,
+      'welcomeBgImg': welcomeBgImg,
+      'welcomeTitleText': welcomeTitleText,
+      'welcomeDescText': welcomeDescText,
+      'selectCategoryTitle': selectCategoryTitle,
+      'selectCategoryDesc': selectCategoryDesc,
+      'primaryColor': primaryColor,
+      'secondaryColor': secondaryColor,
+      'backgroundColor': backgroundColor,
+      'textPrimaryColor': textPrimaryColor,
+      'textSecondaryColor': textSecondaryColor,
+      'cardBackgroundColor': cardBackgroundColor,
+      'darkBackgroundColor': darkBackgroundColor,
+      'splashWelcomeFontSize': splashWelcomeFontSize,
+      'splashAppNameFontSize': splashAppNameFontSize,
+      'splashSwipeFontSize': splashSwipeFontSize,
+      'displayLargeFontSize': displayLargeFontSize,
+      'displayMediumFontSize': displayMediumFontSize,
+      'displaySmallFontSize': displaySmallFontSize,
+      'headlineMediumFontSize': headlineMediumFontSize,
+      'titleLargeFontSize': titleLargeFontSize,
+      'titleMediumFontSize': titleMediumFontSize,
+      'bodyLargeFontSize': bodyLargeFontSize,
+      'bodyMediumFontSize': bodyMediumFontSize,
+      'bodySmallFontSize': bodySmallFontSize,
+      'splashWelcomeFontWeight': splashWelcomeFontWeight,
+      'splashAppNameFontWeight': splashAppNameFontWeight,
+      'splashSwipeFontWeight': splashSwipeFontWeight,
+      'defaultPadding': defaultPadding,
+      'smallPadding': smallPadding,
+      'largePadding': largePadding,
+      'borderRadius': borderRadius,
+      'cardElevation': cardElevation,
+      'splashButtonHeight': splashButtonHeight,
+      'splashButtonBorderRadius': splashButtonBorderRadius,
+      'noInternetError': noInternetError,
+      'serverError': serverError,
+      'unknownError': unknownError,
+      'noDataError': noDataError,
+      'bookmarkAdded': bookmarkAdded,
+      'bookmarkRemoved': bookmarkRemoved,
+      'shortAnimationDuration': shortAnimationDuration,
+      'mediumAnimationDuration': mediumAnimationDuration,
+      'longAnimationDuration': longAnimationDuration,
+      'splashWelcomeLetterSpacing': splashWelcomeLetterSpacing,
+      'splashAppNameLetterSpacing': splashAppNameLetterSpacing,
+      'newsApiKey': newsApiKey,
+      'noResultsFound': noResultsFound,
+      'noNewsForDate': noNewsForDate,
+      'textSizePreviewText': textSizePreviewText,
+      'getStartedImg': getStartedImg,
+      'splashAnimatedGif': splashAnimatedGif,
+      'appNameLogo': appNameLogo,
+      'languageImg': languageImg,
+      'headlineImg': headlineImg,
+      'listenIcon': listenIcon,
+      'drawerMenu': drawerMenu,
+    };
+  }
+
+  /// Create from JSON for local storage
+  factory RemoteConfigModel.fromJson(Map<String, dynamic> json) {
+    return RemoteConfigModel(
+      appName: json['appName'] as String? ?? 'NewsOn',
+      splashWelcomeText: json['splashWelcomeText'] as String? ?? 'WELCOME TO',
+      splashAppNameText: json['splashAppNameText'] as String? ?? 'NEWSON',
+      splashSwipeText:
+          json['splashSwipeText'] as String? ?? 'Swipe To Get Started',
+      authTitleText: json['authTitleText'] as String? ?? 'Sign In',
+      authDescText:
+          json['authDescText'] as String? ?? 'Sign in to your account',
+      onboardingFeatures: json['onboardingFeatures'] as String? ?? '',
+      welcomeBgImg: json['welcomeBgImg'] as String? ?? '',
+      welcomeTitleText: json['welcomeTitleText'] as String? ?? '',
+      welcomeDescText: json['welcomeDescText'] as String? ?? '',
+      selectCategoryTitle: json['selectCategoryTitle'] as String? ?? '',
+      selectCategoryDesc: json['selectCategoryDesc'] as String? ?? '',
+      primaryColor: json['primaryColor'] as String? ?? '#C70000',
+      secondaryColor: json['secondaryColor'] as String? ?? '#2C2C2C',
+      backgroundColor: json['backgroundColor'] as String? ?? '#FFFFFF',
+      textPrimaryColor: json['textPrimaryColor'] as String? ?? '#2C2C2C',
+      textSecondaryColor: json['textSecondaryColor'] as String? ?? '#757575',
+      cardBackgroundColor: json['cardBackgroundColor'] as String? ?? '#FFFFFF',
+      darkBackgroundColor: json['darkBackgroundColor'] as String? ?? '#121212',
+      splashWelcomeFontSize:
+          (json['splashWelcomeFontSize'] as num?)?.toDouble() ?? 32.0,
+      splashAppNameFontSize:
+          (json['splashAppNameFontSize'] as num?)?.toDouble() ?? 36.0,
+      splashSwipeFontSize:
+          (json['splashSwipeFontSize'] as num?)?.toDouble() ?? 16.0,
+      displayLargeFontSize:
+          (json['displayLargeFontSize'] as num?)?.toDouble() ?? 32.0,
+      displayMediumFontSize:
+          (json['displayMediumFontSize'] as num?)?.toDouble() ?? 28.0,
+      displaySmallFontSize:
+          (json['displaySmallFontSize'] as num?)?.toDouble() ?? 24.0,
+      headlineMediumFontSize:
+          (json['headlineMediumFontSize'] as num?)?.toDouble() ?? 20.0,
+      titleLargeFontSize:
+          (json['titleLargeFontSize'] as num?)?.toDouble() ?? 18.0,
+      titleMediumFontSize:
+          (json['titleMediumFontSize'] as num?)?.toDouble() ?? 16.0,
+      bodyLargeFontSize:
+          (json['bodyLargeFontSize'] as num?)?.toDouble() ?? 16.0,
+      bodyMediumFontSize:
+          (json['bodyMediumFontSize'] as num?)?.toDouble() ?? 14.0,
+      bodySmallFontSize:
+          (json['bodySmallFontSize'] as num?)?.toDouble() ?? 12.0,
+      splashWelcomeFontWeight: json['splashWelcomeFontWeight'] as int? ?? 700,
+      splashAppNameFontWeight: json['splashAppNameFontWeight'] as int? ?? 800,
+      splashSwipeFontWeight: json['splashSwipeFontWeight'] as int? ?? 500,
+      defaultPadding: (json['defaultPadding'] as num?)?.toDouble() ?? 16.0,
+      smallPadding: (json['smallPadding'] as num?)?.toDouble() ?? 8.0,
+      largePadding: (json['largePadding'] as num?)?.toDouble() ?? 24.0,
+      borderRadius: (json['borderRadius'] as num?)?.toDouble() ?? 12.0,
+      cardElevation: (json['cardElevation'] as num?)?.toDouble() ?? 2.0,
+      splashButtonHeight:
+          (json['splashButtonHeight'] as num?)?.toDouble() ?? 64.0,
+      splashButtonBorderRadius:
+          (json['splashButtonBorderRadius'] as num?)?.toDouble() ?? 40.0,
+      noInternetError:
+          json['noInternetError'] as String? ??
+          'No internet connection. Please check your network.',
+      serverError:
+          json['serverError'] as String? ??
+          'Server error. Please try again later.',
+      unknownError:
+          json['unknownError'] as String? ?? 'An unknown error occurred.',
+      noDataError: json['noDataError'] as String? ?? 'No data available.',
+      bookmarkAdded: json['bookmarkAdded'] as String? ?? 'Added to bookmarks',
+      bookmarkRemoved:
+          json['bookmarkRemoved'] as String? ?? 'Removed from bookmarks',
+      shortAnimationDuration: json['shortAnimationDuration'] as int? ?? 200,
+      mediumAnimationDuration: json['mediumAnimationDuration'] as int? ?? 300,
+      longAnimationDuration: json['longAnimationDuration'] as int? ?? 500,
+      splashWelcomeLetterSpacing:
+          (json['splashWelcomeLetterSpacing'] as num?)?.toDouble() ?? 1.0,
+      splashAppNameLetterSpacing:
+          (json['splashAppNameLetterSpacing'] as num?)?.toDouble() ?? 1.2,
+      newsApiKey: json['newsApiKey'] as String? ?? '',
+      noResultsFound: json['noResultsFound'] as String?,
+      noNewsForDate:
+          json['noNewsForDate'] as String? ?? 'No news found for this date',
+      textSizePreviewText:
+          json['textSizePreviewText'] as String? ??
+          'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\nIt has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.\n\nLorem Ipsum is simply dummy text of the printing and typesetting industry.',
+      getStartedImg: json['getStartedImg'] as String?,
+      splashAnimatedGif: json['splashAnimatedGif'] as String?,
+      appNameLogo: json['appNameLogo'] as String? ?? '',
+      languageImg: json['languageImg'] as String? ?? '',
+      headlineImg: json['headlineImg'] as String? ?? '',
+      listenIcon: json['listenIcon'] as String? ?? '',
+      drawerMenu: json['drawerMenu'] as List<dynamic>? ?? const [],
+    );
+  }
 }

@@ -61,6 +61,44 @@ class NewsRepository {
     return _apiService.fetchBreakingNews(nextPage: nextPage);
   }
 
+  /// Fetch archive news by date range
+  /// fromDate and toDate should be in format: 'YYYY-MM-DD'
+  Future<NewsResponse> fetchArchiveNews({
+    required String fromDate,
+    String? toDate,
+    String? query,
+    String? category,
+    String? language,
+    String? nextPage,
+  }) async {
+    try {
+      final response = await _apiService.fetchArchiveNews(
+        fromDate: fromDate,
+        toDate: toDate,
+        query: query,
+        category: category,
+        language: language,
+        nextPage: nextPage,
+      );
+
+      // Update bookmark status for fetched articles
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
+
+      return NewsResponse(
+        status: response.status,
+        totalResults: response.totalResults,
+        results: updatedResults,
+        nextPage: response.nextPage,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Toggle bookmark status
   Future<bool> toggleBookmark(NewsArticle article) async {
     try {
