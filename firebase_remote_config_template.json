@@ -77,6 +77,20 @@
       "description": "Welcome subtitle text",
       "valueType": "STRING"
     },
+    "categroy_selection_title": {
+      "defaultValue": {
+        "value": "Select news categories"
+      },
+      "description": "Select category title text",
+      "valueType": "STRING"
+    },
+    "categroy_selection_desc": {
+      "defaultValue": {
+        "value": "Select the categories that you are interested in to get personalized news"
+      },
+      "description": "Select category description text",
+      "valueType": "STRING"
+    },
     "primary_color": {
       "defaultValue": {
         "value": "#C70000"

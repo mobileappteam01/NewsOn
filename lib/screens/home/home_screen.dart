@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
-import '../../providers/tts_provider.dart';
+import '../../data/services/api_service.dart';
 import '../../core/widgets/app_drawer.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../categories/categories_tab.dart';
@@ -47,8 +47,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+
+      // Initialize API Service - Ensures base URL and endpoints are loaded
+      // This is a fallback in case initialization failed at app startup
+      // The service checks if already initialized, so it's safe to call multiple times
+      try {
+        final apiService = ApiService();
+        if (!apiService.isInitialized) {
+          await apiService.initialize();
+          debugPrint("✅ API Service initialized from Home Screen");
+        } else {
+          debugPrint("✅ API Service already initialized");
+        }
+      } catch (e) {
+        debugPrint("⚠️ API Service initialization failed in Home Screen: $e");
+        // Continue even if initialization fails - user can still use the app
+      }
+
+      // Initialize other providers
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<NewsProvider>().fetchBreakingNews();

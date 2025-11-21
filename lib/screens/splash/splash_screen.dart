@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/screens/auth/auth_screen.dart';
+import 'package:newson/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 
 import '../../data/models/remote_config_model.dart';
+import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -47,10 +49,25 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _goNext() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const AuthScreen()),
-    );
+    // Check if user has a valid token (is logged in)
+    final userService = UserService();
+    final token = userService.getToken();
+    
+    if (token != null && token.isNotEmpty) {
+      // User is logged in - route to HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(selectedCategories: []),
+        ),
+      );
+    } else {
+      // User is not logged in - route to AuthScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+      );
+    }
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {

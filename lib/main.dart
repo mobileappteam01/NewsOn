@@ -6,6 +6,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/api_constants.dart';
 import 'data/services/storage_service.dart';
+import 'data/services/api_service.dart';
+import 'data/services/user_service.dart';
+import 'data/services/fcm_service.dart';
 import 'providers/news_provider.dart';
 import 'providers/bookmark_provider.dart';
 import 'providers/tts_provider.dart';
@@ -30,6 +33,9 @@ void main() async {
   // Initialize local storage
   await StorageService.initialize();
 
+  // Initialize User Service - Load saved user data and token
+  await UserService().initialize();
+
   // Initialize Remote Config FIRST (required for API config)
   final remoteConfigProvider = RemoteConfigProvider();
   await remoteConfigProvider.initialize();
@@ -42,6 +48,39 @@ void main() async {
   // Optional: Use Realtime Database for real-time API config updates
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
   // await ApiConstants.initializeFromRealtimeDatabase();
+
+  // Initialize API Service - Fetch base URL and all endpoints at startup
+  try {
+    await ApiService().initialize();
+    debugPrint("✅ API Service initialized - Base URL and endpoints loaded");
+  } catch (e) {
+    debugPrint("❌ Failed to initialize API Service: $e");
+    // Continue app launch even if API service initialization fails
+    // The app can still work, but API calls will fail until initialized
+  }
+
+  // Initialize FCM Service - Request permissions and get token ready
+  // Note: This may fail on emulators without Google Play Services
+  // The app will continue to work without FCM token
+  try {
+    final fcmToken = await FcmService().getToken();
+    if (fcmToken != null) {
+      debugPrint("✅ FCM Token initialized: $fcmToken");
+    } else {
+      debugPrint(
+        "⚠️ FCM Token not available. "
+        "This is normal on emulators without Google Play Services. "
+        "The app will continue without push notifications.",
+      );
+    }
+  } catch (e) {
+    debugPrint("❌ Failed to initialize FCM Service: $e");
+    debugPrint(
+      "ℹ️ App will continue without FCM. "
+      "This is expected on some devices/emulators.",
+    );
+    // Continue app launch even if FCM initialization fails
+  }
 
   runApp(NewsOnApp(remoteConfigProvider: remoteConfigProvider));
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/services/storage_service.dart';
+import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
 import '../category_selection/category_selection_screen.dart';
 
@@ -22,11 +23,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   void initState() {
     super.initState();
-    final v = StorageService.getSetting(
-      AppConstants.userNameKey,
-      defaultValue: '',
-    );
-    _name = v is String ? v : '';
+    // Get nickname from UserService (from sign-up API response)
+    final userService = UserService();
+    final nickName = userService.getNickName();
+    
+    if (nickName != null && nickName.isNotEmpty) {
+      _name = nickName;
+    } else {
+      // Fallback to stored name if nickname not available
+      final v = StorageService.getSetting(
+        AppConstants.userNameKey,
+        defaultValue: '',
+      );
+      _name = v is String ? v : '';
+    }
   }
 
   void _finish() {
@@ -38,7 +48,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
-    final theme = Theme.of(context);
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
@@ -96,7 +105,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ),
 
                           Text(
-                            'JOHN PAUL',
+                            _name.toUpperCase(),
                             style: GoogleFonts.playfair(
                               color: config.primaryColorValue,
                               fontSize: 50,

@@ -1,17 +1,14 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
 import 'dart:convert';
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/utils/shared_functions.dart';
-import '../../core/utils/shared_variables.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../data/services/storage_service.dart';
+import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
-import '../category_selection/category_selection_screen.dart';
 import '../welcome/welcome_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -35,9 +32,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _skip() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const CategorySelectionScreen()),
-    );
+    // Only skip if content is loaded and we're not already on the last page
+    if (onBoardingContent.isNotEmpty && _index < onBoardingContent.length - 1) {
+      final lastPageIndex = onBoardingContent.length - 1;
+      _pageController.animateToPage(
+        lastPageIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    }
   }
 
   Future<void> _finish() async {
@@ -51,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    if (_index < 2) {
+    if (onBoardingContent.isNotEmpty && _index < onBoardingContent.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.ease,
@@ -62,9 +65,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   @override
-  @override
   void initState() {
     super.initState();
+    // Pre-fill name from temporary Google account data (if available)
+    final userService = UserService();
+    final googleAccountData = userService.getTempGoogleAccount();
+    if (googleAccountData != null) {
+      final displayName = googleAccountData['displayName'] as String? ?? '';
+      if (displayName.isNotEmpty) {
+        // Use first name from display name
+        final nameParts = displayName.split(' ');
+        final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+        if (firstName.isNotEmpty) {
+          _nameController.text = firstName;
+        }
+      }
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final configProvider = Provider.of<RemoteConfigProvider>(
         context,
@@ -110,7 +127,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final red = AppTheme.primaryRed;
-    final theme = Theme.of(context);
     return SafeArea(
       child: Scaffold(
         body: Stack(
@@ -142,18 +158,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 16),
               ],
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _skip,
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(color: red, fontWeight: FontWeight.w700),
+            // Only show Skip button if content is loaded and not on last page
+            if (onBoardingContent.isNotEmpty &&
+                _index < onBoardingContent.length - 1)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: onBoardingContent.isNotEmpty ? _skip : null,
+                    child: Text(
+                      'Skip',
+                      style: TextStyle(color: red, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),

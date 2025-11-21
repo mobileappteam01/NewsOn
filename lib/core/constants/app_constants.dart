@@ -14,6 +14,9 @@ class AppConstants {
   static const String countryKey = 'country';
   static const String userNameKey = 'user_name';
   static const String textSizeKey = 'news_text_size';
+  static const String userTokenKey = 'user_token';
+  static const String userDataKey = 'user_data';
+  static const String tempGoogleAccountKey = 'temp_google_account';
 
   // Text Size Settings
   static const double defaultTextSize = 16.0;
