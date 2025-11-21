@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>127869269941-ou3t16b5avnpdgj52hi0gnalgc7de76g.apps.googleusercontent.com</string>
+	<string>127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.127869269941-ou3t16b5avnpdgj52hi0gnalgc7de76g</string>
+	<string>com.googleusercontent.apps.127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.newson</string>
+	<string>com.app.newson</string>
 	<key>PROJECT_ID</key>
 	<string>newson-dea6b</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:127869269941:ios:e00e6e8ca680597aca4bfc</string>
+	<string>1:127869269941:ios:b4f754ab7decdd6cca4bfc</string>
 	<key>DATABASE_URL</key>
 	<string>https://newson-dea6b-default-rtdb.firebaseio.com</string>
 </dict>

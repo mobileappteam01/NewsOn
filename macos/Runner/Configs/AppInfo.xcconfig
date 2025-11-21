@@ -8,7 +8,7 @@
 PRODUCT_NAME = newson
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.newson
+PRODUCT_BUNDLE_IDENTIFIER = com.app.newson
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 com.app. All rights reserved.

@@ -4,14 +4,14 @@
       "android": {
         "default": {
           "projectId": "newson-dea6b",
-          "appId": "1:127869269941:android:b172efb70ab1c8b4ca4bfc",
+          "appId": "1:127869269941:android:67d8fb0ae0545978ca4bfc",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "ios": {
         "default": {
           "projectId": "newson-dea6b",
-          "appId": "1:127869269941:ios:e00e6e8ca680597aca4bfc",
+          "appId": "1:127869269941:ios:b4f754ab7decdd6cca4bfc",
           "uploadDebugSymbols": false,
           "fileOutput": "ios/Runner/GoogleService-Info.plist"
         }
@@ -20,8 +20,8 @@
         "lib/firebase_options.dart": {
           "projectId": "newson-dea6b",
           "configurations": {
-            "android": "1:127869269941:android:b172efb70ab1c8b4ca4bfc",
-            "ios": "1:127869269941:ios:e00e6e8ca680597aca4bfc"
+            "android": "1:127869269941:android:67d8fb0ae0545978ca4bfc",
+            "ios": "1:127869269941:ios:b4f754ab7decdd6cca4bfc"
           }
         }
       }
@@ -30,8 +30,5 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-  },
-  "remoteconfig": {
-    "template": "firebase_remote_config_template.json"
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:newson/screens/category_selection/category_selection_screen.dart';
+import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/screens/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
@@ -12,10 +12,9 @@ import 'providers/tts_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/remote_config_provider.dart';
-import "package:flutter_dotenv/flutter_dotenv.dart";
 
-final GoogleSignIn googleSignIn = GoogleSignIn.instance;
 String newsAPIKey = '';
+String baseURL = '';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +22,7 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp();
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
-  newsAPIKey = dotenv.env['NEWSDATA_API_KEY']?.toString() ?? '';
+  await fetchIPAddressAndURLS();
   debugPrint(
     "📝 News API key from .env: ${newsAPIKey.isNotEmpty ? 'Loaded' : 'Not found'}",
   );
@@ -73,11 +70,32 @@ class NewsOnApp extends StatelessWidget {
             theme: AppTheme.getLightTheme(configProvider.config),
             darkTheme: AppTheme.getDarkTheme(configProvider.config),
             themeMode: themeProvider.themeMode,
-            // home: const SplashScreen(),
-            home: CategorySelectionScreen(),
+            home: const SplashScreen(),
+            // home: CategorySelectionScreen(),
           );
         },
       ),
     );
   }
+}
+
+fetchIPAddressAndURLS() async {
+  debugPrint("Fetching IP address and URLs...");
+
+  await fetchDBData('ipAddress').then((val) async {
+    if (val != null) {
+      debugPrint("IP Address fetched: $val");
+      baseURL = val;
+      await fetchNewsDataAPIKey();
+    }
+  });
+}
+
+fetchNewsDataAPIKey() async {
+  await fetchDBData('newsDataAPIKey').then((val) {
+    if (val != null) {
+      debugPrint("IP Address fetched: $val");
+      newsAPIKey = val;
+    }
+  });
 }

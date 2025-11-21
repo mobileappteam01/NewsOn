@@ -1,85 +1,28 @@
 import 'dart:async';
-
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthService {
-  static final GoogleAuthService _instance = GoogleAuthService._internal();
-  factory GoogleAuthService() => _instance;
-  GoogleAuthService._internal();
-
-  /// Sign in with Google
   Future<GoogleSignInAccount?> signInWithGoogle() async {
-    final GoogleSignIn signIn = GoogleSignIn.instance;
-    unawaited(
-      signIn.initialize(clientId: "", serverClientId: "").then((_) {
-        signIn.authenticationEvents
-            .listen(_handleAuthenticationEvent)
-            .onError(_handleAuthenticationError);
+    final GoogleSignIn _googleSignIn = GoogleSignIn(
+      scopes: ['email'],
 
-        /// This example always uses the stream-based approach to determining
-        /// which UI state to show, rather than using the future returned here,
-        /// if any, to conditionally skip directly to the signed-in state.
-        signIn.attemptLightweightAuthentication();
-      }),
+      // ✔ Android client ID
+      clientId:
+          "127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com",
+
+      // ✔ Web client ID OPTIONAL (required for Firebase Auth)
+      serverClientId:
+          "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
     );
+
     try {
-      print('🔐 Starting Google Sign-In...');
-      await GoogleSignIn.instance.authenticate();
-    } catch (error) {
-      print('❌ Google Sign-In error: $error');
+      print("🔐 Starting Google Sign-In...");
+
+      final account = await _googleSignIn.signIn(); // ← WORKS PERFECTLY
+      return account;
+    } catch (e) {
+      print("❌ Google Sign-In Error: $e");
       return null;
     }
   }
-
-  Future<void> _handleAuthenticationEvent(
-    GoogleSignInAuthenticationEvent event,
-  ) async {
-    // #docregion CheckAuthorization
-    final GoogleSignInAccount? user = // ...
-    // #enddocregion CheckAuthorization
-    switch (event) {
-      GoogleSignInAuthenticationEventSignIn() => event.user,
-      GoogleSignInAuthenticationEventSignOut() => null,
-    };
-
-    // Check for existing authorization.
-    // #docregion CheckAuthorization
-    final GoogleSignInClientAuthorization? authorization = await user
-        ?.authorizationClient
-        .authorizationForScopes([]);
-    // #enddocregion CheckAuthorization
-
-    // If the user has already granted access to the required scopes, call the
-    // REST API.
-    if (user != null && authorization != null) {
-      // unawaited(_handleGetContact(user));
-    }
-  }
-
-  Future<void> _handleAuthenticationError(Object e) async {
-    // setState(() {
-    //   _currentUser = null;
-    //   _isAuthorized = false;
-    //   _errorMessage =
-    //       e is GoogleSignInException
-    //           ? _errorMessageFromSignInException(e)
-    //           : 'Unknown error: $e';
-    // });
-  }
-
-  /// Sign out from Google
-  Future<void> signOut() async {
-    try {
-      await GoogleSignIn.instance.disconnect();
-      print('✅ Google Sign-Out successful');
-    } catch (error) {
-      print('❌ Google Sign-Out error: $error');
-    }
-  }
-
-  /// Check if user is currently signed in
-
-  /// Get current user
-
-  /// Silent sign-in (if user previously signed in)
 }

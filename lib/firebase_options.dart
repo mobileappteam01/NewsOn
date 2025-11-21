@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDje4TYPs2XPUz6RAnkQMkafCycudv69vM',
-    appId: '1:127869269941:android:b172efb70ab1c8b4ca4bfc',
+    appId: '1:127869269941:android:67d8fb0ae0545978ca4bfc',
     messagingSenderId: '127869269941',
     projectId: 'newson-dea6b',
     databaseURL: 'https://newson-dea6b-default-rtdb.firebaseio.com',
@@ -60,13 +60,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCZQFDLcfyOXQqEt9M5mDSQkwMOBl643II',
-    appId: '1:127869269941:ios:e00e6e8ca680597aca4bfc',
+    appId: '1:127869269941:ios:b4f754ab7decdd6cca4bfc',
     messagingSenderId: '127869269941',
     projectId: 'newson-dea6b',
     databaseURL: 'https://newson-dea6b-default-rtdb.firebaseio.com',
     storageBucket: 'newson-dea6b.firebasestorage.app',
     androidClientId: '127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com',
-    iosClientId: '127869269941-ou3t16b5avnpdgj52hi0gnalgc7de76g.apps.googleusercontent.com',
-    iosBundleId: 'com.example.newson',
+    iosClientId: '127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm.apps.googleusercontent.com',
+    iosBundleId: 'com.app.newson',
   );
 }

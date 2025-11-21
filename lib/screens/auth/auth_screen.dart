@@ -23,39 +23,35 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // final account = await _googleAuthService.signInWithGoogle();
+      final account = await _googleAuthService.signInWithGoogle();
 
-      // if (account != null && mounted) {
-      //   // Sign-in successful
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(
-      //       content: Text(
-      //         '✅ Welcome, ${account.displayName ?? account.email}!',
-      //       ),
-      //       backgroundColor: Colors.green,
-      //       duration: const Duration(seconds: 3),
-      //     ),
-      //   );
+      if (account != null && mounted) {
+        // Sign-in successful`
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Welcome, ${account.displayName ?? account.email}!',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
 
-      //   // TODO: Navigate to home screen
-      //   // Navigator.pushReplacement(
-      //   //   context,
-      //   //   MaterialPageRoute(builder: (_) => const HomeScreen()),
-      //   // );
-      // } else if (mounted) {
-      //   // Sign-in cancelled or failed
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     const SnackBar(
-      //       content: Text('❌ Sign-in cancelled'),
-      //       backgroundColor: Colors.orange,
-      //       duration: Duration(seconds: 2),
-      //     ),
-      //   );
-      // }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+        // TODO: Navigate to home screen
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        // );
+      } else if (mounted) {
+        // Sign-in cancelled or failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Sign-in cancelled'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
