@@ -16,11 +16,44 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   final GoogleAuthService _googleAuthService = GoogleAuthService();
   final UserService _userService = UserService();
   bool _isLoading = false;
   String _loadingMessage = 'Connecting...';
+  late AnimationController _loadingAnimationController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadingAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(
+        parent: _loadingAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _loadingAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _loadingAnimationController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() {
@@ -29,20 +62,16 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
+      await _googleAuthService.googleSignOut();
       // Step 1: Google Sign-In
       final account = await _googleAuthService.signInWithGoogle();
 
+      // Check if user cancelled or if account is null
       if (account == null) {
-        // User cancelled sign-in
+        // User cancelled sign-in - this is normal, just dismiss loading
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Sign-in cancelled'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          // Don't show error message for cancellation - it's user's choice
         }
         return;
       }
@@ -59,15 +88,32 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         setState(() => _loadingMessage = 'Welcome!');
 
-        // Navigate to onboarding screen (sign-up will happen after category selection)
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
+        // Small delay to show "Welcome!" message
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          // Navigate to onboarding screen (sign-up will happen after category selection)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          );
+        }
       }
     } catch (e) {
+      // Only show error for actual errors, not cancellations
       if (mounted) {
         setState(() => _isLoading = false);
+
+        // Check if it's a cancellation error
+        final errorString = e.toString().toLowerCase();
+        if (errorString.contains('cancel') ||
+            errorString.contains('cancelled') ||
+            errorString.contains('sign_in_canceled')) {
+          // User cancelled - don't show error
+          return;
+        }
+
+        // Show error for actual failures
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Sign-in failed: ${e.toString()}'),
@@ -181,52 +227,180 @@ class _AuthScreenState extends State<AuthScreen> {
                 ],
               ),
             ),
-            // Beautiful Loading Overlay
+            // Beautiful Loading Overlay with Animations
             if (_isLoading)
-              Container(
-                color: Colors.black.withOpacity(0.7),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                color: Colors.black.withOpacity(0.85),
                 child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            config.primaryColorValue,
+                  child: AnimatedBuilder(
+                    animation: _loadingAnimationController,
+                    builder: (context, child) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 40),
+                        padding: const EdgeInsets.all(40),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.scaffoldBackgroundColor,
+                              theme.scaffoldBackgroundColor.withOpacity(0.95),
+                            ],
                           ),
-                          strokeWidth: 3,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          _loadingMessage,
-                          style: GoogleFonts.roboto(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.secondary,
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: config.primaryColorValue.withOpacity(0.3),
+                            width: 1.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: config.primaryColorValue.withOpacity(0.2),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                              offset: const Offset(0, 10),
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 40,
+                              spreadRadius: -5,
+                              offset: const Offset(0, 20),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Please wait...',
-                          style: GoogleFonts.roboto(
-                            fontSize: 12,
-                            color: theme.colorScheme.tertiary,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Animated Icon Container
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    config.primaryColorValue.withOpacity(0.2),
+                                    config.primaryColorValue.withOpacity(0.05),
+                                  ],
+                                ),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Pulsing ring
+                                  ScaleTransition(
+                                    scale: _pulseAnimation,
+                                    child: Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: config.primaryColorValue
+                                              .withOpacity(0.3),
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Progress indicator
+                                  SizedBox(
+                                    width: 60,
+                                    height: 60,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        config.primaryColorValue,
+                                      ),
+                                      strokeWidth: 4,
+                                      backgroundColor: config.primaryColorValue
+                                          .withOpacity(0.1),
+                                    ),
+                                  ),
+                                  // Icon
+                                  FadeTransition(
+                                    opacity: _fadeAnimation,
+                                    child: Icon(
+                                      Icons.cloud_done_rounded,
+                                      size: 32,
+                                      color: config.primaryColorValue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            // Loading message with animation
+                            FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Text(
+                                  _loadingMessage,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.secondary,
+                                    letterSpacing: 0.5,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Subtitle
+                            FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Text(
+                                  'Please wait while we set things up',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: theme.colorScheme.tertiary,
+                                    letterSpacing: 0.3,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            // Animated dots
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(3, (index) {
+                                return AnimatedBuilder(
+                                  animation: _loadingAnimationController,
+                                  builder: (context, child) {
+                                    final delay = index * 0.2;
+                                    final animationValue =
+                                        (_loadingAnimationController.value +
+                                            delay) %
+                                        1.0;
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: config.primaryColorValue
+                                            .withOpacity(
+                                              0.3 + (animationValue * 0.7),
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              }),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
               ),

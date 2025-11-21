@@ -23,19 +23,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   void initState() {
     super.initState();
-    // Get nickname from UserService (from sign-up API response)
-    final userService = UserService();
-    final nickName = userService.getNickName();
-    
-    if (nickName != null && nickName.isNotEmpty) {
-      _name = nickName;
+    // Priority 1: Get name from StorageService (saved in onboarding screen)
+    final savedName = StorageService.getSetting(
+      AppConstants.userNameKey,
+      defaultValue: '',
+    );
+
+    if (savedName is String && savedName.isNotEmpty) {
+      _name = savedName;
     } else {
-      // Fallback to stored name if nickname not available
-      final v = StorageService.getSetting(
-        AppConstants.userNameKey,
-        defaultValue: '',
-      );
-      _name = v is String ? v : '';
+      // Priority 2: Fallback to nickname from UserService (from sign-up API response)
+      final userService = UserService();
+      final nickName = userService.getNickName();
+      _name = nickName ?? '';
     }
   }
 

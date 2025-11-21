@@ -52,22 +52,26 @@ class _SplashScreenState extends State<SplashScreen>
     // Check if user has a valid token (is logged in)
     final userService = UserService();
     final token = userService.getToken();
-    
-    if (token != null && token.isNotEmpty) {
-      // User is logged in - route to HomeScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const HomeScreen(selectedCategories: []),
-        ),
-      );
-    } else {
-      // User is not logged in - route to AuthScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthScreen()),
-      );
-    }
+
+    // if (token != null && token.isNotEmpty) {
+    //   // User is logged in - route to HomeScreen
+    //   Navigator.pushReplacement(
+    //     context,
+    //     MaterialPageRoute(
+    //       builder: (context) => const HomeScreen(selectedCategories: []),
+    //     ),
+    //   );
+    // } else {
+    //   // User is not logged in - route to AuthScreen
+    //   Navigator.pushReplacement(
+    //     context,
+    //     MaterialPageRoute(builder: (context) => const AuthScreen()),
+    //   );
+    // }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
+    );
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
