@@ -95,16 +95,19 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                   child: ListView.builder(
                     shrinkWrap: true,
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: languageProvider.supportedLanguages.length,
+                    itemCount: languageProvider.languageNames.length,
                     itemBuilder: (context, index) {
-                      final language =
-                          languageProvider.supportedLanguages[index];
-                      final isSelected = language == _selectedLanguage;
+                      final languageName =
+                          languageProvider.languageNames[index];
+                      final locale = languageProvider.getLocaleFromName(
+                        languageName,
+                      );
+                      final isSelected = languageName == _selectedLanguage;
 
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            _selectedLanguage = language;
+                            _selectedLanguage = languageName;
                           });
                         },
                         child: Container(
@@ -140,7 +143,8 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                               ),
                               const SizedBox(width: 16),
                               Text(
-                                language,
+                                locale?.languageCode.toUpperCase() ??
+                                    languageName,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight:
@@ -182,19 +186,23 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_selectedLanguage != null) {
-                            languageProvider.setLanguage(_selectedLanguage!);
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Language changed to $_selectedLanguage',
-                                ),
-                                duration: const Duration(seconds: 2),
-                                backgroundColor: config.primaryColorValue,
-                              ),
+                            await languageProvider.setLanguage(
+                              _selectedLanguage!,
                             );
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Language changed to $_selectedLanguage',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: config.primaryColorValue,
+                                ),
+                              );
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

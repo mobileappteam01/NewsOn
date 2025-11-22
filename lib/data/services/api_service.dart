@@ -328,6 +328,7 @@ class ApiService {
     String endpointKey, {
     Map<String, dynamic>? body,
     Map<String, String>? headers,
+    String? bearerToken,
   }) async {
     try {
       final url = buildUrl(module, endpointKey);
@@ -335,11 +336,37 @@ class ApiService {
       debugPrint('🌐 PUT Request: $url');
       debugPrint('📦 Request Body: ${jsonEncode(body)}');
 
+      // Add Bearer token to headers if provided
+      final finalHeaders = <String, String>{};
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+      }
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+        debugPrint('🔐 Bearer token added to request');
+      }
+
       final response = await _dio.put(
         url,
         data: body,
-        options: Options(headers: headers),
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
       );
+
+      // Check if response indicates an error (4xx or 5xx)
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        // Handle as error response - extract server error message
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
 
       return _handleDioResponse(response);
     } on DioException catch (e) {

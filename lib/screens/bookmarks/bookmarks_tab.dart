@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/news_card.dart';
 import '../news_detail/news_detail_screen.dart';
 
@@ -37,7 +38,7 @@ class _BookmarksTabState extends State<BookmarksTab>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bookmarks'),
+        title: Text(LocalizationHelper.bookmarks(context)),
         actions: [
           if (bookmarkProvider.hasBookmarks)
             IconButton(
@@ -56,7 +57,7 @@ class _BookmarksTabState extends State<BookmarksTab>
               padding: const EdgeInsets.all(AppConstants.defaultPadding),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search bookmarks...',
+                  hintText: LocalizationHelper.search(context),
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.borderRadius),
@@ -106,12 +107,12 @@ class _BookmarksTabState extends State<BookmarksTab>
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No bookmarks yet',
+                              LocalizationHelper.bookmarks(context),
                               style: theme.textTheme.titleLarge,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Save articles to read them later',
+                              LocalizationHelper.bookmarks(context),
                               style: theme.textTheme.bodyMedium,
                             ),
                           ],
@@ -125,7 +126,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                                 const Icon(Icons.search_off, size: 64),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No results found',
+                                  LocalizationHelper.noResultsFound(context),
                                   style: theme.textTheme.titleLarge,
                                 ),
                               ],
@@ -160,14 +161,14 @@ class _BookmarksTabState extends State<BookmarksTab>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear all bookmarks?'),
+        title: Text(LocalizationHelper.clearAllBookmarks(context)),
         content: const Text(
           'This will remove all saved articles. This action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(LocalizationHelper.cancel(context)),
           ),
           TextButton(
             onPressed: () {
@@ -179,7 +180,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                 ),
               );
             },
-            child: const Text('Clear'),
+            child: Text(LocalizationHelper.clear(context)),
           ),
         ],
       ),

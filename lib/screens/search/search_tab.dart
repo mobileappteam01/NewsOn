@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/news_card.dart';
 import '../../core/widgets/loading_shimmer.dart';
 import '../../data/models/remote_config_model.dart';
@@ -96,7 +97,10 @@ class _SearchTabState extends State<SearchTab>
     final remoteConfig = context.read<RemoteConfigProvider>().config;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Search'), elevation: 0),
+      appBar: AppBar(
+        title: Text(LocalizationHelper.search(context)),
+        elevation: 0,
+      ),
       body: Column(
         children: [
           // Search bar
@@ -246,7 +250,10 @@ class _SearchTabState extends State<SearchTab>
                   color: theme.colorScheme.primary.withOpacity(0.5),
                 ),
                 const SizedBox(height: 16),
-                Text('Search for news', style: theme.textTheme.titleLarge),
+                Text(
+                  LocalizationHelper.search(context),
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'Enter keywords to find articles',

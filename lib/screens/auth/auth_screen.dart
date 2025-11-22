@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/remote_config_provider.dart';
@@ -21,7 +22,7 @@ class _AuthScreenState extends State<AuthScreen>
   final GoogleAuthService _googleAuthService = GoogleAuthService();
   final UserService _userService = UserService();
   bool _isLoading = false;
-  String _loadingMessage = 'Connecting...';
+  late String _loadingMessage;
   late AnimationController _loadingAnimationController;
   late Animation<double> _pulseAnimation;
   late Animation<double> _fadeAnimation;
@@ -29,6 +30,7 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
+    _loadingMessage = ''; // Will be set when context is available
     _loadingAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -58,7 +60,7 @@ class _AuthScreenState extends State<AuthScreen>
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isLoading = true;
-      _loadingMessage = 'Connecting to Google...';
+      _loadingMessage = LocalizationHelper.connectingToGoogle(context);
     });
 
     try {
@@ -86,7 +88,7 @@ class _AuthScreenState extends State<AuthScreen>
       await _userService.saveTempGoogleAccount(googleAccountData);
 
       if (mounted) {
-        setState(() => _loadingMessage = 'Welcome!');
+        setState(() => _loadingMessage = LocalizationHelper.welcome(context));
 
         // Small delay to show "Welcome!" message
         await Future.delayed(const Duration(milliseconds: 500));
@@ -116,7 +118,7 @@ class _AuthScreenState extends State<AuthScreen>
         // Show error for actual failures
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Sign-in failed: ${e.toString()}'),
+            content: Text('❌ ${LocalizationHelper.signInFailed(context, e.toString())}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -153,34 +155,17 @@ class _AuthScreenState extends State<AuthScreen>
                           padding: EdgeInsets.only(
                             top: MediaQuery.of(context).size.height / 5.5,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                config.authTitleText.replaceRange(4, 7, ""),
-                                style: GoogleFonts.playfair(
-                                  fontSize: config.splashWelcomeFontSize,
-                                  fontWeight:
-                                      config.splashWelcomeFontWeightValue,
-                                  color: theme.colorScheme.secondary,
-                                  letterSpacing:
-                                      config.splashWelcomeLetterSpacing,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              Text(
-                                config.authTitleText.substring(4),
-                                style: GoogleFonts.playfair(
-                                  fontSize: config.splashWelcomeFontSize,
-                                  fontWeight:
-                                      config.splashWelcomeFontWeightValue,
-                                  color: config.primaryColorValue,
-                                  letterSpacing:
-                                      config.splashWelcomeLetterSpacing,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                          child: Text(
+                            LocalizationHelper.signIn(context),
+                            style: GoogleFonts.playfair(
+                              fontSize: config.splashWelcomeFontSize,
+                              fontWeight:
+                                  config.splashWelcomeFontWeightValue,
+                              color: config.primaryColorValue,
+                              letterSpacing:
+                                  config.splashWelcomeLetterSpacing,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         giveHeight(6),
@@ -189,7 +174,7 @@ class _AuthScreenState extends State<AuthScreen>
                             left: MediaQuery.of(context).size.width / 3,
                           ),
                           child: Text(
-                            config.authDescText,
+                            LocalizationHelper.signInToYourAccount(context),
                             style: GoogleFonts.inriaSerif(
                               fontSize: 14,
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/category_card.dart';
 import '../../providers/news_provider.dart';
 import '../news_detail/news_detail_screen.dart';
@@ -27,7 +28,9 @@ class _CategoriesTabState extends State<CategoriesTab>
     final newsProvider = Provider.of<NewsProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Categories')),
+      appBar: AppBar(
+        title: Text(LocalizationHelper.categories(context)),
+      ),
       body: Column(
         children: [
           // Categories Grid

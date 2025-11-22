@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../core/utils/localization_helper.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 showRefreshButton() {
@@ -211,31 +212,41 @@ showSaveButton(bool isSaved, Function() onTapped) {
   );
 }
 
-showListenButton(RemoteConfigModel config, Function() onListenTapped) {
-  return GestureDetector(
-    onTap: () => onListenTapped(), // ✅ FIXED
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: config.primaryColorValue,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
-          giveWidth(12),
-          Text(
-            'Listen',
-            style: GoogleFonts.playfair(
-              color: Colors.white,
-              fontWeight: FontWeight.w400,
-              fontSize: 15,
-            ),
+showListenButton(RemoteConfigModel config, Function() onListenTapped, [BuildContext? context]) {
+  return Builder(
+    builder: (ctx) {
+      final buildContext = context ?? ctx;
+      return GestureDetector(
+        onTap: () => onListenTapped(), // ✅ FIXED
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: config.primaryColorValue,
           ),
-        ],
-      ),
-    ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
+              giveWidth(12),
+              Flexible(
+                child: Text(
+                  LocalizationHelper.listen(buildContext),
+                  style: GoogleFonts.playfair(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 15,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
   );
 }
 
@@ -306,8 +317,8 @@ Future fetchDBData(String key) async {
   }
 }
 
-showLogoutModalBottomSheet(context) {
-  RemoteConfigModel config = RemoteConfigModel();
+Widget showLogoutModalBottomSheet(BuildContext context) {
+  final RemoteConfigModel config = RemoteConfigModel();
   final theme = Theme.of(context);
   return Stack(
     children: [
@@ -315,7 +326,7 @@ showLogoutModalBottomSheet(context) {
         height: 180,
         width: double.infinity,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -334,17 +345,17 @@ showLogoutModalBottomSheet(context) {
                   for (int i = 0; i < 2; i++)
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context);
+                        Navigator.pop(context, i == 0); // Return true for Yes, false for No
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 32,
                           vertical: 12,
                         ),
-                        margin: EdgeInsets.only(left: 8),
+                        margin: const EdgeInsets.only(left: 8),
                         decoration: BoxDecoration(
-                          color: i == 0 ? Color(0xff505050) : Colors.white,
-                          border: Border.all(color: Color(0xff505050)),
+                          color: i == 0 ? const Color(0xff505050) : Colors.white,
+                          border: Border.all(color: const Color(0xff505050)),
                           borderRadius: BorderRadius.circular(25),
                         ),
                         child: Center(

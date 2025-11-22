@@ -1,0 +1,87 @@
+{
+  "@@locale": "fr",
+  "appName": "NewsOn",
+  "welcomeTo": "BIENVENUE DANS",
+  "swipeToGetStarted": "Glissez pour commencer",
+  "signIn": "Se connecter",
+  "signInToYourAccount": "Connectez-vous à votre compte",
+  "connecting": "Connexion...",
+  "connectingToGoogle": "Connexion à Google...",
+  "welcome": "Bienvenue !",
+  "signInCancelled": "Connexion annulée",
+  "signInFailed": "Échec de la connexion : {error}",
+  "@signInFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "skip": "Passer",
+  "continueText": "Continuer",
+  "enterYourName": "Entrez votre nom",
+  "selectCategories": "Sélectionner les Catégories",
+  "selectAtLeastOneCategory": "Veuillez sélectionner au moins une catégorie",
+  "categories": "Catégories",
+  "bookmarks": "Signets",
+  "search": "Rechercher",
+  "headlines": "Titres",
+  "newsFeed": "Fil d'actualité",
+  "retry": "Réessayer",
+  "noNewsAvailable": "Aucune actualité disponible",
+  "noResultsFound": "Aucun résultat trouvé",
+  "clearAllBookmarks": "Effacer tous les signets ?",
+  "cancel": "Annuler",
+  "clear": "Effacer",
+  "allBookmarksCleared": "Tous les signets ont été effacés",
+  "addedToBookmarks": "Ajouté aux signets",
+  "removedFromBookmarks": "Retiré des signets",
+  "noInternetConnection": "Aucune connexion Internet. Veuillez vérifier votre réseau.",
+  "serverError": "Erreur du serveur. Veuillez réessayer plus tard.",
+  "unknownError": "Une erreur inconnue s'est produite.",
+  "noDataAvailable": "Aucune donnée disponible.",
+  "error": "Erreur : {error}",
+  "@error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "textSizeSaved": "Taille du texte enregistrée",
+  "formSubmittedSuccessfully": "Formulaire soumis avec succès !",
+  "pleaseFixErrorsBeforeSaving": "Veuillez corriger les erreurs avant d'enregistrer",
+  "accountSettings": "Paramètres du Compte",
+  "appearanceSettings": "Apparence",
+  "applicationSettings": "Paramètres de l'Application",
+  "notifications": "Notifications",
+  "privacyPolicy": "Politique de Confidentialité",
+  "termsAndConditions": "Termes et Conditions",
+  "language": "Langue",
+  "logout": "Déconnexion",
+  "selectLanguage": "Sélectionner la Langue",
+  "english": "Anglais",
+  "hindi": "Hindi",
+  "spanish": "Espagnol",
+  "french": "Français",
+  "german": "Allemand",
+  "chinese": "Chinois",
+  "japanese": "Japonais",
+  "arabic": "Arabe",
+  "portuguese": "Portugais",
+  "russian": "Russe",
+  "loading": "Chargement...",
+  "somethingWentWrong": "Quelque chose s'est mal passé",
+  "tryAgain": "Réessayer",
+  "noNewsForDate": "Aucune actualité trouvée pour cette date",
+  "remoteConfigRefreshed": "Configuration distante actualisée avec succès !",
+  "failedToRefresh": "Échec de l'actualisation : {error}",
+  "@failedToRefresh": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}
+

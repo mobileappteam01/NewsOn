@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/screens/auth/auth_screen.dart';
 import 'package:newson/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
@@ -53,25 +54,21 @@ class _SplashScreenState extends State<SplashScreen>
     final userService = UserService();
     final token = userService.getToken();
 
-    // if (token != null && token.isNotEmpty) {
-    //   // User is logged in - route to HomeScreen
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(
-    //       builder: (context) => const HomeScreen(selectedCategories: []),
-    //     ),
-    //   );
-    // } else {
-    //   // User is not logged in - route to AuthScreen
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(builder: (context) => const AuthScreen()),
-    //   );
-    // }
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const AuthScreen()),
-    );
+    if (token != null && token.isNotEmpty) {
+      // User is logged in - route to HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(selectedCategories: []),
+        ),
+      );
+    } else {
+      // User is not logged in - route to AuthScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+      );
+    }
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
@@ -124,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            config.splashWelcomeText,
+                            LocalizationHelper.welcomeTo(context),
                             style: GoogleFonts.playfair(
                               fontSize: config.splashWelcomeFontSize,
                               fontWeight: config.splashWelcomeFontWeightValue,
@@ -136,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           giveHeight(6),
                           Text(
-                            config.appName,
+                            LocalizationHelper.appName(context),
                             style: GoogleFonts.playfair(
                               fontSize: config.splashAppNameFontSize,
                               fontWeight: config.splashAppNameFontWeightValue,
@@ -194,21 +191,20 @@ class _SwipeCta extends StatelessWidget {
           padding: const EdgeInsets.only(left: 20.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                config.splashSwipeText,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: config.splashSwipeFontSize,
-                  fontWeight: config.splashSwipeFontWeightValue,
+              Flexible(
+                child: Text(
+                  LocalizationHelper.swipeToGetStarted(context),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: config.splashSwipeFontSize,
+                    fontWeight: config.splashSwipeFontWeightValue,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-              ),
-              Row(
-                children: [
-                  Icon(Icons.chevron_right, color: primaryColor),
-                  Icon(Icons.chevron_right, color: primaryColor),
-                  Icon(Icons.chevron_right, color: primaryColor),
-                ],
               ),
             ],
           ),

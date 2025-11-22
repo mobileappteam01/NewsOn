@@ -4,6 +4,7 @@ import 'package:newson/widgets/news_grid_views.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/shared_functions.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
 
 class NotificationView extends StatefulWidget {
@@ -54,7 +55,7 @@ class _NotificationViewState extends State<NotificationView> {
 
                   // Title
                   Text(
-                    "Notifications",
+                    LocalizationHelper.notifications(context),
                     style: GoogleFonts.playfairDisplay(
                       color: config.primaryColorValue,
                       fontSize: 22,

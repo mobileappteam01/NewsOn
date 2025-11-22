@@ -12,6 +12,20 @@ class RemoteConfigService {
 
   final FirebaseRemoteConfig _remoteConfig = FirebaseRemoteConfig.instance;
 
+  /// Safe JSON decode with fallback
+  /// Returns default value if string is empty or parsing fails
+  dynamic _safeJsonDecode(String jsonString, dynamic defaultValue) {
+    if (jsonString.isEmpty || jsonString.trim().isEmpty) {
+      return defaultValue;
+    }
+    try {
+      return jsonDecode(jsonString);
+    } catch (e) {
+      print('⚠️ Error parsing JSON: $e, using default value');
+      return defaultValue;
+    }
+  }
+
   /// Initialize Remote Config with default values and fetch settings
   /// Loads cached data first, then tries to fetch new data
   Future<void> initialize() async {
@@ -180,6 +194,17 @@ class RemoteConfigService {
       // Letter Spacing
       'splash_welcome_letter_spacing': 1.0,
       'splash_app_name_letter_spacing': 1.2,
+
+      // Drawer Menu (as JSON string)
+      'drawer_menu': jsonEncode([
+        {'title': 'Account settings', 'icon': 'Icons.lock_outline', 'route': '/account_settings'},
+        {'title': 'Notification inbox', 'icon': 'Icons.notifications', 'badgeCount': 2, 'route': '/notifications'},
+        {'title': 'Bookmark', 'icon': 'Icons.bookmark_border', 'route': '/bookmarks'},
+        {'title': 'Application settings', 'icon': 'Icons.settings', 'route': '/settings'},
+        {'title': 'Terms of use', 'icon': 'Icons.description_outlined', 'route': '/terms'},
+        {'title': 'Privacy policy', 'icon': 'Icons.privacy_tip_outlined', 'route': '/privacy'},
+        {'title': 'News categories', 'icon': 'Icons.list_alt_outlined', 'route': '/categories'},
+      ]),
     };
   }
 
@@ -311,8 +336,8 @@ class RemoteConfigService {
       headlineImg: _remoteConfig.getString('headline_img'),
       listenIcon: _remoteConfig.getString('listen_img'),
 
-      // Drawer Content
-      drawerMenu: jsonDecode(_remoteConfig.getString('drawer_menu')),
+      // Drawer Content - Safe JSON parsing with fallback
+      drawerMenu: _safeJsonDecode(_remoteConfig.getString('drawer_menu'), []),
     );
   }
 

@@ -11,6 +11,7 @@ import '../../../providers/news_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../core/utils/shared_functions.dart';
+import '../../../core/utils/localization_helper.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
@@ -75,16 +76,20 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          text,
-          style: GoogleFonts.playfair(
-            color: theme.colorScheme.secondary,
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            text,
+            style: GoogleFonts.playfair(
+              color: theme.colorScheme.secondary,
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
         Text(
-          "View All",
+          LocalizationHelper.viewAll(context),
           style: GoogleFonts.inter(
             color: Color(0xFFC70000),
             fontSize: 12,
@@ -171,7 +176,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     vertical: 8,
                   ),
                   child: Text(
-                    'Breaking News',
+                    LocalizationHelper.breakingNews(context),
                     style: GoogleFonts.playfair(
                       color: Color(0xFFE31E24),
                       fontSize: 24,
@@ -319,7 +324,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     padding: const EdgeInsets.all(16.0),
                     child: Center(
                       child: Text(
-                        remoteConfig.noNewsForDate,
+                        LocalizationHelper.noNewsForDate(context),
                         style: TextStyle(
                           color: theme.colorScheme.secondary,
                           fontSize: 14,
@@ -374,7 +379,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     horizontal: 16,
                     vertical: 12,
                   ),
-                  child: showHeadingText("Flash News", theme),
+                  child: showHeadingText(
+                    LocalizationHelper.flashNews(context),
+                    theme,
+                  ),
                 ),
               ),
 
@@ -426,7 +434,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     children: [
-                      showHeadingText("Live Cricket Score", theme),
+                      showHeadingText(
+                        LocalizationHelper.liveCricketScore(context),
+                        theme,
+                      ),
                       const SizedBox(height: 12),
                       // card
                       Container(
@@ -656,7 +667,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     children: [
                       // "Hot News" label
                       Text(
-                        'Hot News',
+                        LocalizationHelper.hotNews(context),
                         style: GoogleFonts.inter(
                           color: Color(0xFFE31E24),
                           fontSize: 14,
@@ -920,9 +931,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     final selected = DateTime(date.year, date.month, date.day);
 
     if (selected == today) {
-      return 'Today';
+      return LocalizationHelper.today(context);
     } else if (selected == today.subtract(const Duration(days: 1))) {
-      return 'Yesterday';
+      return LocalizationHelper.yesterday(context);
     } else {
       return DateFormat('dd MMM yyyy').format(date);
     }

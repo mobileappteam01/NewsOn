@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../data/models/news_article.dart';
@@ -85,15 +86,20 @@ class NewsGridView extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
             giveWidth(12),
-            Text(
-              'Listen',
-              style: GoogleFonts.playfair(
-                color: Colors.white,
-                fontWeight: FontWeight.w400,
-                fontSize: 15,
+            Flexible(
+              child: Text(
+                LocalizationHelper.listen(context),
+                style: GoogleFonts.playfair(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w400,
+                  fontSize: 15,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],

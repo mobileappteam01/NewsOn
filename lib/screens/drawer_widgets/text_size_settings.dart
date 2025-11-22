@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/services/storage_service.dart';
 import '../../providers/remote_config_provider.dart';
@@ -37,7 +38,11 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("✅ Text size saved")));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(LocalizationHelper.textSizeSaved(context)),
+        ),
+      );
     }
   }
 
@@ -70,9 +75,9 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
                           ),
                         ),
                         onPressed: _saveTextSize,
-                        child: const Text(
-                          "Save",
-                          style: TextStyle(color: Colors.white),
+                        child: Text(
+                          LocalizationHelper.save(context),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ],
@@ -81,7 +86,7 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
 
                   // Title
                   Text(
-                    "Text size",
+                    LocalizationHelper.textSize(context),
                     style: GoogleFonts.playfairDisplay(
                       color: config.primaryColorValue,
                       fontSize: 22,

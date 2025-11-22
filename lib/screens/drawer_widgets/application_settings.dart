@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
 import 'text_size_settings.dart';
 import 'appearance_settings.dart';
@@ -36,7 +37,7 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
 
                   // 🔹 Title
                   Text(
-                    "Application settings",
+                    LocalizationHelper.applicationSettings(context),
                     style: GoogleFonts.playfairDisplay(
                       color: config.primaryColorValue,
                       fontSize: 22,
@@ -47,7 +48,7 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
 
                   // 🔹 Settings Options
                   _buildSettingItem(
-                    title: "Text size",
+                    title: LocalizationHelper.textSize(context),
                     theme: theme,
                     onTap:
                         () => Navigator.push(
@@ -59,7 +60,7 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                   ),
                   _divider(),
                   _buildSettingItem(
-                    title: "Appearance",
+                    title: LocalizationHelper.appearance(context),
                     theme: theme,
                     onTap:
                         () => Navigator.push(

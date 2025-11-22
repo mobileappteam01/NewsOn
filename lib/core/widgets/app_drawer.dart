@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/screens/category_selection/category_selection_screen.dart';
 import 'package:newson/screens/drawer_widgets/account_settings.dart';
 import 'package:newson/screens/drawer_widgets/application_settings.dart';
@@ -85,7 +86,10 @@ class AppDrawer extends StatelessWidget {
                         _buildMenuItem(
                           context,
                           icon: getIconFromString(config.drawerMenu[i]['icon']),
-                          title: config.drawerMenu[i]['title'].toString(),
+                          title: LocalizationHelper.getDrawerMenuTitle(
+                            context,
+                            i,
+                          ),
                           onTap: () {
                             Navigator.pop(context); // Close the drawer first
                             Future.delayed(
@@ -107,7 +111,9 @@ class AppDrawer extends StatelessWidget {
                                                 ? TermsAndConditions()
                                                 : i == 5
                                                 ? PrivacyPolicy()
-                                                : CategorySelectionScreen(),
+                                                : const CategorySelectionScreen(
+                                                  isFromSideMenu: true,
+                                                ),
                                   ),
                                 );
                               },
@@ -161,7 +167,7 @@ class AppDrawer extends StatelessWidget {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Select Language'),
+            title: Text(LocalizationHelper.selectLanguage(context)),
             content: SizedBox(
               width: double.maxFinite,
               child: ListView.builder(
@@ -171,8 +177,8 @@ class AppDrawer extends StatelessWidget {
                   final language = languageProvider.supportedLanguages[index];
 
                   return RadioListTile<String>(
-                    title: Text(language),
-                    value: language,
+                    title: Text(language!.languageCode),
+                    value: language.languageCode,
                     groupValue: languageProvider.selectedLanguage,
                     activeColor: const Color(0xFFE31E24),
                     onChanged: (value) {
@@ -188,7 +194,7 @@ class AppDrawer extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(LocalizationHelper.cancel(context)),
               ),
             ],
           ),
@@ -227,24 +233,26 @@ class AppDrawer extends StatelessWidget {
                 ),
               ],
             ),
-            content: const Column(
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Version: 1.0.0'),
-                SizedBox(height: 8),
-                Text('Your personalized news application'),
-                SizedBox(height: 16),
+                Text('${LocalizationHelper.version(context)}: 1.0.0'),
+                const SizedBox(height: 8),
+                Text(
+                  LocalizationHelper.yourPersonalizedNewsApplication(context),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   '© 2025 NewsOn. All rights reserved.',
-                  style: TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
+                child: Text(LocalizationHelper.close(context)),
               ),
             ],
           ),

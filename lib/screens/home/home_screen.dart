@@ -1,11 +1,14 @@
 // ignore_for_file: deprecated_member_use, unused_local_variable
 import 'package:flutter/material.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/user_service.dart';
+import '../../data/services/profile_service.dart';
 import '../../core/widgets/app_drawer.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../categories/categories_tab.dart';
@@ -72,7 +75,59 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<BookmarkProvider>().loadBookmarks();
       context.read<RemoteConfigProvider>().initialize();
+
+      // Update FCM Token when home page initializes
+      _updateFCMToken();
+
+      // Fetch user profile when home page initializes
+      _fetchUserProfile();
     });
+  }
+
+  /// Update FCM Token on home page initialization
+  Future<void> _updateFCMToken() async {
+    try {
+      final userService = UserService();
+      if (!userService.isLoggedIn) {
+        debugPrint('⚠️ User not logged in, skipping FCM token update');
+        return;
+      }
+
+      final profileService = ProfileService();
+      final response = await profileService.updateFCMToken();
+
+      if (response.success) {
+        debugPrint('✅ FCM Token updated successfully from Home Screen');
+      } else {
+        debugPrint('⚠️ FCM Token update failed: ${response.error}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating FCM Token from Home Screen: $e');
+      // Don't show error to user - this is a background operation
+    }
+  }
+
+  /// Fetch User Profile on home page initialization
+  Future<void> _fetchUserProfile() async {
+    try {
+      final userService = UserService();
+      if (!userService.isLoggedIn) {
+        debugPrint('⚠️ User not logged in, skipping user profile fetch');
+        return;
+      }
+
+      final profileService = ProfileService();
+      final response = await profileService.getUserProfile();
+
+      if (response.success) {
+        debugPrint('✅ User profile fetched successfully from Home Screen');
+      } else {
+        debugPrint('⚠️ User profile fetch failed: ${response.error}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching user profile from Home Screen: $e');
+      // Don't show error to user - this is a background operation
+    }
   }
 
   @override
@@ -210,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildBottomNavItem(
                 Icon(Icons.menu, color: theme.colorScheme.secondary),
-                'Menu',
+                LocalizationHelper.menu(context),
                 onTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
               Container(
@@ -228,13 +283,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? config.primaryColorValue
                                 : theme.colorScheme.secondary,
                       ),
-                      'Today',
+                      LocalizationHelper.today(context),
                       onTap: () => setState(() => _currentIndex = 0),
                       isSelected: _currentIndex == 0,
                     ),
                     _buildBottomNavItem(
                       Image.network(config.headlineImg, height: 24),
-                      'Headline',
+                      LocalizationHelper.headlines(context),
                       onTap: () => setState(() => _currentIndex = 1),
                       isSelected: _currentIndex == 1,
                     ),
@@ -246,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? config.primaryColorValue
                                 : theme.colorScheme.secondary,
                       ),
-                      'For Later',
+                      LocalizationHelper.forLater(context),
                       onTap: () => setState(() => _currentIndex = 2),
                       isSelected: _currentIndex == 2,
                     ),
@@ -261,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? config.primaryColorValue
                           : theme.colorScheme.secondary,
                 ),
-                'Search',
+                LocalizationHelper.search(context),
                 onTap: () => setState(() => _currentIndex = 3),
               ),
             ],

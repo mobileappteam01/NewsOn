@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/category_card.dart';
@@ -11,12 +12,20 @@ import '../../data/services/category_api_service.dart';
 import '../../data/services/fcm_service.dart';
 import '../../data/services/storage_service.dart';
 import '../../data/services/user_service.dart';
+import '../../data/services/profile_service.dart';
+import '../../data/services/api_service.dart';
 import '../../providers/remote_config_provider.dart';
 import '../home/home_screen.dart';
 
-/// Category selection screen - First screen of the app
+/// Category selection screen - First screen of the app or from side menu
 class CategorySelectionScreen extends StatefulWidget {
-  const CategorySelectionScreen({super.key});
+  /// Whether this screen is opened from side menu (existing user updating preferences)
+  final bool isFromSideMenu;
+
+  const CategorySelectionScreen({
+    super.key,
+    this.isFromSideMenu = false,
+  });
 
   @override
   State<CategorySelectionScreen> createState() =>
@@ -29,6 +38,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   final AuthApiService _authApiService = AuthApiService();
   final UserService _userService = UserService();
   final FcmService _fcmService = FcmService();
+  final ProfileService _profileService = ProfileService();
 
   List<CategoryModel> _categories = [];
   bool _isLoading = true;
@@ -38,6 +48,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    // If coming from side menu, load user's existing categories
+    if (widget.isFromSideMenu) {
+      _loadUserCategories();
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -74,6 +88,47 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
+  /// Load user's existing categories and pre-select them
+  Future<void> _loadUserCategories() async {
+    try {
+      // Check if API Service is initialized
+      final apiService = ApiService();
+      if (!apiService.isInitialized) {
+        await apiService.initialize();
+      }
+
+      // Fetch user profile
+      final response = await _profileService.getUserProfile();
+
+      if (response.success && response.data != null) {
+        // Response structure: {"message": "success", "data": {...userData...}}
+        final responseMap = response.data as Map<String, dynamic>;
+        final userData = responseMap['data'] as Map<String, dynamic>?;
+
+        if (userData != null && mounted) {
+          // Get user's existing categories
+          final userCategories = userData['category'] as List?;
+          if (userCategories != null && userCategories.isNotEmpty) {
+            // Filter out null values and convert to String IDs
+            final categoryIds = userCategories
+                .where((id) => id != null)
+                .map((id) => id.toString())
+                .toList();
+
+            debugPrint('📦 User has existing categories: $categoryIds');
+
+            // Pre-select categories
+            setState(() {
+              _selectedCategoryIds.addAll(categoryIds);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading user categories: $e');
+    }
+  }
+
   Future<void> _selectCategories() async {
     if (_selectedCategoryIds.isEmpty) return;
 
@@ -95,78 +150,134 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     );
 
     try {
-      // Step 1: Get nickname from onboarding (stored in StorageService)
-      final nickName =
-          StorageService.getSetting(AppConstants.userNameKey) as String? ?? '';
-
-      // Step 2: Get Google account data (stored temporarily)
-      final googleAccountData = _userService.getTempGoogleAccount();
-      if (googleAccountData == null) {
-        throw Exception('Google account data not found. Please sign in again.');
-      }
-
-      // Step 3: Get FCM token
-      final fcmToken = await _fcmService.getToken();
-
-      // Step 4: Get selected category IDs as array
+      // Get selected category IDs as array
       final selectedCategoryIds = _selectedCategoryIds.toList();
 
-      // Step 5: Call Sign-Up API
-      final signUpResponse = await _authApiService.signUp(
-        googleAccountData: googleAccountData,
-        nickName: nickName,
-        fcmToken: fcmToken,
-        categoryIds: selectedCategoryIds,
-      );
+      // If coming from side menu, update profile with new categories
+      if (widget.isFromSideMenu) {
+        // Check if API Service is initialized
+        final apiService = ApiService();
+        if (!apiService.isInitialized) {
+          await apiService.initialize();
+        }
 
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        // Get user data
+        final userData = _userService.getUserData();
+        if (userData == null) {
+          throw Exception('User data not found. Please sign in again.');
+        }
 
-        if (signUpResponse.success) {
-          // Extract token and user data from response
-          final responseData = signUpResponse.data as Map<String, dynamic>?;
+        // Update profile with new categories
+        final updateResponse = await _profileService.updateProfile(
+          nickName: userData['nickName']?.toString() ?? '',
+          email: userData['email']?.toString() ?? '',
+          firstName: userData['firstName']?.toString() ?? '',
+          secondName: userData['secondName']?.toString() ?? '',
+          personalDetails: userData['personalDetails'] is Map
+              ? userData['personalDetails'] as Map
+              : null,
+          mobileNumber: userData['mobileNumber']?.toString(),
+          city: userData['city']?.toString(),
+          pincode: userData['pincode']?.toString(),
+          country: userData['country']?.toString(),
+          category: selectedCategoryIds,
+        );
 
-          if (responseData != null) {
-            final token = responseData['token'] as String?;
-            final userData = responseData['data'] as Map<String, dynamic>?;
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
 
-            if (token != null && userData != null) {
-              // Save user data and token
-              await _userService.saveUserData(token: token, userData: userData);
+          if (updateResponse.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ Categories updated successfully'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            // Navigate back
+            Navigator.of(context).pop();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ ${updateResponse.error ?? 'Failed to update categories'}'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } else {
+        // New user flow - Sign up
+        // Step 1: Get nickname from onboarding (stored in StorageService)
+        final nickName =
+            StorageService.getSetting(AppConstants.userNameKey) as String? ?? '';
 
-              // Clear temporary Google account data
-              await _userService.clearTempGoogleAccount();
+        // Step 2: Get Google account data (stored temporarily)
+        final googleAccountData = _userService.getTempGoogleAccount();
+        if (googleAccountData == null) {
+          throw Exception('Google account data not found. Please sign in again.');
+        }
 
-              // Get selected category names for HomeScreen
-              final selectedCategoryNames =
-                  _categories
-                      .where((cat) => _selectedCategoryIds.contains(cat.id))
-                      .map((cat) => cat.categoryName)
-                      .toList();
+        // Step 3: Get FCM token
+        final fcmToken = await _fcmService.getToken();
 
-              // Navigate to home screen
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder:
-                      (context) =>
-                          HomeScreen(selectedCategories: selectedCategoryNames),
-                ),
-              );
+        // Step 4: Call Sign-Up API
+        final signUpResponse = await _authApiService.signUp(
+          googleAccountData: googleAccountData,
+          nickName: nickName,
+          fcmToken: fcmToken,
+          categoryIds: selectedCategoryIds,
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+
+          if (signUpResponse.success) {
+            // Extract token and user data from response
+            final responseData = signUpResponse.data as Map<String, dynamic>?;
+
+            if (responseData != null) {
+              final token = responseData['token'] as String?;
+              final userData = responseData['data'] as Map<String, dynamic>?;
+
+              if (token != null && userData != null) {
+                // Save user data and token
+                await _userService.saveUserData(token: token, userData: userData);
+
+                // Clear temporary Google account data
+                await _userService.clearTempGoogleAccount();
+
+                // Get selected category names for HomeScreen
+                final selectedCategoryNames =
+                    _categories
+                        .where((cat) => _selectedCategoryIds.contains(cat.id))
+                        .map((cat) => cat.categoryName)
+                        .toList();
+
+                // Navigate to home screen
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            HomeScreen(selectedCategories: selectedCategoryNames),
+                  ),
+                );
+              } else {
+                throw Exception('Invalid response: missing token or user data');
+              }
             } else {
-              throw Exception('Invalid response: missing token or user data');
+              throw Exception('Invalid response format');
             }
           } else {
-            throw Exception('Invalid response format');
+            // Sign-up failed
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ ${signUpResponse.message}'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
           }
-        } else {
-          // Sign-up failed
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⚠️ ${signUpResponse.message}'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
-          );
         }
       }
     } catch (e) {
@@ -214,7 +325,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             ElevatedButton.icon(
               onPressed: _loadCategories,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(LocalizationHelper.retry(context)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: config.primaryColorValue,
                 foregroundColor: Colors.white,
@@ -252,7 +363,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                     children: [
                       // Title
                       Text(
-                        config.selectCategoryTitle,
+                        LocalizationHelper.selectCategoryTitle(context),
                         style: GoogleFonts.playfair(
                           color: config.primaryColorValue,
                           fontSize: config.displayMediumFontSize,
@@ -261,7 +372,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                       ),
                       giveHeight(12),
                       Text(
-                        config.selectCategoryDesc,
+                        LocalizationHelper.selectCategoryDesc(context),
                         style: GoogleFonts.playfair(
                           color: theme.colorScheme.tertiary,
                           fontSize: config.displaySmallFontSize,
@@ -315,10 +426,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                           ),
                 ),
 
-                // Continue Button
+                // Continue/Update Preferences Button
                 _BottomCta(
                   red: config.primaryColorValue,
-                  label: 'Continue',
+                  label: widget.isFromSideMenu ? 'Update Preferences' : 'Continue',
                   onTap:
                       _selectedCategoryIds.isEmpty
                           ? null

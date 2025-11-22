@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/l10n/app_localizations.dart';
 import 'package:newson/screens/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,9 +28,6 @@ void main() async {
   await Firebase.initializeApp();
 
   await fetchIPAddressAndURLS();
-  debugPrint(
-    "📝 News API key from .env: ${newsAPIKey.isNotEmpty ? 'Loaded' : 'Not found'}",
-  );
 
   // Initialize local storage
   await StorageService.initialize();
@@ -101,14 +100,31 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
       ],
-      child: Consumer2<ThemeProvider, RemoteConfigProvider>(
-        builder: (context, themeProvider, configProvider, child) {
+      child: Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
+        builder: (
+          context,
+          themeProvider,
+          languageProvider,
+          configProvider,
+          child,
+        ) {
           return MaterialApp(
             title: configProvider.config.appName,
             debugShowCheckedModeBanner: false,
             theme: AppTheme.getLightTheme(configProvider.config),
             darkTheme: AppTheme.getDarkTheme(configProvider.config),
             themeMode: themeProvider.themeMode,
+
+            // Localization configuration
+            locale: languageProvider.locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: languageProvider.supportedLocales,
+
             home: const SplashScreen(),
             // home: CategorySelectionScreen(),
           );

@@ -1,0 +1,487 @@
+{
+  "@@locale": "en",
+  "appName": "NewsOn",
+  "@appName": {
+    "description": "Application name"
+  },
+  "welcomeTo": "WELCOME TO",
+  "@welcomeTo": {
+    "description": "Welcome text on splash screen"
+  },
+  "swipeToGetStarted": "Swipe To Get Started",
+  "@swipeToGetStarted": {
+    "description": "Swipe button text on splash screen"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "signInToYourAccount": "Sign in to your account",
+  "@signInToYourAccount": {
+    "description": "Sign in description text"
+  },
+  "connecting": "Connecting...",
+  "@connecting": {
+    "description": "Loading message when connecting"
+  },
+  "connectingToGoogle": "Connecting to Google...",
+  "@connectingToGoogle": {
+    "description": "Loading message when connecting to Google"
+  },
+  "welcome": "Welcome!",
+  "@welcome": {
+    "description": "Welcome message"
+  },
+  "signInCancelled": "Sign-in cancelled",
+  "@signInCancelled": {
+    "description": "Message when user cancels sign-in"
+  },
+  "signInFailed": "Sign-in failed: {error}",
+  "@signInFailed": {
+    "description": "Error message when sign-in fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "skip": "Skip",
+  "@skip": {
+    "description": "Skip button text"
+  },
+  "continueText": "Continue",
+  "@continueText": {
+    "description": "Continue button text"
+  },
+  "enterYourName": "Enter your name",
+  "@enterYourName": {
+    "description": "Placeholder text for name input"
+  },
+  "selectCategories": "Select Categories",
+  "@selectCategories": {
+    "description": "Title for category selection screen"
+  },
+  "selectAtLeastOneCategory": "Please select at least one category",
+  "@selectAtLeastOneCategory": {
+    "description": "Error message when no category is selected"
+  },
+  "categories": "Categories",
+  "@categories": {
+    "description": "Categories tab title"
+  },
+  "bookmarks": "Bookmarks",
+  "@bookmarks": {
+    "description": "Bookmarks tab title"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Search tab title"
+  },
+  "headlines": "Headlines",
+  "@headlines": {
+    "description": "Headlines tab title"
+  },
+  "newsFeed": "News Feed",
+  "@newsFeed": {
+    "description": "News feed tab title"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "noNewsAvailable": "No news available",
+  "@noNewsAvailable": {
+    "description": "Message when no news is available"
+  },
+  "noResultsFound": "No results found",
+  "@noResultsFound": {
+    "description": "Message when search returns no results"
+  },
+  "clearAllBookmarks": "Clear all bookmarks?",
+  "@clearAllBookmarks": {
+    "description": "Confirmation dialog title for clearing bookmarks"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "clear": "Clear",
+  "@clear": {
+    "description": "Clear button text"
+  },
+  "allBookmarksCleared": "All bookmarks cleared",
+  "@allBookmarksCleared": {
+    "description": "Success message when bookmarks are cleared"
+  },
+  "addedToBookmarks": "Added to bookmarks",
+  "@addedToBookmarks": {
+    "description": "Success message when article is bookmarked"
+  },
+  "removedFromBookmarks": "Removed from bookmarks",
+  "@removedFromBookmarks": {
+    "description": "Success message when bookmark is removed"
+  },
+  "noInternetConnection": "No internet connection. Please check your network.",
+  "@noInternetConnection": {
+    "description": "Error message for no internet connection"
+  },
+  "serverError": "Server error. Please try again later.",
+  "@serverError": {
+    "description": "Error message for server error"
+  },
+  "unknownError": "An unknown error occurred.",
+  "@unknownError": {
+    "description": "Error message for unknown error"
+  },
+  "noDataAvailable": "No data available.",
+  "@noDataAvailable": {
+    "description": "Message when no data is available"
+  },
+  "error": "Error: {error}",
+  "@error": {
+    "description": "Generic error message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "textSizeSaved": "Text size saved",
+  "@textSizeSaved": {
+    "description": "Success message when text size is saved"
+  },
+  "formSubmittedSuccessfully": "Form submitted successfully!",
+  "@formSubmittedSuccessfully": {
+    "description": "Success message when form is submitted"
+  },
+  "pleaseFixErrorsBeforeSaving": "Please fix errors before saving",
+  "@pleaseFixErrorsBeforeSaving": {
+    "description": "Error message when form has validation errors"
+  },
+  "accountSettings": "Account Settings",
+  "@accountSettings": {
+    "description": "Account settings menu item"
+  },
+  "appearanceSettings": "Appearance",
+  "@appearanceSettings": {
+    "description": "Appearance settings menu item"
+  },
+  "applicationSettings": "Application Settings",
+  "@applicationSettings": {
+    "description": "Application settings menu item"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications menu item"
+  },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy policy menu item"
+  },
+  "termsAndConditions": "Terms and Conditions",
+  "@termsAndConditions": {
+    "description": "Terms and conditions menu item"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language menu item"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout menu item"
+  },
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Language selection dialog title"
+  },
+  "english": "English",
+  "@english": {
+    "description": "English language name"
+  },
+  "hindi": "Hindi",
+  "@hindi": {
+    "description": "Hindi language name"
+  },
+  "tamil": "Tamil",
+  "@tamil": {
+    "description": "Tamil language name"
+  },
+  "spanish": "Spanish",
+  "@spanish": {
+    "description": "Spanish language name"
+  },
+  "french": "French",
+  "@french": {
+    "description": "French language name"
+  },
+  "german": "German",
+  "@german": {
+    "description": "German language name"
+  },
+  "chinese": "Chinese",
+  "@chinese": {
+    "description": "Chinese language name"
+  },
+  "japanese": "Japanese",
+  "@japanese": {
+    "description": "Japanese language name"
+  },
+  "arabic": "Arabic",
+  "@arabic": {
+    "description": "Arabic language name"
+  },
+  "portuguese": "Portuguese",
+  "@portuguese": {
+    "description": "Portuguese language name"
+  },
+  "russian": "Russian",
+  "@russian": {
+    "description": "Russian language name"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Generic loading message"
+  },
+  "somethingWentWrong": "Something went wrong",
+  "@somethingWentWrong": {
+    "description": "Generic error message"
+  },
+  "tryAgain": "Try Again",
+  "@tryAgain": {
+    "description": "Try again button text"
+  },
+  "noNewsForDate": "No news found for this date",
+  "@noNewsForDate": {
+    "description": "Message when no news is found for a specific date"
+  },
+  "remoteConfigRefreshed": "Remote Config refreshed successfully!",
+  "@remoteConfigRefreshed": {
+    "description": "Success message when remote config is refreshed"
+  },
+  "failedToRefresh": "Failed to refresh: {error}",
+  "@failedToRefresh": {
+    "description": "Error message when remote config refresh fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeTitleText": "Welcome",
+  "@welcomeTitleText": {
+    "description": "Welcome screen title text"
+  },
+  "welcomeDescText": "Get ready to explore the world of news!",
+  "@welcomeDescText": {
+    "description": "Welcome screen description text"
+  },
+  "selectCategoryTitle": "Select Your Interests",
+  "@selectCategoryTitle": {
+    "description": "Category selection screen title"
+  },
+  "selectCategoryDesc": "Choose the categories you want to follow",
+  "@selectCategoryDesc": {
+    "description": "Category selection screen description"
+  },
+  "menu": "Menu",
+  "@menu": {
+    "description": "Bottom navigation menu label"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Bottom navigation today label"
+  },
+  "headlines": "Headlines",
+  "@headlines": {
+    "description": "Bottom navigation headlines label"
+  },
+  "forLater": "For Later",
+  "@forLater": {
+    "description": "Bottom navigation for later label"
+  },
+  "accountSettings": "Account Settings",
+  "@accountSettings": {
+    "description": "Account settings menu item"
+  },
+  "notificationInbox": "Notification Inbox",
+  "@notificationInbox": {
+    "description": "Notification inbox menu item"
+  },
+  "bookmark": "Bookmark",
+  "@bookmark": {
+    "description": "Bookmark menu item"
+  },
+  "applicationSettings": "Application Settings",
+  "@applicationSettings": {
+    "description": "Application settings menu item"
+  },
+  "termsOfUse": "Terms of Use",
+  "@termsOfUse": {
+    "description": "Terms of use menu item"
+  },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy policy menu item"
+  },
+  "newsCategories": "News Categories",
+  "@newsCategories": {
+    "description": "News categories menu item"
+  },
+  "listen": "Listen",
+  "@listen": {
+    "description": "Listen button text"
+  },
+  "userName": "User name",
+  "@userName": {
+    "description": "User name section title"
+  },
+  "enterYourFirstName": "Enter Your First Name *",
+  "@enterYourFirstName": {
+    "description": "First name input label"
+  },
+  "enterYourSecondName": "Enter Your Second Name",
+  "@enterYourSecondName": {
+    "description": "Second name input label"
+  },
+  "firstNameRequired": "First name is required",
+  "@firstNameRequired": {
+    "description": "First name validation error"
+  },
+  "emailId": "Email-ID",
+  "@emailId": {
+    "description": "Email section title"
+  },
+  "enterYourEmailId": "Enter Your Email ID",
+  "@enterYourEmailId": {
+    "description": "Email input label"
+  },
+  "emailRequired": "Email is required",
+  "@emailRequired": {
+    "description": "Email validation error"
+  },
+  "enterValidEmail": "Enter a valid email",
+  "@enterValidEmail": {
+    "description": "Email format validation error"
+  },
+  "personalDetails": "Personal details",
+  "@personalDetails": {
+    "description": "Personal details section title"
+  },
+  "enterMobileNumber": "Enter mobile number",
+  "@enterMobileNumber": {
+    "description": "Mobile number input label"
+  },
+  "mobileNumberRequired": "Mobile number is required",
+  "@mobileNumberRequired": {
+    "description": "Mobile number validation error"
+  },
+  "enterValidMobileNumber": "Enter a valid 10-digit mobile number",
+  "@enterValidMobileNumber": {
+    "description": "Mobile number format validation error"
+  },
+  "selectCity": "Select City",
+  "@selectCity": {
+    "description": "City dropdown hint"
+  },
+  "pleaseSelectCity": "Please select a city",
+  "@pleaseSelectCity": {
+    "description": "City selection validation error"
+  },
+  "enterPincode": "Enter Pincode",
+  "@enterPincode": {
+    "description": "Pincode input label"
+  },
+  "pincodeRequired": "Pincode is required",
+  "@pincodeRequired": {
+    "description": "Pincode validation error"
+  },
+  "enterValidPincode": "Enter a valid 6-digit pincode",
+  "@enterValidPincode": {
+    "description": "Pincode format validation error"
+  },
+  "selectCountry": "Select Country",
+  "@selectCountry": {
+    "description": "Country dropdown hint"
+  },
+  "pleaseSelectCountry": "Please select a country",
+  "@pleaseSelectCountry": {
+    "description": "Country selection validation error"
+  },
+  "socialAccount": "Social account",
+  "@socialAccount": {
+    "description": "Social account section title"
+  },
+  "loginWithGoogle": "Login with Google",
+  "@loginWithGoogle": {
+    "description": "Google login button text"
+  },
+  "connected": "Connected",
+  "@connected": {
+    "description": "Connected status text"
+  },
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Appearance settings title"
+  },
+  "textSize": "Text size",
+  "@textSize": {
+    "description": "Text size settings title"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button text"
+  },
+  "lightMode": "Light mode",
+  "@lightMode": {
+    "description": "Light theme mode option"
+  },
+  "darkMode": "Dark mode",
+  "@darkMode": {
+    "description": "Dark theme mode option"
+  },
+  "systemDefault": "System default",
+  "@systemDefault": {
+    "description": "System default theme mode option"
+  },
+  "unknownSource": "Unknown Source",
+  "@unknownSource": {
+    "description": "Unknown source fallback text"
+  },
+  "version": "Version",
+  "@version": {
+    "description": "Version label"
+  },
+  "yourPersonalizedNewsApplication": "Your personalized news application",
+  "@yourPersonalizedNewsApplication": {
+    "description": "About dialog description"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close button text"
+  },
+  "breakingNews": "Breaking News",
+  "@breakingNews": {
+    "description": "Breaking news section title"
+  },
+  "viewAll": "View All",
+  "@viewAll": {
+    "description": "View all link text"
+  },
+  "flashNews": "Flash News",
+  "@flashNews": {
+    "description": "Flash news section title"
+  },
+  "liveCricketScore": "Live Cricket Score",
+  "@liveCricketScore": {
+    "description": "Live cricket score section title"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Yesterday date label"
+  },
+  "hotNews": "Hot News",
+  "@hotNews": {
+    "description": "Hot news label"
+  }
+}
+

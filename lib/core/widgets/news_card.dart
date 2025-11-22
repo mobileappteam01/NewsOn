@@ -5,6 +5,7 @@ import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/tts_provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/localization_helper.dart';
 
 /// Reusable news card widget
 class NewsCard extends StatelessWidget {
@@ -97,7 +98,7 @@ class NewsCard extends StatelessWidget {
                         child: Text(
                           article.creator != null && article.creator!.isNotEmpty
                               ? article.creator![0]
-                              : article.sourceName ?? 'Unknown Source',
+                              : article.sourceName ?? LocalizationHelper.unknownSource(context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.textTheme.bodySmall?.color
                                 ?.withOpacity(0.7),
@@ -130,7 +131,7 @@ class NewsCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Listen',
+                                LocalizationHelper.listen(context),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -151,8 +152,8 @@ class NewsCard extends StatelessWidget {
                             SnackBar(
                               content: Text(
                                 isBookmarked
-                                    ? AppConstants.bookmarkRemoved
-                                    : AppConstants.bookmarkAdded,
+                                    ? LocalizationHelper.removedFromBookmarks(context)
+                                    : LocalizationHelper.addedToBookmarks(context),
                               ),
                               duration: const Duration(seconds: 1),
                             ),

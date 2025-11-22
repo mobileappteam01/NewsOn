@@ -1,0 +1,87 @@
+{
+  "@@locale": "es",
+  "appName": "NewsOn",
+  "welcomeTo": "BIENVENIDO A",
+  "swipeToGetStarted": "Desliza para comenzar",
+  "signIn": "Iniciar sesión",
+  "signInToYourAccount": "Inicia sesión en tu cuenta",
+  "connecting": "Conectando...",
+  "connectingToGoogle": "Conectando a Google...",
+  "welcome": "¡Bienvenido!",
+  "signInCancelled": "Inicio de sesión cancelado",
+  "signInFailed": "Error al iniciar sesión: {error}",
+  "@signInFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "skip": "Omitir",
+  "continueText": "Continuar",
+  "enterYourName": "Ingresa tu nombre",
+  "selectCategories": "Seleccionar Categorías",
+  "selectAtLeastOneCategory": "Por favor selecciona al menos una categoría",
+  "categories": "Categorías",
+  "bookmarks": "Marcadores",
+  "search": "Buscar",
+  "headlines": "Titulares",
+  "newsFeed": "Feed de Noticias",
+  "retry": "Reintentar",
+  "noNewsAvailable": "No hay noticias disponibles",
+  "noResultsFound": "No se encontraron resultados",
+  "clearAllBookmarks": "¿Eliminar todos los marcadores?",
+  "cancel": "Cancelar",
+  "clear": "Limpiar",
+  "allBookmarksCleared": "Todos los marcadores fueron eliminados",
+  "addedToBookmarks": "Agregado a marcadores",
+  "removedFromBookmarks": "Eliminado de marcadores",
+  "noInternetConnection": "No hay conexión a Internet. Por favor verifica tu red.",
+  "serverError": "Error del servidor. Por favor intenta más tarde.",
+  "unknownError": "Ocurrió un error desconocido.",
+  "noDataAvailable": "No hay datos disponibles.",
+  "error": "Error: {error}",
+  "@error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "textSizeSaved": "Tamaño de texto guardado",
+  "formSubmittedSuccessfully": "¡Formulario enviado exitosamente!",
+  "pleaseFixErrorsBeforeSaving": "Por favor corrige los errores antes de guardar",
+  "accountSettings": "Configuración de Cuenta",
+  "appearanceSettings": "Apariencia",
+  "applicationSettings": "Configuración de Aplicación",
+  "notifications": "Notificaciones",
+  "privacyPolicy": "Política de Privacidad",
+  "termsAndConditions": "Términos y Condiciones",
+  "language": "Idioma",
+  "logout": "Cerrar sesión",
+  "selectLanguage": "Seleccionar Idioma",
+  "english": "Inglés",
+  "hindi": "Hindi",
+  "spanish": "Español",
+  "french": "Francés",
+  "german": "Alemán",
+  "chinese": "Chino",
+  "japanese": "Japonés",
+  "arabic": "Árabe",
+  "portuguese": "Portugués",
+  "russian": "Ruso",
+  "loading": "Cargando...",
+  "somethingWentWrong": "Algo salió mal",
+  "tryAgain": "Intentar de nuevo",
+  "noNewsForDate": "No se encontraron noticias para esta fecha",
+  "remoteConfigRefreshed": "¡Configuración remota actualizada exitosamente!",
+  "failedToRefresh": "Error al actualizar: {error}",
+  "@failedToRefresh": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}
+

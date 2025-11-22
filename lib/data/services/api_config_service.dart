@@ -38,27 +38,33 @@ class ApiConfigService {
       try {
         final apiConfigJson = _remoteConfig.getString('api_config_json');
 
-        if (apiConfigJson.isNotEmpty) {
-          final Map<String, dynamic> configMap = json.decode(apiConfigJson);
-          _cachedConfig = ApiConfigModel.fromJson(configMap);
-          _isInitialized = true;
-          print('✅ API Config loaded from Remote Config');
-
-          // Step 3: Save to local cache after successful load
-          await StorageService.saveApiConfigCache(_cachedConfig!);
-          print('💾 API Config saved to local cache');
-          return _cachedConfig!;
-        } else {
-          // Use cached or default config if Remote Config doesn't have it
-          if (_cachedConfig == null) {
-            _cachedConfig = ApiConfigModel();
+        if (apiConfigJson.isNotEmpty && apiConfigJson.trim().isNotEmpty) {
+          try {
+            final Map<String, dynamic> configMap = json.decode(apiConfigJson);
+            _cachedConfig = ApiConfigModel.fromJson(configMap);
             _isInitialized = true;
-            print('⚠️ Using default API Config (Remote Config empty)');
-          } else {
-            print('⚠️ Remote Config empty, using cached API Config');
+            print('✅ API Config loaded from Remote Config');
+
+            // Step 3: Save to local cache after successful load
+            await StorageService.saveApiConfigCache(_cachedConfig!);
+            print('💾 API Config saved to local cache');
+            return _cachedConfig!;
+          } catch (jsonError) {
+            print('⚠️ Error parsing API Config JSON: $jsonError');
+            print('📦 Using cached or default API Config');
+            // Fall through to use cached/default config
           }
-          return _cachedConfig!;
         }
+        
+        // Use cached or default config if Remote Config doesn't have it or parsing failed
+        if (_cachedConfig == null) {
+          _cachedConfig = ApiConfigModel();
+          _isInitialized = true;
+          print('⚠️ Using default API Config (Remote Config empty or invalid)');
+        } else {
+          print('⚠️ Using cached API Config');
+        }
+        return _cachedConfig!;
       } catch (fetchError) {
         // If fetch fails (offline), use cached data or defaults
         print(

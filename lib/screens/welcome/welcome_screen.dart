@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
@@ -96,7 +97,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            config.welcomeTitleText,
+                            LocalizationHelper.welcomeTitleText(context),
                             style: GoogleFonts.playfair(
                               fontSize: config.displayLargeFontSize,
                               fontWeight: FontWeight.bold,
@@ -114,7 +115,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ),
 
                           Text(
-                            config.welcomeDescText,
+                            LocalizationHelper.welcomeDescText(context),
                             textAlign: TextAlign.center,
                             style: GoogleFonts.playfair(
                               fontSize: config.displaySmallFontSize,

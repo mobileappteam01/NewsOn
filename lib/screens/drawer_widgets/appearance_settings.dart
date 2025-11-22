@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/theme_provider.dart';
 
@@ -45,7 +46,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
 
                   // Title
                   Text(
-                    "Appearance",
+                    LocalizationHelper.appearance(context),
                     style: GoogleFonts.playfairDisplay(
                       color: config.primaryColorValue,
                       fontSize: 22,
@@ -56,7 +57,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
 
                   // Light mode
                   _buildModeOption(
-                    title: "Light mode",
+                    title: LocalizationHelper.lightMode(context),
                     theme: theme,
                     mode: ThemeMode.light,
                     isSelected: _selectedMode == ThemeMode.light,
@@ -70,7 +71,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
 
                   // Dark mode
                   _buildModeOption(
-                    title: "Dark mode",
+                    title: LocalizationHelper.darkMode(context),
                     theme: theme,
                     mode: ThemeMode.dark,
                     isSelected: _selectedMode == ThemeMode.dark,
@@ -85,7 +86,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
 
                   // System default mode (optional)
                   _buildModeOption(
-                    title: "System default",
+                    title: LocalizationHelper.systemDefault(context),
                     theme: theme,
                     mode: ThemeMode.system,
                     isSelected: _selectedMode == ThemeMode.system,
