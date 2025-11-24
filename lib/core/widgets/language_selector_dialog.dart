@@ -99,9 +99,6 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                     itemBuilder: (context, index) {
                       final languageName =
                           languageProvider.languageNames[index];
-                      final locale = languageProvider.getLocaleFromName(
-                        languageName,
-                      );
                       final isSelected = languageName == _selectedLanguage;
 
                       return InkWell(
@@ -143,8 +140,7 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                               ),
                               const SizedBox(width: 16),
                               Text(
-                                locale?.languageCode.toUpperCase() ??
-                                    languageName,
+                                languageName, // Display full language name (English, Tamil, Hindi)
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight:

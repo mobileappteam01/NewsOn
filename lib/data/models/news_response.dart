@@ -18,7 +18,6 @@ class NewsResponse {
 
   /// Factory constructor to create NewsResponse from JSON
   factory NewsResponse.fromJson(Map<String, dynamic> json) {
-    debugPrint("Fetching news 4 : $json");
     return NewsResponse(
       status: json['status'] as String? ?? 'error',
       totalResults: json['totalResults'] as int? ?? 0,

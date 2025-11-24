@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/news_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
+import '../../../providers/audio_player_provider.dart';
 import '../../../core/utils/shared_functions.dart';
 import '../../../core/utils/localization_helper.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
@@ -343,8 +344,21 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         key: ValueKey('today_${article.articleId ?? index}'),
                         type: 'listview',
                         newsDetails: article,
-                        onListenTapped: () {
-                          // context.read<TtsProvider>().playArticle(article);
+                        onListenTapped: () async {
+                          try {
+                            await context
+                                .read<AudioPlayerProvider>()
+                                .playArticle(article);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error playing audio: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         },
                         onSaveTapped: () {
                           context.read<NewsProvider>().toggleBookmark(article);
@@ -399,7 +413,22 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         key: ValueKey('flash_$index'),
                         type: 'bannerview',
                         newsDetails: data,
-                        onListenTapped: () {},
+                        onListenTapped: () async {
+                          try {
+                            await context
+                                .read<AudioPlayerProvider>()
+                                .playArticle(data);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error playing audio: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
                         onSaveTapped: () {},
                         onNewsTapped: () async {
                           NewsArticle newsArticle = await getNewsDetail();
@@ -683,8 +712,21 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       // Listen button at bottom right
                       Align(
                         alignment: Alignment.bottomRight,
-                        child: showListenButton(config, () {
-                          // context.read<TtsProvider>().playArticle(article);
+                        child: showListenButton(config, () async {
+                          try {
+                            await context
+                                .read<AudioPlayerProvider>()
+                                .playArticle(article);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error playing audio: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         }),
                       ),
                     ],

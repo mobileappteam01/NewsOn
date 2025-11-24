@@ -51,6 +51,10 @@ dependencies:
   # Text to Speech
   flutter_tts: ^4.0.2
 
+  # Audio Player
+  just_audio: ^0.9.36
+  audio_service: ^0.18.11
+
   # UI & Animations
   cached_network_image: ^3.3.0
   shimmer: ^3.0.0
@@ -62,6 +66,7 @@ dependencies:
   url_launcher: ^6.2.2
   share_plus: ^7.2.1
   connectivity_plus: ^5.0.2
+  flutter_html: ^3.0.0-beta.2
 
   # Icons
   font_awesome_flutter: ^10.6.0

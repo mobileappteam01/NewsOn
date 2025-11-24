@@ -39,15 +39,11 @@ class NewsProvider with ChangeNotifier {
   /// Fetch breaking/top news
   Future<void> fetchBreakingNews() async {
     try {
-      debugPrint("Fetching breaking news");
       _isLoading = true;
       _error = null;
       notifyListeners();
 
       final response = await _repository.fetchBreakingNews();
-      debugPrint("Fetching breaking news 2.11 : ${response.results.length}");
-      debugPrint("Response status: ${response.status}");
-      debugPrint("Total results: ${response.totalResults}");
 
       if (response.results.isNotEmpty) {
         debugPrint("First article title: ${response.results.first.title}");

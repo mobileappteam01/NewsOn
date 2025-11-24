@@ -10,6 +10,8 @@ import '../../data/services/api_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
 import '../../core/widgets/app_drawer.dart';
+import '../../core/widgets/audio_mini_player.dart';
+import '../../core/widgets/audio_loading_overlay.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../categories/categories_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
@@ -146,6 +148,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SearchTab(),
                 ],
               ),
+
+              // Audio Mini Player (Spotify-like)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: const AudioMiniPlayer(),
+              ),
+
+              // Audio Loading Overlay (shows when generating audio)
+              const AudioLoadingOverlay(),
 
               // TTS Controller
               // if (ttsProvider.isPlaying || ttsProvider.isPaused)

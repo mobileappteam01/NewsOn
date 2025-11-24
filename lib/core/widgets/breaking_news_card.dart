@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/news_article.dart';
-import '../../providers/tts_provider.dart';
+import '../../providers/audio_player_provider.dart';
 import '../../core/constants/app_constants.dart';
 
 /// Breaking news card with large image and play button overlay
@@ -19,8 +19,8 @@ class BreakingNewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final ttsProvider = Provider.of<TtsProvider>(context);
-    final isPlaying = ttsProvider.isArticlePlaying(article);
+    final audioProvider = Provider.of<AudioPlayerProvider>(context);
+    final isPlaying = audioProvider.isArticlePlaying(article);
 
     return GestureDetector(
       onTap: onTap,
@@ -160,11 +160,22 @@ class BreakingNewsCard extends StatelessWidget {
                       color: Colors.white,
                       size: 32,
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (isPlaying) {
-                        ttsProvider.pause();
+                        await audioProvider.pause();
                       } else {
-                        ttsProvider.playArticle(article);
+                        try {
+                          await audioProvider.playArticle(article);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error playing audio: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                   ),

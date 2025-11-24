@@ -12,6 +12,7 @@ import '../../data/services/storage_service.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/widgets/audio_loading_overlay.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsArticle article;
@@ -101,7 +102,9 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         builder: (context, configProvider, child) {
           final config = configProvider.config;
 
-          return Column(
+          return Stack(
+            children: [
+              Column(
             children: [
               /// 🔹 HEADER IMAGE + OVERLAY
               Stack(
@@ -403,6 +406,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                   ),
                 ),
               ),
+            ],
+          ),
+
+              // Audio Loading Overlay
+              const AudioLoadingOverlay(),
             ],
           );
         },

@@ -151,7 +151,6 @@ class NewsArticle {
   }
 
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
-    debugPrint("Fetching news 5 : $json");
     DateTime? bookmarked;
     // Support ISO string or epoch (int) if provided
     if (json.containsKey('bookmarkedAt') && json['bookmarkedAt'] != null) {

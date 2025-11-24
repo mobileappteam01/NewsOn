@@ -172,13 +172,13 @@ class AppDrawer extends StatelessWidget {
               width: double.maxFinite,
               child: ListView.builder(
                 shrinkWrap: true,
-                itemCount: languageProvider.supportedLanguages.length,
+                itemCount: languageProvider.languageNames.length,
                 itemBuilder: (context, index) {
-                  final language = languageProvider.supportedLanguages[index];
+                  final languageName = languageProvider.languageNames[index];
 
                   return RadioListTile<String>(
-                    title: Text(language!.languageCode),
-                    value: language.languageCode,
+                    title: Text(languageName), // Display full language name (English, Tamil, Hindi)
+                    value: languageName,
                     groupValue: languageProvider.selectedLanguage,
                     activeColor: const Color(0xFFE31E24),
                     onChanged: (value) {

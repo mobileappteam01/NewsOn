@@ -72,6 +72,7 @@ class UserService {
 
   /// Get authentication token
   String? getToken() {
+    debugPrint('🔐 Token: $_token');
     return _token;
   }
 

@@ -14,12 +14,18 @@ import 'data/services/fcm_service.dart';
 import 'providers/news_provider.dart';
 import 'providers/bookmark_provider.dart';
 import 'providers/tts_provider.dart';
+import 'providers/audio_player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/remote_config_provider.dart';
 
 String newsAPIKey = '';
+String elevenLabsAPIKey = '';
+String elevenLabsVoiceId = '';
 String baseURL = '';
+
+// Global reference to audio player provider for updating API key
+AudioPlayerProvider? _globalAudioPlayerProvider;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +33,12 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp();
 
+  // Fetch all API keys FIRST before initializing providers
   await fetchIPAddressAndURLS();
+  // Wait a bit more to ensure ElevenLabs API key is fetched and provider is updated
+  await Future.delayed(
+    const Duration(milliseconds: 1000),
+  ); // Give time for async fetch to complete
 
   // Initialize local storage
   await StorageService.initialize();
@@ -99,6 +110,28 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NewsProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
+        // Audio Player Provider - Get API key from Firebase
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = AudioPlayerProvider(
+              elevenLabsApiKey:
+                  elevenLabsAPIKey.isNotEmpty ? elevenLabsAPIKey : null,
+            );
+            // Store global reference to update when key is fetched
+            _globalAudioPlayerProvider = provider;
+
+            if (elevenLabsAPIKey.isNotEmpty) {
+              debugPrint(
+                '✅ AudioPlayerProvider initialized with ElevenLabs API key',
+              );
+            } else {
+              debugPrint(
+                '⚠️ AudioPlayerProvider initialized without API key - will update when fetched',
+              );
+            }
+            return provider;
+          },
+        ),
       ],
       child: Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
         builder: (
@@ -147,10 +180,49 @@ fetchIPAddressAndURLS() async {
 }
 
 fetchNewsDataAPIKey() async {
-  await fetchDBData('newsDataAPIKey').then((val) {
+  await fetchDBData('newsDataAPIKey').then((val) async {
     if (val != null) {
       debugPrint("IP Address fetched: $val");
       newsAPIKey = val;
+      await fetchElevenLabsAPIKey();
+    }
+  });
+}
+
+fetchElevenLabsAPIKey() async {
+  await fetchDBData('elevenLabsKey').then((val) async {
+    if (val != null) {
+      debugPrint("Eleven Labs API Key fetched: $val");
+      elevenLabsAPIKey = val;
+      await fetchElevenLabsVoiceId();
+
+      // Update the provider if it's already been created
+      if (_globalAudioPlayerProvider != null) {
+        _globalAudioPlayerProvider!.setApiKey(elevenLabsAPIKey);
+        debugPrint('✅ ElevenLabs API key updated in AudioPlayerProvider');
+      } else {
+        debugPrint(
+          '⚠️ AudioPlayerProvider not yet created, key will be set on creation',
+        );
+      }
+    } else {
+      debugPrint('⚠️ ElevenLabs API key not found in database');
+    }
+  });
+}
+
+fetchElevenLabsVoiceId() async {
+  await fetchDBData('elevenLabsVoiceId').then((val) {
+    if (val != null) {
+      debugPrint("Eleven Labs Voice ID fetched: $val");
+      elevenLabsVoiceId = val;
+      if (_globalAudioPlayerProvider != null) {
+        _globalAudioPlayerProvider!.setVoiceId(elevenLabsVoiceId);
+      } else {
+        debugPrint(
+          '⚠️ AudioPlayerProvider not yet created, key will be set on creation',
+        );
+      }
     }
   });
 }
