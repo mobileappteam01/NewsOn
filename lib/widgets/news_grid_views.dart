@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
+import '../core/utils/date_formatter.dart';
 
 class NewsGridView extends StatelessWidget {
   final String type;
@@ -50,6 +51,22 @@ class NewsGridView extends StatelessWidget {
     );
   }
 
+  /// Get relative time string from article's pubDate
+  static String _getTimeAgo(NewsArticle article) {
+    if (article.pubDate == null || article.pubDate!.isEmpty) {
+      return 'Just now';
+    }
+
+    // Parse the pubDate - format is "2025-11-24 00:00:00"
+    final dateTime = DateFormatter.parseApiDate(article.pubDate);
+
+    if (dateTime == null) {
+      return 'Just now';
+    }
+
+    return DateFormatter.getRelativeTime(dateTime);
+  }
+
   showCommonWidget(
     RemoteConfigModel config,
     String type,
@@ -66,7 +83,7 @@ class NewsGridView extends StatelessWidget {
         )
         : type.toLowerCase() == 'postedtime'
         ? Text(
-          newsDetails.pubDate!,
+          _getTimeAgo(newsDetails),
           style: GoogleFonts.inter(color: config.primaryColorValue),
         )
         : GestureDetector(
@@ -152,13 +169,13 @@ class NewsGridView extends StatelessWidget {
     return GestureDetector(
       onTap: () => onNewsTapped(),
       child: SizedBox(
-        height: 200,
+        height: 210,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             showImage(
-              newsDetails.sourceName! + newsDetails.sourceIcon!,
+              newsDetails.imageUrl ?? newsDetails.sourceIcon ?? '',
               BoxFit.contain,
               height: 200,
               width: MediaQuery.of(context).size.width / 2.5,
@@ -171,7 +188,7 @@ class NewsGridView extends StatelessWidget {
                   showCommonWidget(config, 'category', newsDetails),
                   giveHeight(3),
                   SizedBox(
-                    height: 90,
+                    height: 110,
 
                     child: Text(
                       newsDetails.title,

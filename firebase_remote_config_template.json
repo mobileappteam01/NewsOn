@@ -105,6 +105,13 @@
       "description": "Secondary color (hex format)",
       "valueType": "STRING"
     },
+    "no_results_found": {
+      "defaultValue": {
+        "value": "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmZnZHJ3Mmw3dWZkaWNsN2dkbWttbmN3ZHlxYzY5dHNvMzBiaHYwaCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/zLCiUWVfex7ji/giphy.gif"
+      },
+      "description": "No Results Found GIF",
+      "valueType": "STRING"
+    },
     "app_name_logo": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0"

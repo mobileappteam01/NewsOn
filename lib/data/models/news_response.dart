@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import 'news_article.dart';
 
 /// Response model for Newsdata.IO API
@@ -16,11 +18,16 @@ class NewsResponse {
 
   /// Factory constructor to create NewsResponse from JSON
   factory NewsResponse.fromJson(Map<String, dynamic> json) {
+    debugPrint("Fetching news 4 : $json");
     return NewsResponse(
       status: json['status'] as String? ?? 'error',
       totalResults: json['totalResults'] as int? ?? 0,
-      results: (json['results'] as List<dynamic>?)
-              ?.map((article) => NewsArticle.fromJson(article as Map<String, dynamic>))
+      results:
+          (json['results'] as List<dynamic>?)
+              ?.map(
+                (article) =>
+                    NewsArticle.fromJson(article as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       nextPage: json['nextPage'] as String?,

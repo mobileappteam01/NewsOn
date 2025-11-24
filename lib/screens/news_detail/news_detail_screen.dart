@@ -11,6 +11,7 @@ import '../../core/constants/app_constants.dart';
 import '../../data/services/storage_service.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../core/utils/date_formatter.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsArticle article;
@@ -74,6 +75,22 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     return 'White House trade adviser Peter Navarro accused India of helping finance Russia\'s war in Ukraine through continued oil imports, describing the conflict as "Modi\'s war."';
   }
 
+  /// Get relative time string from article's pubDate
+  String _getTimeAgo() {
+    if (widget.article.pubDate == null || widget.article.pubDate!.isEmpty) {
+      return 'Just now';
+    }
+
+    // Parse the pubDate - format is "2025-11-24 00:00:00"
+    final dateTime = DateFormatter.parseApiDate(widget.article.pubDate);
+
+    if (dateTime == null) {
+      return 'Just now';
+    }
+
+    return DateFormatter.getRelativeTime(dateTime);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
@@ -91,7 +108,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                 children: [
                   // Background image
                   CachedNetworkImage(
-                    imageUrl: widget.article.imageUrl ?? '',
+                    imageUrl:
+                        widget.article.imageUrl ??
+                        widget.article.sourceIcon ??
+                        '',
                     height: 380,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -176,7 +196,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          "30 mins ago",
+                          _getTimeAgo(),
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,

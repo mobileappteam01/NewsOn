@@ -22,10 +22,7 @@ class CategorySelectionScreen extends StatefulWidget {
   /// Whether this screen is opened from side menu (existing user updating preferences)
   final bool isFromSideMenu;
 
-  const CategorySelectionScreen({
-    super.key,
-    this.isFromSideMenu = false,
-  });
+  const CategorySelectionScreen({super.key, this.isFromSideMenu = false});
 
   @override
   State<CategorySelectionScreen> createState() =>
@@ -42,7 +39,17 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
 
   List<CategoryModel> _categories = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
   String? _errorMessage;
+
+  // Pagination variables
+  int _currentPage = 1;
+  int _limit = 10;
+  int _total = 0; // Total number of items available
+  bool _hasMorePages = true;
+
+  // Scroll controller for infinite scroll
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -52,21 +59,60 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     if (widget.isFromSideMenu) {
       _loadUserCategories();
     }
+
+    // Add scroll listener for infinite scroll
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Handle scroll events for infinite scroll pagination
+  void _onScroll() {
+    // Check if we can scroll and if we've reached the threshold
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+
+    // Load more when user scrolls to 80% of the list
+    if (currentScroll >= maxScroll * 0.8) {
+      // Prevent multiple simultaneous loads and ensure we haven't loaded all items
+      if (!_isLoadingMore &&
+          !_isLoading &&
+          _hasMorePages &&
+          _categories.length < _total) {
+        _loadMoreCategories();
+      }
+    }
   }
 
   Future<void> _loadCategories() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _currentPage = 1;
+      _total = 0;
+      _hasMorePages = true;
     });
 
     try {
-      final response = await _categoryApiService.getCategories();
+      final response = await _categoryApiService.getCategories(
+        page: 1,
+        limit: _limit,
+      );
 
       if (response.success && mounted) {
         setState(() {
           _categories = response.categories;
           _isLoading = false;
+          _currentPage = response.page;
+          _total = response.total;
+          _hasMorePages = response.hasMorePages;
         });
       } else if (mounted) {
         setState(() {
@@ -74,6 +120,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           _isLoading = false;
           // Fallback to empty list if API fails
           _categories = [];
+          _total = 0;
+          _hasMorePages = false;
         });
       }
     } catch (e) {
@@ -83,7 +131,70 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           _isLoading = false;
           // Fallback to empty list
           _categories = [];
+          _total = 0;
+          _hasMorePages = false;
         });
+      }
+    }
+  }
+
+  /// Load more categories for pagination
+  Future<void> _loadMoreCategories() async {
+    // Prevent loading if already loading, no more pages, or already loaded all items
+    if (_isLoadingMore ||
+        !_hasMorePages ||
+        _isLoading ||
+        _categories.length >= _total) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final nextPage = _currentPage + 1;
+
+      final response = await _categoryApiService.getCategories(
+        page: nextPage,
+        limit: _limit,
+      );
+
+      if (response.success && mounted) {
+        setState(() {
+          // Only add new categories that aren't already in the list
+          final newCategories =
+              response.categories
+                  .where(
+                    (cat) =>
+                        !_categories.any((existing) => existing.id == cat.id),
+                  )
+                  .toList();
+
+          _categories.addAll(newCategories);
+          _isLoadingMore = false;
+          _currentPage = response.page;
+          _total = response.total; // Update total in case it changed
+          _hasMorePages = response.hasMorePages;
+
+          // Additional safety check: if we've loaded all items, set hasMorePages to false
+          if (_categories.length >= _total) {
+            _hasMorePages = false;
+          }
+        });
+      } else if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+          _hasMorePages = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+          _hasMorePages = false;
+        });
+        debugPrint('❌ Error loading more categories: $e');
       }
     }
   }
@@ -110,10 +221,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           final userCategories = userData['category'] as List?;
           if (userCategories != null && userCategories.isNotEmpty) {
             // Filter out null values and convert to String IDs
-            final categoryIds = userCategories
-                .where((id) => id != null)
-                .map((id) => id.toString())
-                .toList();
+            final categoryIds =
+                userCategories
+                    .where((id) => id != null)
+                    .map((id) => id.toString())
+                    .toList();
 
             debugPrint('📦 User has existing categories: $categoryIds');
 
@@ -173,9 +285,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           email: userData['email']?.toString() ?? '',
           firstName: userData['firstName']?.toString() ?? '',
           secondName: userData['secondName']?.toString() ?? '',
-          personalDetails: userData['personalDetails'] is Map
-              ? userData['personalDetails'] as Map
-              : null,
+          personalDetails:
+              userData['personalDetails'] is Map
+                  ? userData['personalDetails'] as Map
+                  : null,
           mobileNumber: userData['mobileNumber']?.toString(),
           city: userData['city']?.toString(),
           pincode: userData['pincode']?.toString(),
@@ -199,7 +312,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('⚠️ ${updateResponse.error ?? 'Failed to update categories'}'),
+                content: Text(
+                  '⚠️ ${updateResponse.error ?? 'Failed to update categories'}',
+                ),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 3),
               ),
@@ -210,12 +325,15 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
         // New user flow - Sign up
         // Step 1: Get nickname from onboarding (stored in StorageService)
         final nickName =
-            StorageService.getSetting(AppConstants.userNameKey) as String? ?? '';
+            StorageService.getSetting(AppConstants.userNameKey) as String? ??
+            '';
 
         // Step 2: Get Google account data (stored temporarily)
         final googleAccountData = _userService.getTempGoogleAccount();
         if (googleAccountData == null) {
-          throw Exception('Google account data not found. Please sign in again.');
+          throw Exception(
+            'Google account data not found. Please sign in again.',
+          );
         }
 
         // Step 3: Get FCM token
@@ -242,7 +360,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
 
               if (token != null && userData != null) {
                 // Save user data and token
-                await _userService.saveUserData(token: token, userData: userData);
+                await _userService.saveUserData(
+                  token: token,
+                  userData: userData,
+                );
 
                 // Clear temporary Google account data
                 await _userService.clearTempGoogleAccount();
@@ -258,8 +379,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
                     builder:
-                        (context) =>
-                            HomeScreen(selectedCategories: selectedCategoryNames),
+                        (context) => HomeScreen(
+                          selectedCategories: selectedCategoryNames,
+                        ),
                   ),
                 );
               } else {
@@ -390,6 +512,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                           : _errorMessage != null && _categories.isEmpty
                           ? _buildErrorState(theme, config)
                           : GridView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.all(
                               AppConstants.defaultPadding,
                             ),
@@ -400,8 +523,19 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                   mainAxisSpacing: AppConstants.defaultPadding,
                                   childAspectRatio: 1.2,
                                 ),
-                            itemCount: _categories.length,
+                            itemCount:
+                                _categories.length + (_isLoadingMore ? 1 : 0),
                             itemBuilder: (context, index) {
+                              // Show loading indicator at the bottom when loading more
+                              if (index == _categories.length) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+
                               final category = _categories[index];
                               final isSelected = _selectedCategoryIds.contains(
                                 category.id,
@@ -429,7 +563,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                 // Continue/Update Preferences Button
                 _BottomCta(
                   red: config.primaryColorValue,
-                  label: widget.isFromSideMenu ? 'Update Preferences' : 'Continue',
+                  label:
+                      widget.isFromSideMenu ? 'Update Preferences' : 'Continue',
                   onTap:
                       _selectedCategoryIds.isEmpty
                           ? null

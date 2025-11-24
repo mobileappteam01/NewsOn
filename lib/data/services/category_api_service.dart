@@ -5,23 +5,43 @@ import 'package:newson/data/services/api_service.dart';
 class CategoryApiService {
   final ApiService _apiService = ApiService();
 
-  /// Get categories list (no token required)
-  Future<CategoryResponse> getCategories() async {
+  /// Get categories list with pagination support
+  /// [page] - Page number to fetch (default: 1)
+  /// [limit] - Number of items per page (default: 10, fixed)
+  Future<CategoryResponse> getCategories({
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
+      // Build query parameters for pagination
+      final queryParameters = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
       final response = await _apiService.get(
         'chooseCategory', // Module name in Firestore apiEndPoints collection
         'getCategories', // Endpoint key in the chooseCategory document
+        queryParameters: queryParameters,
       );
 
       if (response.success) {
         // Parse categories from response
         List<CategoryModel> categories = [];
+        int total = 0;
+        int page = 1;
+        int totalPages = 1;
 
         // Get image base URL from ApiService
         final imageBaseUrl = _apiService.getImageBaseUrl();
 
         if (response.data is Map) {
           final data = response.data as Map<String, dynamic>;
+
+          // Extract pagination metadata
+          total = data['total'] as int? ?? 0;
+          page = data['page'] as int? ?? 1;
+          totalPages = data['totalPages'] as int? ?? 1;
 
           // The response structure is: { "message": "success", "data": [...] }
           if (data.containsKey('data') && data['data'] is List) {
@@ -62,7 +82,7 @@ class CategoryApiService {
                     .toList();
           }
         } else if (response.data is List) {
-          // Direct list response
+          // Direct list response (fallback for non-paginated responses)
           final dataList = response.data as List;
           categories =
               dataList
@@ -74,18 +94,28 @@ class CategoryApiService {
                     ),
                   )
                   .toList();
+          total = categories.length;
+          totalPages = 1;
         }
 
         return CategoryResponse(
           success: true,
           categories: categories,
           message: 'Categories loaded successfully',
+          total: total,
+          page: page,
+          limit: limit,
+          totalPages: totalPages,
         );
       } else {
         return CategoryResponse(
           success: false,
           categories: [],
           message: response.error ?? 'Failed to load categories',
+          total: 0,
+          page: 1,
+          limit: limit,
+          totalPages: 0,
         );
       }
     } catch (e) {
@@ -93,6 +123,10 @@ class CategoryApiService {
         success: false,
         categories: [],
         message: 'Error loading categories: $e',
+        total: 0,
+        page: 1,
+        limit: limit,
+        totalPages: 0,
       );
     }
   }
@@ -135,20 +169,31 @@ class CategoryApiService {
   }
 }
 
-/// Category Response model
+/// Category Response model with pagination support
 class CategoryResponse {
   final bool success;
   final List<CategoryModel> categories;
   final String message;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
 
   CategoryResponse({
     required this.success,
     required this.categories,
     required this.message,
+    this.total = 0,
+    this.page = 1,
+    this.limit = 10,
+    this.totalPages = 0,
   });
+
+  /// Check if there are more pages available
+  bool get hasMorePages => page < totalPages;
 
   @override
   String toString() {
-    return 'CategoryResponse(success: $success, categories: ${categories.length}, message: $message)';
+    return 'CategoryResponse(success: $success, categories: ${categories.length}, page: $page/$totalPages, message: $message)';
   }
 }

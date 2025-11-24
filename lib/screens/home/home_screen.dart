@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, unused_local_variable
+// ignore_for_file: deprecated_member_use, unused_local_variable, use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/data/models/remote_config_model.dart';
@@ -28,24 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  List newsList = [
-    {
-      "img":
-          "https://www.hindustantimes.com/ht-img/img/2025/11/07/550x309/donald_trump_us_boycott_g20_summit_south_africa_1762556620255_1762556620523.jpg",
-      "category": "Politics",
-      "headLines":
-          "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
-      "updatedAt": "15Min ago",
-    },
-    {
-      "img":
-          "https://www.hindustantimes.com/ht-img/img/2025/11/07/550x309/donald_trump_us_boycott_g20_summit_south_africa_1762556620255_1762556620523.jpg",
-      "category": "Politics",
-      "headLines":
-          "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
-      "updatedAt": "15Min ago",
-    },
-  ];
+  List newsList = [];
 
   @override
   void initState() {

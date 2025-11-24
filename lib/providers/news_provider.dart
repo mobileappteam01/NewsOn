@@ -39,17 +39,30 @@ class NewsProvider with ChangeNotifier {
   /// Fetch breaking/top news
   Future<void> fetchBreakingNews() async {
     try {
+      debugPrint("Fetching breaking news");
       _isLoading = true;
       _error = null;
       notifyListeners();
 
       final response = await _repository.fetchBreakingNews();
+      debugPrint("Fetching breaking news 2.11 : ${response.results.length}");
+      debugPrint("Response status: ${response.status}");
+      debugPrint("Total results: ${response.totalResults}");
+
+      if (response.results.isNotEmpty) {
+        debugPrint("First article title: ${response.results.first.title}");
+      }
+
       _breakingNews = response.results;
       _isLoading = false;
+      debugPrint("Breaking news assigned: ${_breakingNews.length} articles");
       notifyListeners();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint("Error fetching breaking news: $e");
+      debugPrint("Stack trace: $stackTrace");
       _error = e.toString();
       _isLoading = false;
+      _breakingNews = [];
       notifyListeners();
     }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 part 'news_article.g.dart';
@@ -123,7 +124,34 @@ class NewsArticle {
     this.duplicate = false,
   });
 
+  /// Helper method to parse sentiment_stats which can be a String or Map
+  static String? _parseSentimentStats(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map) {
+      // Convert map to JSON string representation
+      try {
+        return value.toString();
+      } catch (e) {
+        return null;
+      }
+    }
+    return value.toString();
+  }
+
+  /// Helper method to parse fields that can be a String or List
+  static String? _parseStringOrList(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List) {
+      // Convert list to comma-separated string
+      return value.map((e) => e.toString()).join(', ');
+    }
+    return value.toString();
+  }
+
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
+    debugPrint("Fetching news 5 : $json");
     DateTime? bookmarked;
     // Support ISO string or epoch (int) if provided
     if (json.containsKey('bookmarkedAt') && json['bookmarkedAt'] != null) {
@@ -166,10 +194,10 @@ class NewsArticle {
       sourceUrl: json['source_url'] as String?,
       sourceIcon: json['source_icon'] as String?,
       sentiment: json['sentiment'] as String?,
-      sentimentStats: json['sentiment_stats'] as String?,
-      aiTag: json['ai_tag'] as String?,
-      aiRegion: json['ai_region'] as String?,
-      aiOrg: json['ai_org'] as String?,
+      sentimentStats: _parseSentimentStats(json['sentiment_stats']),
+      aiTag: _parseStringOrList(json['ai_tag']),
+      aiRegion: _parseStringOrList(json['ai_region']),
+      aiOrg: _parseStringOrList(json['ai_org']),
       aiSummary: json['ai_summary'] as String?,
       duplicate: json['duplicate'] == true,
     );

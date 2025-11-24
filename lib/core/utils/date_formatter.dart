@@ -38,12 +38,31 @@ class DateFormatter {
   }
 
   /// Parse date string from API
+  /// Handles formats like:
+  /// - "2025-11-24 00:00:00" (space-separated)
+  /// - "2025-11-24T00:00:00" (ISO format)
+  /// - "2025-11-24T00:00:00Z" (ISO with timezone)
   static DateTime? parseApiDate(String? dateString) {
-    if (dateString == null) return null;
+    if (dateString == null || dateString.isEmpty) return null;
+    
     try {
+      // Try direct parsing first (for ISO formats)
       return DateTime.parse(dateString);
     } catch (e) {
-      return null;
+      // If that fails, try to handle space-separated format "2025-11-24 00:00:00"
+      try {
+        // Replace space with 'T' to convert to ISO format
+        final isoFormat = dateString.replaceFirst(' ', 'T');
+        return DateTime.parse(isoFormat);
+      } catch (e2) {
+        // If that also fails, try parsing just the date part
+        try {
+          final dateOnly = dateString.split(' ').first;
+          return DateTime.parse(dateOnly);
+        } catch (e3) {
+          return null;
+        }
+      }
     }
   }
 }

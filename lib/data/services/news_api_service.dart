@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
 import '../../main.dart';
@@ -33,7 +34,9 @@ class NewsApiService {
           .timeout(ApiConstants.requestTimeout);
 
       if (response.statusCode == 200) {
+        debugPrint("Fetching news 2 : ${response.body}");
         final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        debugPrint("Fetching news 3 : $jsonData");
         return NewsResponse.fromJson(jsonData);
       } else if (response.statusCode == 401) {
         throw Exception(
