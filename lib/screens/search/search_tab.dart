@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
-import '../../core/widgets/news_card.dart';
 import '../../core/widgets/loading_shimmer.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../widgets/news_grid_views.dart';
+import '../../providers/audio_player_provider.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../news_detail/news_detail_screen.dart';
 
@@ -417,8 +417,21 @@ class _SearchTabState extends State<SearchTab>
                 key: ValueKey('today_${article.articleId ?? index}'),
                 type: 'listview',
                 newsDetails: article,
-                onListenTapped: () {
-                  // context.read<TtsProvider>().playArticle(article);
+                onListenTapped: () async {
+                  try {
+                    await context.read<AudioPlayerProvider>().playArticle(
+                      article,
+                    );
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error playing audio: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
                 onSaveTapped: () {
                   context.read<NewsProvider>().toggleBookmark(article);

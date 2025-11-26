@@ -175,8 +175,8 @@ class NewsGridView extends StatelessWidget {
   ) {
     return GestureDetector(
       onTap: () => onNewsTapped(),
-      child: SizedBox(
-        height: 210,
+      child: Container(
+        margin: const EdgeInsets.only(top: 14),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -195,8 +195,6 @@ class NewsGridView extends StatelessWidget {
                   showCommonWidget(config, 'category', newsDetails, theme),
                   giveHeight(3),
                   SizedBox(
-                    height: 110,
-
                     child: Text(
                       newsDetails.title,
                       style: GoogleFonts.inriaSerif(

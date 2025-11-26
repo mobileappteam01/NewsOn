@@ -4,7 +4,7 @@ import '../data/services/storage_service.dart';
 /// Provider for managing app language selection
 /// Works with Flutter's Locale system for proper localization
 class LanguageProvider extends ChangeNotifier {
-  Locale _locale = const Locale('en'); // Default to English
+  Locale _locale = const Locale('ta'); // Default to Tamil
 
   // Supported languages with their locale codes
   final Map<String, Locale> supportedLanguages = {
@@ -34,7 +34,7 @@ class LanguageProvider extends ChangeNotifier {
         return entry.key;
       }
     }
-    return 'English'; // Default fallback
+    return 'Tamil'; // Default fallback
   }
 
   /// Load saved language preference
@@ -45,7 +45,7 @@ class LanguageProvider extends ChangeNotifier {
         // Find locale from language code
         final locale = supportedLanguages.values.firstWhere(
           (loc) => loc.languageCode == savedLanguageCode,
-          orElse: () => const Locale('en'),
+          orElse: () => const Locale('ta'),
         );
         _locale = locale;
         notifyListeners();
@@ -104,6 +104,6 @@ class LanguageProvider extends ChangeNotifier {
     // Map locale codes to API language codes
     // NewsData API supports: en, ta, hi, etc.
     final languageMap = {'en': 'en', 'ta': 'ta', 'hi': 'hi'};
-    return languageMap[localeCode] ?? 'en'; // Default to English
+    return languageMap[localeCode] ?? 'ta'; // Default to Tamil
   }
 }

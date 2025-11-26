@@ -1,17 +1,19 @@
 import '../models/news_article.dart';
 import '../models/news_response.dart';
-import '../services/news_api_service.dart';
+import '../services/backend_news_service.dart';
 import '../services/storage_service.dart';
 
 /// Repository layer for news data management
 /// Handles both API calls and local storage
+/// Now uses BackendNewsService instead of NewsApiService
 class NewsRepository {
-  final NewsApiService _apiService;
+  final BackendNewsService _backendService;
 
-  NewsRepository({required String apiKey, NewsApiService? apiService})
-      : _apiService = apiService ?? NewsApiService(apiKey: apiKey);
+  NewsRepository({required String apiKey, BackendNewsService? backendService})
+      : _backendService = backendService ?? BackendNewsService();
 
-  /// Fetch news with optional filters
+  /// Fetch news with optional filters (deprecated - use specific methods)
+  /// This method is kept for backward compatibility but should use specific methods
   Future<NewsResponse> fetchNews({
     String? category,
     String? country,
@@ -19,13 +21,35 @@ class NewsRepository {
     String? query,
     String? nextPage,
   }) async {
+    // If query is provided, use search
+    if (query != null && query.isNotEmpty) {
+      return searchNews(query, language: language, limit: 50, page: 1);
+    }
+    // If category is provided, use category fetch
+    if (category != null && category.isNotEmpty) {
+      return fetchNewsByCategory(category, language: language, limit: 50, page: 1);
+    }
+    // Otherwise, use breaking news
+    return fetchBreakingNews(language: language, limit: 50, page: 1);
+  }
+
+  /// Fetch news by category
+  /// [category] - Category name (e.g., 'business', 'sports')
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch (default: 50)
+  /// [page] - Page number for pagination (default: 1)
+  Future<NewsResponse> fetchNewsByCategory(
+    String category, {
+    String? language,
+    int limit = 50,
+    int page = 1,
+  }) async {
     try {
-      final response = await _apiService.fetchNews(
+      final response = await _backendService.fetchNewsByCategory(
         category: category,
-        country: country,
         language: language,
-        query: query,
-        nextPage: nextPage,
+        limit: limit,
+        page: page,
       );
 
       // Update bookmark status for fetched articles
@@ -46,44 +70,115 @@ class NewsRepository {
     }
   }
 
-  /// Fetch news by category
-  Future<NewsResponse> fetchNewsByCategory(
-    String category, {
-    String? language,
-    String? nextPage,
-  }) async {
-    return fetchNews(
-      category: category,
-      language: language,
-      nextPage: nextPage,
-    );
-  }
-
   /// Search news
+  /// [query] - Search query
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch (default: 50)
+  /// [page] - Page number for pagination (default: 1)
   Future<NewsResponse> searchNews(
     String query, {
     String? language,
-    String? nextPage,
+    int limit = 50,
+    int page = 1,
   }) async {
-    return fetchNews(
-      query: query,
-      language: language,
-      nextPage: nextPage,
-    );
+    try {
+      final response = await _backendService.searchNews(
+        query: query,
+        language: language,
+        limit: limit,
+        page: page,
+      );
+
+      // Update bookmark status for fetched articles
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
+
+      return NewsResponse(
+        status: response.status,
+        totalResults: response.totalResults,
+        results: updatedResults,
+        nextPage: response.nextPage,
+      );
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Fetch breaking news
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch (default: 10 for home page, 50 for View All)
+  /// [page] - Page number for pagination (default: 1)
   Future<NewsResponse> fetchBreakingNews({
     String? language,
-    String? nextPage,
+    int limit = 10,
+    int page = 1,
   }) async {
-    return _apiService.fetchBreakingNews(
-      language: language,
-      nextPage: nextPage,
-    );
+    try {
+      final response = await _backendService.fetchBreakingNews(
+        language: language,
+        limit: limit,
+        page: page,
+      );
+
+      // Update bookmark status for fetched articles
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
+
+      return NewsResponse(
+        status: response.status,
+        totalResults: response.totalResults,
+        results: updatedResults,
+        nextPage: response.nextPage,
+      );
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  /// Fetch archive news by date range
+  /// Fetch today's news (archive/news by date)
+  /// [date] - Date in format 'YYYY-MM-DD' (optional, defaults to today)
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch (default: 5 for home page, 50 for View All)
+  /// [page] - Page number for pagination (default: 1)
+  Future<NewsResponse> fetchTodayNews({
+    String? date,
+    String? language,
+    int limit = 5,
+    int page = 1,
+  }) async {
+    try {
+      final response = await _backendService.fetchTodayNews(
+        date: date,
+        language: language,
+        limit: limit,
+        page: page,
+      );
+
+      // Update bookmark status for fetched articles
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
+
+      return NewsResponse(
+        status: response.status,
+        totalResults: response.totalResults,
+        results: updatedResults,
+        nextPage: response.nextPage,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fetch archive news by date range (kept for backward compatibility)
   /// fromDate and toDate should be in format: 'YYYY-MM-DD'
   Future<NewsResponse> fetchArchiveNews({
     required String fromDate,
@@ -93,32 +188,13 @@ class NewsRepository {
     String? language,
     String? nextPage,
   }) async {
-    try {
-      final response = await _apiService.fetchArchiveNews(
-        fromDate: fromDate,
-        toDate: toDate,
-        query: query,
-        category: category,
-        language: language,
-        nextPage: nextPage,
-      );
-
-      // Update bookmark status for fetched articles
-      final updatedResults = response.results.map((article) {
-        final key = article.articleId ?? article.title;
-        final isBookmarked = StorageService.isBookmarked(key);
-        return article.copyWith(isBookmarked: isBookmarked);
-      }).toList();
-
-      return NewsResponse(
-        status: response.status,
-        totalResults: response.totalResults,
-        results: updatedResults,
-        nextPage: response.nextPage,
-      );
-    } catch (e) {
-      rethrow;
-    }
+    // Use todayNews endpoint with date parameter
+    return fetchTodayNews(
+      date: fromDate,
+      language: language,
+      limit: 50,
+      page: 1,
+    );
   }
 
   /// Toggle bookmark status
@@ -168,6 +244,6 @@ class NewsRepository {
 
   /// Dispose resources
   void dispose() {
-    _apiService.dispose();
+    // BackendNewsService doesn't need disposal
   }
 }

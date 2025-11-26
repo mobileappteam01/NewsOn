@@ -182,16 +182,16 @@ class AudioPlayerProvider with ChangeNotifier {
     buffer.write('. ');
 
     // // Add author if available
-    if (article.creator != null && article.creator!.isNotEmpty) {
-      buffer.write('By ${article.creator!.first}. ');
-    }
+    // if (article.creator != null && article.creator!.isNotEmpty) {
+    //   buffer.write('By ${article.creator!.first}. ');
+    // }
 
     // // Add description or content
-    if (article.content != null && article.content!.isNotEmpty) {
-      buffer.write(article.content);
-    } else if (article.description != null && article.description!.isNotEmpty) {
-      buffer.write(article.description);
-    }
+    // if (article.content != null && article.content!.isNotEmpty) {
+    //   buffer.write(article.content);
+    // } else if (article.description != null && article.description!.isNotEmpty) {
+    //   buffer.write(article.description);
+    // }
 
     return buffer.toString();
   }

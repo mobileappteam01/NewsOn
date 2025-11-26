@@ -8,7 +8,7 @@ import 'language_provider.dart';
 class NewsProvider with ChangeNotifier {
   final NewsRepository _repository;
   LanguageProvider? _languageProvider;
-  String _currentLanguageCode = 'en'; // Default to English
+  String _currentLanguageCode = 'ta'; // Default to Tamil
 
   NewsProvider({NewsRepository? repository, LanguageProvider? languageProvider})
     : _repository = repository ?? NewsRepository(apiKey: ""),
@@ -17,9 +17,13 @@ class NewsProvider with ChangeNotifier {
     _languageProvider?.addListener(_onLanguageChanged);
     if (_languageProvider != null) {
       _currentLanguageCode = _languageProvider!.getApiLanguageCode();
-      debugPrint('📰 NewsProvider initialized with language: $_currentLanguageCode');
+      debugPrint(
+        '📰 NewsProvider initialized with language: $_currentLanguageCode',
+      );
     } else {
-      debugPrint('⚠️ NewsProvider initialized without LanguageProvider - language will be set later');
+      debugPrint(
+        '⚠️ NewsProvider initialized without LanguageProvider - language will be set later',
+      );
     }
   }
 
@@ -38,7 +42,9 @@ class NewsProvider with ChangeNotifier {
       final newLanguageCode = _languageProvider!.getApiLanguageCode();
       if (newLanguageCode != _currentLanguageCode) {
         _currentLanguageCode = newLanguageCode;
-        debugPrint('🔄 Language changed to: $_currentLanguageCode - Refreshing ALL news sections...');
+        debugPrint(
+          '🔄 Language changed to: $_currentLanguageCode - Refreshing ALL news sections...',
+        );
         // Refresh ALL news sections with new language
         _refreshAllNewsSections();
       }
@@ -50,7 +56,7 @@ class NewsProvider with ChangeNotifier {
     try {
       // Refresh breaking news (used in carousel and flash news)
       await fetchBreakingNews();
-      
+
       // Refresh today's news if date is selected
       if (_selectedDate != null) {
         await fetchNewsByDate(_selectedDate);
@@ -58,15 +64,17 @@ class NewsProvider with ChangeNotifier {
         // Refresh today's news with current date
         await fetchNewsByDate(DateTime.now());
       }
-      
+
       // Refresh category/news articles if there's an active category or query
       if (_currentCategory != null) {
         await fetchNewsByCategory(_currentCategory!, refresh: true);
       } else if (_currentQuery != null) {
         await searchNews(_currentQuery!, refresh: true);
       }
-      
-      debugPrint('✅ All news sections refreshed with language: $_currentLanguageCode');
+
+      debugPrint(
+        '✅ All news sections refreshed with language: $_currentLanguageCode',
+      );
     } catch (e) {
       debugPrint('❌ Error refreshing all news sections: $e');
     }
@@ -98,8 +106,13 @@ class NewsProvider with ChangeNotifier {
   String? get currentQuery => _currentQuery;
   DateTime? get selectedDate => _selectedDate;
 
+  // Get repository for direct access (needed for View All pages with pagination)
+  NewsRepository get repository => _repository;
+
   /// Fetch breaking/top news
-  Future<void> fetchBreakingNews() async {
+  /// [limit] - Number of items to fetch (default: 10 for home page, 50 for View All)
+  /// [page] - Page number for pagination (default: 1)
+  Future<void> fetchBreakingNews({int limit = 10, int page = 1}) async {
     try {
       _isLoading = true;
       _error = null;
@@ -112,6 +125,8 @@ class NewsProvider with ChangeNotifier {
 
       final response = await _repository.fetchBreakingNews(
         language: _currentLanguageCode,
+        limit: limit,
+        page: page,
       );
 
       if (response.results.isNotEmpty) {
@@ -169,42 +184,49 @@ class NewsProvider with ChangeNotifier {
     }
   }
 
-  /// Load more news (pagination)
+  /// Load more news (pagination) - Updated to use page-based pagination
+  /// This method is kept for backward compatibility but now uses page numbers
   Future<void> loadMoreNews() async {
-    if (_isLoadingMore || _nextPage == null) return;
+    if (_isLoadingMore) return;
 
     try {
       _isLoadingMore = true;
       notifyListeners();
 
-      NewsResponse response;
+      // Calculate next page based on current articles length
+      final currentPage = (_articles.length / 50).ceil() + 1;
 
       // Update language code from provider if available
       if (_languageProvider != null) {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
+      NewsResponse response;
+
       if (_currentQuery != null) {
         response = await _repository.searchNews(
           _currentQuery!,
           language: _currentLanguageCode,
-          nextPage: _nextPage,
+          limit: 50,
+          page: currentPage,
         );
       } else if (_currentCategory != null) {
         response = await _repository.fetchNewsByCategory(
           _currentCategory!,
           language: _currentLanguageCode,
-          nextPage: _nextPage,
+          limit: 50,
+          page: currentPage,
         );
       } else {
         response = await _repository.fetchBreakingNews(
           language: _currentLanguageCode,
-          nextPage: _nextPage,
+          limit: 50,
+          page: currentPage,
         );
       }
 
       _articles.addAll(response.results);
-      _nextPage = response.nextPage;
+      _nextPage = response.nextPage; // Keep for backward compatibility
       _isLoadingMore = false;
       notifyListeners();
     } catch (e) {
@@ -318,8 +340,14 @@ class NewsProvider with ChangeNotifier {
   }
 
   /// Fetch news for a specific date (archive)
-  /// date: The date to fetch news for (defaults to today if null)
-  Future<void> fetchNewsByDate(DateTime? date) async {
+  /// [date] - The date to fetch news for (defaults to today if null)
+  /// [limit] - Number of items to fetch (default: 5 for home page, 50 for View All)
+  /// [page] - Page number for pagination (default: 1)
+  Future<void> fetchNewsByDate(
+    DateTime? date, {
+    int limit = 5,
+    int page = 1,
+  }) async {
     try {
       _isLoadingToday = true;
       _error = null;
@@ -327,18 +355,18 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
 
       // Format date as YYYY-MM-DD
-      final fromDate = _formatDate(_selectedDate!);
-      final toDate = fromDate; // Same date for single day
+      final dateString = _formatDate(_selectedDate!);
 
       // Update language code from provider if available
       if (_languageProvider != null) {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
-      final response = await _repository.fetchArchiveNews(
-        fromDate: fromDate,
-        toDate: toDate,
+      final response = await _repository.fetchTodayNews(
+        date: dateString,
         language: _currentLanguageCode,
+        limit: limit,
+        page: page,
       );
 
       _todayNews = response.results;

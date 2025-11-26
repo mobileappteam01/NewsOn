@@ -18,6 +18,8 @@ import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../view_all/breaking_news_view_all_screen.dart';
+import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
 class NewsFeedTabNew extends StatefulWidget {
@@ -62,10 +64,12 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   @override
   void initState() {
     super.initState();
-    // Fetch today's news on initialization
+    // Fetch today's news on initialization with limit of 5
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<NewsProvider>().fetchNewsByDate(_selectedDate);
+        context.read<NewsProvider>().fetchNewsByDate(_selectedDate, limit: 5);
+        // Fetch breaking news with limit of 10
+        context.read<NewsProvider>().fetchBreakingNews(limit: 10);
       }
     });
   }
@@ -78,7 +82,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     super.dispose();
   }
 
-  showHeadingText(String text, ThemeData theme) {
+  showHeadingText(String text, ThemeData theme, {VoidCallback? onViewAll}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -94,12 +98,15 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
             maxLines: 1,
           ),
         ),
-        Text(
-          LocalizationHelper.viewAll(context),
-          style: GoogleFonts.inter(
-            color: Color(0xFFC70000),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+        GestureDetector(
+          onTap: onViewAll,
+          child: Text(
+            LocalizationHelper.viewAll(context),
+            style: GoogleFonts.inter(
+              color: Color(0xFFC70000),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -207,8 +214,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   child: CarouselSlider.builder(
                     itemCount:
                         newsProvider.breakingNews.isNotEmpty
-                            ? newsProvider.breakingNews.length
-                            : widget.newsList.length,
+                            ? newsProvider.breakingNews.length.clamp(
+                              0,
+                              10,
+                            ) // Limit to 10 on home page
+                            : widget.newsList.length.clamp(0, 10),
                     itemBuilder: (context, index, realIndex) {
                       final article =
                           newsProvider.breakingNews.isNotEmpty
@@ -309,6 +319,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       newsProvider.selectedDate ?? _selectedDate,
                     ),
                     theme,
+                    onViewAll: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => TodayNewsViewAllScreen(
+                                selectedDate:
+                                    newsProvider.selectedDate ?? _selectedDate,
+                              ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -348,51 +370,56 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final article = newsProvider.todayNews[index];
-                      return NewsGridView(
-                        key: ValueKey('today_${article.articleId ?? index}'),
-                        type: 'listview',
-                        newsDetails: article,
-                        onListenTapped: () async {
-                          try {
-                            await context
-                                .read<AudioPlayerProvider>()
-                                .playArticle(article);
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error playing audio: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final article = newsProvider.todayNews[index];
+                        return NewsGridView(
+                          key: ValueKey('today_${article.articleId ?? index}'),
+                          type: 'listview',
+                          newsDetails: article,
+                          onListenTapped: () async {
+                            try {
+                              await context
+                                  .read<AudioPlayerProvider>()
+                                  .playArticle(article);
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error playing audio: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
                             }
-                          }
-                        },
-                        onSaveTapped: () {
-                          context.read<NewsProvider>().toggleBookmark(article);
-                        },
-                        onNewsTapped: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      NewsDetailScreen(article: article),
-                            ),
-                          );
-                        },
-                        onShareTapped: () {
-                          showModalBottomSheet(
-                            context: context,
-                            builder: (c) {
-                              return showShareModalBottomSheet(context);
-                            },
-                          );
-                        },
-                      );
-                    }, childCount: newsProvider.todayNews.length),
+                          },
+                          onSaveTapped: () {
+                            context.read<NewsProvider>().toggleBookmark(
+                              article,
+                            );
+                          },
+                          onNewsTapped: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        NewsDetailScreen(article: article),
+                              ),
+                            );
+                          },
+                          onShareTapped: () {
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (c) {
+                                return showShareModalBottomSheet(context);
+                              },
+                            );
+                          },
+                        );
+                      },
+                      childCount: newsProvider.todayNews.length.clamp(0, 5),
+                    ), // Limit to 5 on home page
                   ),
                 ),
 
@@ -406,6 +433,15 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   child: showHeadingText(
                     LocalizationHelper.flashNews(context),
                     theme,
+                    onViewAll: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const BreakingNewsViewAllScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -416,7 +452,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   height: 200,
                   child: PageView.builder(
                     controller: _flashNewsController,
-                    itemCount: newsProvider.breakingNews.length,
+                    itemCount: newsProvider.breakingNews.length.clamp(
+                      0,
+                      5,
+                    ), // Limit to 5 on home page
                     itemBuilder: (context, index) {
                       final data = newsProvider.breakingNews[index];
                       return NewsGridView(

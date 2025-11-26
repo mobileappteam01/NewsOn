@@ -101,8 +101,8 @@ class StorageService {
 
   /// Get language preference
   static String getLanguage() {
-    if (_settingsBox == null) return 'en';
-    return _settingsBox!.get(AppConstants.languageKey, defaultValue: 'en');
+    if (_settingsBox == null) return 'ta';
+    return _settingsBox!.get(AppConstants.languageKey, defaultValue: 'ta');
   }
 
   /// Save country preference

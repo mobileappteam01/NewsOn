@@ -43,11 +43,11 @@ class ApiConfigModel {
     this.apiKeyParam = 'apikey',
     this.categoryParam = 'category',
     this.countryParam = 'country',
-    this.languageParam = 'lan', // NewsData API uses 'lan' parameter
+    this.languageParam = 'language', // Backend API uses 'language' parameter
     this.queryParam = 'q',
     this.pageParam = 'page',
     this.sizeParam = 'size',
-    this.defaultLanguage = 'en',
+    this.defaultLanguage = 'ta',
     this.defaultCountry = 'us',
     this.defaultPageSize = 10,
     this.requestTimeoutSeconds = 30,
@@ -96,11 +96,11 @@ class ApiConfigModel {
       apiKeyParam: json['api_key_param'] as String? ?? 'apikey',
       categoryParam: json['category_param'] as String? ?? 'category',
       countryParam: json['country_param'] as String? ?? 'country',
-      languageParam: json['language_param'] as String? ?? 'lan', // NewsData API uses 'lan' parameter
+      languageParam: json['language_param'] as String? ?? 'language', // Backend API uses 'language' parameter
       queryParam: json['query_param'] as String? ?? 'q',
       pageParam: json['page_param'] as String? ?? 'page',
       sizeParam: json['size_param'] as String? ?? 'size',
-      defaultLanguage: json['default_language'] as String? ?? 'en',
+      defaultLanguage: json['default_language'] as String? ?? 'ta',
       defaultCountry: json['default_country'] as String? ?? 'us',
       defaultPageSize: json['default_page_size'] as int? ?? 10,
       requestTimeoutSeconds: json['request_timeout_seconds'] as int? ?? 30,
