@@ -43,7 +43,7 @@ class ApiConfigModel {
     this.apiKeyParam = 'apikey',
     this.categoryParam = 'category',
     this.countryParam = 'country',
-    this.languageParam = 'language',
+    this.languageParam = 'lan', // NewsData API uses 'lan' parameter
     this.queryParam = 'q',
     this.pageParam = 'page',
     this.sizeParam = 'size',
@@ -96,7 +96,7 @@ class ApiConfigModel {
       apiKeyParam: json['api_key_param'] as String? ?? 'apikey',
       categoryParam: json['category_param'] as String? ?? 'category',
       countryParam: json['country_param'] as String? ?? 'country',
-      languageParam: json['language_param'] as String? ?? 'language',
+      languageParam: json['language_param'] as String? ?? 'lan', // NewsData API uses 'lan' parameter
       queryParam: json['query_param'] as String? ?? 'q',
       pageParam: json['page_param'] as String? ?? 'page',
       sizeParam: json['size_param'] as String? ?? 'size',

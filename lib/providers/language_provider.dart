@@ -5,19 +5,19 @@ import '../data/services/storage_service.dart';
 /// Works with Flutter's Locale system for proper localization
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('en'); // Default to English
-  
+
   // Supported languages with their locale codes
   final Map<String, Locale> supportedLanguages = {
-    'English': const Locale('en'),
+    // 'English': const Locale('en'),
     'Tamil': const Locale('ta'),
-    'Hindi': const Locale('hi'),
+    // 'Hindi': const Locale('hi'),
   };
 
   // Language names for display
   final List<String> languageNames = [
-    'English',
+    // 'English',
     'Tamil',
-    'Hindi',
+    // 'Hindi',
   ];
 
   LanguageProvider() {
@@ -62,7 +62,7 @@ class LanguageProvider extends ChangeNotifier {
     final isSupported = supportedLanguages.values.any(
       (supportedLocale) => supportedLocale.languageCode == locale.languageCode,
     );
-    
+
     if (isSupported) {
       _locale = locale;
       await StorageService.saveLanguage(locale.languageCode);
@@ -91,5 +91,19 @@ class LanguageProvider extends ChangeNotifier {
 
   /// Get list of supported locales
   List<Locale> get supportedLocales => supportedLanguages.values.toList();
-}
 
+  /// Get API language code for NewsData API
+  /// Maps locale codes to API language codes (e.g., 'en', 'ta', 'hi')
+  String getApiLanguageCode() {
+    return _locale.languageCode; // Returns 'en', 'ta', or 'hi'
+  }
+
+  /// Get API language code from locale code
+  /// This ensures we always return a valid API language code
+  static String getApiLanguageCodeFromLocale(String localeCode) {
+    // Map locale codes to API language codes
+    // NewsData API supports: en, ta, hi, etc.
+    final languageMap = {'en': 'en', 'ta': 'ta', 'hi': 'hi'};
+    return languageMap[localeCode] ?? 'en'; // Default to English
+  }
+}

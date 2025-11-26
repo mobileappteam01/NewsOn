@@ -30,6 +30,7 @@ class NewsGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
@@ -37,16 +38,16 @@ class NewsGridView extends StatelessWidget {
         // final isDark = theme.brightness == Brightness.dark;
 
         return type.toLowerCase() == 'listview'
-            ? showListView(config, newsDetails, context)
+            ? showListView(config, newsDetails, context, theme)
             : type.toLowerCase() == 'cardview'
-            ? showCardView(config, newsDetails, context)
+            ? showCardView(config, newsDetails, context, theme)
             : type.toLowerCase() == 'thumbnail'
-            ? showThumbNailView(config, newsDetails, context)
+            ? showThumbNailView(config, newsDetails, context, theme)
             : type.toLowerCase() == 'detailedview'
-            ? showDetailedView(config, newsDetails, context)
+            ? showDetailedView(config, newsDetails, context, theme)
             : type.toLowerCase() == 'bannerview'
-            ? showBannerView(config, newsDetails, context)
-            : showListView(config, newsDetails, context);
+            ? showBannerView(config, newsDetails, context, theme)
+            : showListView(config, newsDetails, context, theme);
       },
     );
   }
@@ -71,6 +72,7 @@ class NewsGridView extends StatelessWidget {
     RemoteConfigModel config,
     String type,
     NewsArticle newsDetails,
+    ThemeData theme,
   ) {
     return type.toLowerCase() == 'category'
         ? Text(
@@ -88,7 +90,7 @@ class NewsGridView extends StatelessWidget {
         )
         : GestureDetector(
           onTap: () => onSaveTapped(), // ✅ FIXED
-          child: Icon(Icons.bookmark, color: Colors.black),
+          child: Icon(Icons.bookmark, color: theme.colorScheme.secondary),
         );
   }
 
@@ -150,13 +152,17 @@ class NewsGridView extends StatelessWidget {
     );
   }
 
-  showShareButton() {
+  showShareButton(ThemeData theme) {
     return GestureDetector(
       onTap: () => onShareTapped(),
       child: Transform(
         alignment: Alignment.center,
-        transform: Matrix4.rotationY(3.1416), // 180° flip horizontally
-        child: Icon(Icons.reply_outlined, size: 24, color: Colors.black),
+        transform: Matrix4.rotationY(3.1416),
+        child: Icon(
+          Icons.reply_outlined,
+          size: 24,
+          color: theme.colorScheme.secondary,
+        ),
       ),
     );
   }
@@ -165,6 +171,7 @@ class NewsGridView extends StatelessWidget {
     RemoteConfigModel config,
     NewsArticle newsDetails,
     BuildContext context,
+    ThemeData theme,
   ) {
     return GestureDetector(
       onTap: () => onNewsTapped(),
@@ -185,7 +192,7 @@ class NewsGridView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  showCommonWidget(config, 'category', newsDetails),
+                  showCommonWidget(config, 'category', newsDetails, theme),
                   giveHeight(3),
                   SizedBox(
                     height: 110,
@@ -200,14 +207,14 @@ class NewsGridView extends StatelessWidget {
                     ),
                   ),
                   giveHeight(3),
-                  showCommonWidget(config, 'postedtime', newsDetails),
+                  showCommonWidget(config, 'postedtime', newsDetails, theme),
                   giveHeight(3),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       showListenButton(config, context),
-                      showCommonWidget(config, 'save', newsDetails),
-                      showShareButton(),
+                      showCommonWidget(config, 'save', newsDetails, theme),
+                      showShareButton(theme),
                     ],
                   ),
                 ],
@@ -223,6 +230,7 @@ class NewsGridView extends StatelessWidget {
     RemoteConfigModel config,
     NewsArticle newsDetails,
     BuildContext context,
+    ThemeData theme,
   ) {
     return GestureDetector(
       onTap: () => onNewsTapped(),
@@ -324,6 +332,7 @@ class NewsGridView extends StatelessWidget {
     RemoteConfigModel config,
     NewsArticle newsDetails,
     BuildContext context,
+    ThemeData theme,
   ) {
     return GestureDetector(
       onTap: () => onNewsTapped(),
@@ -397,11 +406,13 @@ class NewsGridView extends StatelessWidget {
     RemoteConfigModel config,
     NewsArticle newsDetails,
     BuildContext context,
+    ThemeData theme,
   ) {}
 
   showDetailedView(
     RemoteConfigModel config,
     NewsArticle newsDetails,
     BuildContext context,
+    ThemeData theme,
   ) {}
 }

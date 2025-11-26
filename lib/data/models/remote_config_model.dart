@@ -96,6 +96,7 @@ class RemoteConfigModel {
   final String languageImg;
   final String headlineImg;
   final String listenIcon;
+  final String? appIcon; // Dynamic app icon from Firebase Realtime Database
 
   // Drawer Contents
   final List<dynamic> drawerMenu;
@@ -191,6 +192,7 @@ class RemoteConfigModel {
     this.languageImg = '',
     this.headlineImg = '',
     this.listenIcon = '',
+    this.appIcon, // Dynamic app icon from Firebase Realtime Database
 
     // Drawer Contents
     this.drawerMenu = const [],
@@ -320,6 +322,7 @@ class RemoteConfigModel {
       'languageImg': languageImg,
       'headlineImg': headlineImg,
       'listenIcon': listenIcon,
+      'appIcon': appIcon,
       'drawerMenu': drawerMenu,
     };
   }
@@ -416,6 +419,7 @@ class RemoteConfigModel {
       languageImg: json['languageImg'] as String? ?? '',
       headlineImg: json['headlineImg'] as String? ?? '',
       listenIcon: json['listenIcon'] as String? ?? '',
+      appIcon: json['appIcon'] as String?,
       drawerMenu: json['drawerMenu'] as List<dynamic>? ?? const [],
     );
   }

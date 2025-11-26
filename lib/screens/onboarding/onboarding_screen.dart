@@ -368,6 +368,7 @@ class _NameField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -384,6 +385,7 @@ class _NameField extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              style: TextStyle(color: Colors.black),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Enter your nick name',

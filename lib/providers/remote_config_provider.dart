@@ -11,6 +11,19 @@ class RemoteConfigProvider extends ChangeNotifier {
   RemoteConfigModel get config => _config;
   bool get isInitialized => _isInitialized;
 
+  /// Update app icon from Realtime Database
+  /// Creates a new config instance with the updated app icon
+  void updateAppIcon(String? appIconUrl) {
+    if (appIconUrl != null && appIconUrl.isNotEmpty) {
+      // Create a new config with updated app icon using fromJson for easier copying
+      final currentJson = _config.toJson();
+      currentJson['appIcon'] = appIconUrl;
+      _config = RemoteConfigModel.fromJson(currentJson);
+      notifyListeners();
+      debugPrint('✅ App icon updated in RemoteConfigProvider: $appIconUrl');
+    }
+  }
+
   /// Initialize Remote Config
   /// Loads cached data immediately, then tries to fetch new data
   Future<void> initialize() async {

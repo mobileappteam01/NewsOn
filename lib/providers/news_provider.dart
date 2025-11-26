@@ -2,13 +2,75 @@ import 'package:flutter/foundation.dart';
 import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/repositories/news_repository.dart';
+import 'language_provider.dart';
 
 /// Provider for managing news state
 class NewsProvider with ChangeNotifier {
   final NewsRepository _repository;
+  LanguageProvider? _languageProvider;
+  String _currentLanguageCode = 'en'; // Default to English
 
-  NewsProvider({NewsRepository? repository})
-    : _repository = repository ?? NewsRepository(apiKey: "");
+  NewsProvider({NewsRepository? repository, LanguageProvider? languageProvider})
+    : _repository = repository ?? NewsRepository(apiKey: ""),
+      _languageProvider = languageProvider {
+    // Listen to language changes if provider is available
+    _languageProvider?.addListener(_onLanguageChanged);
+    if (_languageProvider != null) {
+      _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      debugPrint('📰 NewsProvider initialized with language: $_currentLanguageCode');
+    } else {
+      debugPrint('⚠️ NewsProvider initialized without LanguageProvider - language will be set later');
+    }
+  }
+
+  /// Set language provider and listen to changes
+  void setLanguageProvider(LanguageProvider languageProvider) {
+    _languageProvider?.removeListener(_onLanguageChanged);
+    _languageProvider = languageProvider;
+    _languageProvider?.addListener(_onLanguageChanged);
+    _currentLanguageCode = languageProvider.getApiLanguageCode();
+    debugPrint('📰 NewsProvider language set to: $_currentLanguageCode');
+  }
+
+  /// Called when language changes
+  void _onLanguageChanged() {
+    if (_languageProvider != null) {
+      final newLanguageCode = _languageProvider!.getApiLanguageCode();
+      if (newLanguageCode != _currentLanguageCode) {
+        _currentLanguageCode = newLanguageCode;
+        debugPrint('🔄 Language changed to: $_currentLanguageCode - Refreshing ALL news sections...');
+        // Refresh ALL news sections with new language
+        _refreshAllNewsSections();
+      }
+    }
+  }
+
+  /// Refresh all news sections when language changes
+  Future<void> _refreshAllNewsSections() async {
+    try {
+      // Refresh breaking news (used in carousel and flash news)
+      await fetchBreakingNews();
+      
+      // Refresh today's news if date is selected
+      if (_selectedDate != null) {
+        await fetchNewsByDate(_selectedDate);
+      } else {
+        // Refresh today's news with current date
+        await fetchNewsByDate(DateTime.now());
+      }
+      
+      // Refresh category/news articles if there's an active category or query
+      if (_currentCategory != null) {
+        await fetchNewsByCategory(_currentCategory!, refresh: true);
+      } else if (_currentQuery != null) {
+        await searchNews(_currentQuery!, refresh: true);
+      }
+      
+      debugPrint('✅ All news sections refreshed with language: $_currentLanguageCode');
+    } catch (e) {
+      debugPrint('❌ Error refreshing all news sections: $e');
+    }
+  }
 
   // State variables
   List<NewsArticle> _articles = [];
@@ -43,7 +105,14 @@ class NewsProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _repository.fetchBreakingNews();
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+
+      final response = await _repository.fetchBreakingNews(
+        language: _currentLanguageCode,
+      );
 
       if (response.results.isNotEmpty) {
         debugPrint("First article title: ${response.results.first.title}");
@@ -80,7 +149,15 @@ class NewsProvider with ChangeNotifier {
       _currentQuery = null;
       notifyListeners();
 
-      final response = await _repository.fetchNewsByCategory(category);
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+
+      final response = await _repository.fetchNewsByCategory(
+        category,
+        language: _currentLanguageCode,
+      );
       _articles = response.results;
       _nextPage = response.nextPage;
       _isLoading = false;
@@ -102,18 +179,28 @@ class NewsProvider with ChangeNotifier {
 
       NewsResponse response;
 
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+
       if (_currentQuery != null) {
         response = await _repository.searchNews(
           _currentQuery!,
+          language: _currentLanguageCode,
           nextPage: _nextPage,
         );
       } else if (_currentCategory != null) {
         response = await _repository.fetchNewsByCategory(
           _currentCategory!,
+          language: _currentLanguageCode,
           nextPage: _nextPage,
         );
       } else {
-        response = await _repository.fetchBreakingNews(nextPage: _nextPage);
+        response = await _repository.fetchBreakingNews(
+          language: _currentLanguageCode,
+          nextPage: _nextPage,
+        );
       }
 
       _articles.addAll(response.results);
@@ -146,7 +233,15 @@ class NewsProvider with ChangeNotifier {
       _currentCategory = null;
       notifyListeners();
 
-      final response = await _repository.searchNews(query);
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+
+      final response = await _repository.searchNews(
+        query,
+        language: _currentLanguageCode,
+      );
       _articles = response.results;
       _nextPage = response.nextPage;
       _isLoading = false;
@@ -235,10 +330,15 @@ class NewsProvider with ChangeNotifier {
       final fromDate = _formatDate(_selectedDate!);
       final toDate = fromDate; // Same date for single day
 
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+
       final response = await _repository.fetchArchiveNews(
         fromDate: fromDate,
         toDate: toDate,
-        language: 'en', // You can make this dynamic
+        language: _currentLanguageCode,
       );
 
       _todayNews = response.results;
@@ -264,6 +364,7 @@ class NewsProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _languageProvider?.removeListener(_onLanguageChanged);
     _repository.dispose();
     super.dispose();
   }

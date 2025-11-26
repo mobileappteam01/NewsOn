@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:newson/core/utils/shared_functions.dart';
@@ -18,11 +20,15 @@ import 'providers/audio_player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/remote_config_provider.dart';
+import 'data/services/dynamic_icon_service.dart';
+import 'package:language_detector/language_detector.dart';
 
 String newsAPIKey = '';
 String elevenLabsAPIKey = '';
 String elevenLabsVoiceId = '';
 String baseURL = '';
+String appIconUrl = ''; // Dynamic app icon URL from Firebase Realtime Database
+final detector = LanguageDetector();
 
 // Global reference to audio player provider for updating API key
 AudioPlayerProvider? _globalAudioPlayerProvider;
@@ -33,8 +39,9 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp();
 
-  // Fetch all API keys FIRST before initializing providers
+  // Fetch all API keys and app icon FIRST before initializing providers
   await fetchIPAddressAndURLS();
+  await fetchAppIcon(); // Fetch dynamic app icon from Realtime Database
   // Wait a bit more to ensure ElevenLabs API key is fetched and provider is updated
   await Future.delayed(
     const Duration(milliseconds: 1000),
@@ -49,6 +56,23 @@ void main() async {
   // Initialize Remote Config FIRST (required for API config)
   final remoteConfigProvider = RemoteConfigProvider();
   await remoteConfigProvider.initialize();
+
+  // Update app icon if fetched from Realtime Database
+  if (appIconUrl.isNotEmpty) {
+    remoteConfigProvider.updateAppIcon(appIconUrl);
+    debugPrint('✅ App icon set in RemoteConfigProvider');
+
+    // Apply dynamic launcher icon change (Android only)
+    try {
+      // For now, switch to dynamic1 variant when icon is fetched
+      // In production, you can download the icon and create variants
+      await DynamicIconService.changeIcon('dynamic1');
+      debugPrint('✅ Dynamic launcher icon applied');
+    } catch (e) {
+      debugPrint('⚠️ Could not apply dynamic icon: $e');
+      // This is expected on iOS or if the feature is not fully set up
+    }
+  }
 
   // Initialize Dynamic API Configuration from Remote Config
   // This loads all API endpoints, parameters, and settings dynamically
@@ -107,7 +131,15 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: remoteConfigProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => NewsProvider()),
+        // NewsProvider depends on LanguageProvider for language-based API calls
+        ChangeNotifierProxyProvider<LanguageProvider, NewsProvider>(
+          create: (_) => NewsProvider(),
+          update: (_, languageProvider, previous) {
+            previous ??= NewsProvider();
+            previous.setLanguageProvider(languageProvider);
+            return previous;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
         // Audio Player Provider - Get API key from Firebase
@@ -223,6 +255,18 @@ fetchElevenLabsVoiceId() async {
           '⚠️ AudioPlayerProvider not yet created, key will be set on creation',
         );
       }
+    }
+  });
+}
+
+/// Fetch dynamic app icon from Firebase Realtime Database
+fetchAppIcon() async {
+  await fetchDBData('appImages').then((val) {
+    if (val != null) {
+      debugPrint("✅ App Icon URL fetched: $val");
+      appIconUrl = val.toString();
+    } else {
+      debugPrint('⚠️ App Icon URL not found in database');
     }
   });
 }

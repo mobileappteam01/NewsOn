@@ -58,29 +58,37 @@ class NewsApiService {
   /// Fetch news by category
   Future<NewsResponse> fetchNewsByCategory(
     String category, {
+    String? language,
     String? nextPage,
   }) async {
     return fetchNews(
       category: category,
-      language: ApiConstants.defaultLanguage,
+      language: language ?? ApiConstants.defaultLanguage,
       nextPage: nextPage,
     );
   }
 
   /// Search news by query
-  Future<NewsResponse> searchNews(String query, {String? nextPage}) async {
+  Future<NewsResponse> searchNews(
+    String query, {
+    String? language,
+    String? nextPage,
+  }) async {
     return fetchNews(
       query: query,
-      language: ApiConstants.defaultLanguage,
+      language: language ?? ApiConstants.defaultLanguage,
       nextPage: nextPage,
     );
   }
 
   /// Fetch top/breaking news
-  Future<NewsResponse> fetchBreakingNews({String? nextPage}) async {
+  Future<NewsResponse> fetchBreakingNews({
+    String? language,
+    String? nextPage,
+  }) async {
     return fetchNews(
       category: 'top',
-      language: ApiConstants.defaultLanguage,
+      language: language ?? ApiConstants.defaultLanguage,
       nextPage: nextPage,
     );
   }
@@ -165,6 +173,9 @@ class NewsApiService {
     }
     if (language != null && language.isNotEmpty) {
       queryParameters[ApiConstants.languageParam] = language;
+      debugPrint('🌐 Archive API call with language parameter: ${ApiConstants.languageParam}=$language');
+    } else {
+      debugPrint('⚠️ Archive API call without language parameter - using default');
     }
     if (query != null && query.isNotEmpty) {
       queryParameters[ApiConstants.queryParam] = query;
@@ -205,6 +216,9 @@ class NewsApiService {
     }
     if (language != null && language.isNotEmpty) {
       queryParameters[ApiConstants.languageParam] = language;
+      debugPrint('🌐 API call with language parameter: ${ApiConstants.languageParam}=$language');
+    } else {
+      debugPrint('⚠️ API call without language parameter - using default');
     }
     if (query != null && query.isNotEmpty) {
       queryParameters[ApiConstants.queryParam] = query;

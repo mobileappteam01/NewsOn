@@ -10,6 +10,8 @@ import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
+// Uncomment to use dynamic app icon:
+// import '../../core/widgets/dynamic_app_icon.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

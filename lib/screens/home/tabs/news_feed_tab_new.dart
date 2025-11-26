@@ -17,6 +17,7 @@ import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
+import '../../../core/constants/api_constants.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
 class NewsFeedTabNew extends StatefulWidget {
@@ -46,13 +47,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   String _selectedCategory = 'All';
   DateTime _selectedDate = DateTime.now();
 
-  final List<String> categories = [
-    'All',
-    'Politics',
-    'Sports',
-    'Education',
-    'Business',
-  ];
+  // Get dynamic categories from API config, with 'All' as first option
+  List<String> get categories {
+    final apiCategories = ApiConstants.categories;
+    // Capitalize first letter of each category for display
+    final formattedCategories =
+        apiCategories.map((cat) {
+          if (cat.isEmpty) return cat;
+          return cat[0].toUpperCase() + cat.substring(1);
+        }).toList();
+    return ['All', ...formattedCategories];
+  }
 
   @override
   void initState() {
@@ -251,9 +256,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           onTap: () {
                             setState(() => _selectedCategory = category);
                             if (category != 'All') {
+                              // Convert display name back to API format (lowercase)
+                              final apiCategory = category.toLowerCase();
                               context.read<NewsProvider>().fetchNewsByCategory(
-                                category.toLowerCase(),
+                                apiCategory,
                               );
+                            } else {
+                              // If "All" is selected, fetch breaking news
+                              context.read<NewsProvider>().fetchBreakingNews();
                             }
                           },
                           child: Container(

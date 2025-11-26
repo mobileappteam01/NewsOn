@@ -5,6 +5,7 @@ import '../data/models/news_article.dart';
 import '../data/services/elevenlabs_service.dart';
 import '../data/services/audio_player_service.dart';
 import '../data/services/audio_background_service.dart';
+import '../main.dart';
 
 /// Audio Player Provider - Manages ElevenLabs audio playback with Spotify-like features
 class AudioPlayerProvider with ChangeNotifier {
@@ -128,12 +129,17 @@ class AudioPlayerProvider with ChangeNotifier {
       debugPrint('📝 Text length: ${textToSpeak.length} characters');
 
       // Generate audio using ElevenLabs
+      // final audioBytes = await _elevenLabsService.textToSpeech(
+      //   text: textToSpeak,
+      //   stability: 0.5,
+      //   similarityBoost: 0.75,
+      //   style: 0.0,
+      //   useSpeakerBoost: true,
+      // );
+
       final audioBytes = await _elevenLabsService.textToSpeech(
         text: textToSpeak,
-        stability: 0.5,
-        similarityBoost: 0.75,
-        style: 0.0,
-        useSpeakerBoost: true,
+        voiceId: elevenLabsVoiceId,
       );
 
       // Audio generated successfully - hide loader immediately
@@ -176,16 +182,16 @@ class AudioPlayerProvider with ChangeNotifier {
     buffer.write('. ');
 
     // // Add author if available
-    // if (article.creator != null && article.creator!.isNotEmpty) {
-    //   buffer.write('By ${article.creator!.first}. ');
-    // }
+    if (article.creator != null && article.creator!.isNotEmpty) {
+      buffer.write('By ${article.creator!.first}. ');
+    }
 
     // // Add description or content
-    // if (article.content != null && article.content!.isNotEmpty) {
-    //   buffer.write(article.content);
-    // } else if (article.description != null && article.description!.isNotEmpty) {
-    //   buffer.write(article.description);
-    // }
+    if (article.content != null && article.content!.isNotEmpty) {
+      buffer.write(article.content);
+    } else if (article.description != null && article.description!.isNotEmpty) {
+      buffer.write(article.description);
+    }
 
     return buffer.toString();
   }

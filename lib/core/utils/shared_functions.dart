@@ -191,28 +191,36 @@ showMatchVS(String teamA, String teamB, RemoteConfigModel config) {
   );
 }
 
-showShareButton(Function() onTapped) {
+showShareButton(Function() onTapped, ThemeData theme) {
   return GestureDetector(
     onTap: () => onTapped(),
     child: Transform(
       alignment: Alignment.center,
       transform: Matrix4.rotationY(3.1416), // 180° flip horizontally
-      child: Icon(Icons.reply_outlined, size: 24, color: Colors.black),
+      child: Icon(
+        Icons.reply_outlined,
+        size: 24,
+        color: theme.colorScheme.secondary,
+      ),
     ),
   );
 }
 
-showSaveButton(bool isSaved, Function() onTapped) {
+showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
   return GestureDetector(
     onTap: () => onTapped(),
     child: Icon(
       isSaved ? Icons.bookmark : Icons.bookmark_border,
-      color: Colors.black,
+      color: theme.colorScheme.secondary,
     ),
   );
 }
 
-showListenButton(RemoteConfigModel config, Function() onListenTapped, [BuildContext? context]) {
+showListenButton(
+  RemoteConfigModel config,
+  Function() onListenTapped, [
+  BuildContext? context,
+]) {
   return Builder(
     builder: (ctx) {
       final buildContext = context ?? ctx;
@@ -228,7 +236,12 @@ showListenButton(RemoteConfigModel config, Function() onListenTapped, [BuildCont
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
+              showImage(
+                config.listenIcon,
+                BoxFit.contain,
+                height: 15,
+                width: 15,
+              ),
               giveWidth(12),
               Flexible(
                 child: Text(
@@ -345,7 +358,10 @@ Widget showLogoutModalBottomSheet(BuildContext context) {
                   for (int i = 0; i < 2; i++)
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context, i == 0); // Return true for Yes, false for No
+                        Navigator.pop(
+                          context,
+                          i == 0,
+                        ); // Return true for Yes, false for No
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -354,7 +370,8 @@ Widget showLogoutModalBottomSheet(BuildContext context) {
                         ),
                         margin: const EdgeInsets.only(left: 8),
                         decoration: BoxDecoration(
-                          color: i == 0 ? const Color(0xff505050) : Colors.white,
+                          color:
+                              i == 0 ? const Color(0xff505050) : Colors.white,
                           border: Border.all(color: const Color(0xff505050)),
                           borderRadius: BorderRadius.circular(25),
                         ),

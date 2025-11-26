@@ -47,18 +47,40 @@ class NewsRepository {
   }
 
   /// Fetch news by category
-  Future<NewsResponse> fetchNewsByCategory(String category, {String? nextPage}) async {
-    return fetchNews(category: category, nextPage: nextPage);
+  Future<NewsResponse> fetchNewsByCategory(
+    String category, {
+    String? language,
+    String? nextPage,
+  }) async {
+    return fetchNews(
+      category: category,
+      language: language,
+      nextPage: nextPage,
+    );
   }
 
   /// Search news
-  Future<NewsResponse> searchNews(String query, {String? nextPage}) async {
-    return fetchNews(query: query, nextPage: nextPage);
+  Future<NewsResponse> searchNews(
+    String query, {
+    String? language,
+    String? nextPage,
+  }) async {
+    return fetchNews(
+      query: query,
+      language: language,
+      nextPage: nextPage,
+    );
   }
 
   /// Fetch breaking news
-  Future<NewsResponse> fetchBreakingNews({String? nextPage}) async {
-    return _apiService.fetchBreakingNews(nextPage: nextPage);
+  Future<NewsResponse> fetchBreakingNews({
+    String? language,
+    String? nextPage,
+  }) async {
+    return _apiService.fetchBreakingNews(
+      language: language,
+      nextPage: nextPage,
+    );
   }
 
   /// Fetch archive news by date range
