@@ -44,7 +44,7 @@ class DynamicIconPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
 
         try {
-            // Disable all aliases first
+            // Disable all aliases first to ensure only one is active
             disableComponent(pm, packageName, "$packageName.MainActivityDefault")
             disableComponent(pm, packageName, "$packageName.MainActivityDynamic1")
             disableComponent(pm, packageName, "$packageName.MainActivityDynamic2")
@@ -61,6 +61,7 @@ class DynamicIconPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     enableComponent(pm, packageName, "$packageName.MainActivityDynamic2")
                 }
                 else -> {
+                    // Default to MainActivityDefault if unknown icon name
                     enableComponent(pm, packageName, "$packageName.MainActivityDefault")
                 }
             }

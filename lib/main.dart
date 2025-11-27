@@ -63,11 +63,18 @@ void main() async {
     debugPrint('✅ App icon set in RemoteConfigProvider');
 
     // Apply dynamic launcher icon change (Android only)
+    // Only change icon if we're not already using the default
+    // This prevents duplicate app entries on the launcher
     try {
-      // For now, switch to dynamic1 variant when icon is fetched
-      // In production, you can download the icon and create variants
-      await DynamicIconService.changeIcon('dynamic1');
-      debugPrint('✅ Dynamic launcher icon applied');
+      final currentIcon = await DynamicIconService.getCurrentIcon();
+      if (currentIcon != 'dynamic1') {
+        // Switch to dynamic1 variant when icon is fetched
+        // In production, you can download the icon and create variants
+        await DynamicIconService.changeIcon('dynamic1');
+        debugPrint('✅ Dynamic launcher icon applied');
+      } else {
+        debugPrint('ℹ️ Dynamic icon already active, skipping change');
+      }
     } catch (e) {
       debugPrint('⚠️ Could not apply dynamic icon: $e');
       // This is expected on iOS or if the feature is not fully set up
