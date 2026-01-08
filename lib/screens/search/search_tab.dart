@@ -419,8 +419,9 @@ class _SearchTabState extends State<SearchTab>
                 newsDetails: article,
                 onListenTapped: () async {
                   try {
-                    await context.read<AudioPlayerProvider>().playArticle(
+                    await context.read<AudioPlayerProvider>().playArticleFromUrl(
                       article,
+                      playTitle: true,
                     );
                   } catch (e) {
                     if (mounted) {

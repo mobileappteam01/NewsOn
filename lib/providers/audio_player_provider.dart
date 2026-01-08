@@ -104,8 +104,16 @@ class AudioPlayerProvider with ChangeNotifier {
     _elevenLabsService.setVoiceId(voiceId);
   }
 
-  /// Play article using ElevenLabs TTS
+  /// Play article using ElevenLabs TTS (legacy method - kept for backward compatibility)
   Future<void> playArticle(NewsArticle article) async {
+    // Check if article has audio URLs - if yes, use URL playback
+    if (article.titleAudioUrl != null && article.titleAudioUrl!.isNotEmpty) {
+      // Play from title audio URL (for home screen)
+      await playArticleFromUrl(article, playTitle: true);
+      return;
+    }
+    
+    // Fallback to TTS generation if no audio URLs
     try {
       // If same article is playing, just resume
       if (_currentArticle != null &&
@@ -127,15 +135,6 @@ class AudioPlayerProvider with ChangeNotifier {
 
       debugPrint('🎵 Preparing to play article: ${article.title}');
       debugPrint('📝 Text length: ${textToSpeak.length} characters');
-
-      // Generate audio using ElevenLabs
-      // final audioBytes = await _elevenLabsService.textToSpeech(
-      //   text: textToSpeak,
-      //   stability: 0.5,
-      //   similarityBoost: 0.75,
-      //   style: 0.0,
-      //   useSpeakerBoost: true,
-      // );
 
       final audioBytes = await _elevenLabsService.textToSpeech(
         text: textToSpeak,
@@ -168,6 +167,74 @@ class AudioPlayerProvider with ChangeNotifier {
       _currentArticle = null;
       debugPrint('❌ Error playing article: $e');
       debugPrint('Stack trace: ${StackTrace.current}');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Play article from audio URL(s)
+  /// [playTitle] - if true, plays only title_audio_url (for home screen)
+  /// if false, plays description_audio_url then content_audio_url (for detail screen)
+  Future<void> playArticleFromUrl(
+    NewsArticle article, {
+    bool playTitle = false,
+  }) async {
+    try {
+      // If same article is playing and same mode, just resume
+      if (_currentArticle != null &&
+          (_currentArticle!.articleId ?? _currentArticle!.title) ==
+              (article.articleId ?? article.title)) {
+        if (_isPaused) {
+          await resume();
+        }
+        return;
+      }
+
+      _isLoading = true;
+      _error = null;
+      _currentArticle = article;
+      notifyListeners();
+
+      if (playTitle) {
+        // Home screen: Play only title audio
+        final titleUrl = article.titleAudioUrl;
+        if (titleUrl == null || titleUrl.isEmpty) {
+          throw Exception('Title audio URL not available');
+        }
+
+        debugPrint('🎵 Playing title audio from URL: $titleUrl');
+        _isLoading = false;
+        notifyListeners();
+
+        await _audioPlayerService.playFromUrl(titleUrl);
+      } else {
+        // Detail screen: Play description then content sequentially
+        final descriptionUrl = article.descriptionAudioUrl;
+        final contentUrl = article.contentAudioUrl;
+
+        if (descriptionUrl == null || descriptionUrl.isEmpty) {
+          throw Exception('Description audio URL not available');
+        }
+
+        debugPrint('🎵 Playing description then content audio');
+        _isLoading = false;
+        notifyListeners();
+
+        // Create a list of URLs to play sequentially
+        final List<String> urlsToPlay = [descriptionUrl];
+        if (contentUrl != null && contentUrl.isNotEmpty) {
+          urlsToPlay.add(contentUrl);
+        }
+
+        // Play sequentially using concatenating audio source
+        await _playSequentialUrls(urlsToPlay);
+      }
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      _isPlaying = false;
+      _currentArticle = null;
+      debugPrint('❌ Error playing article from URL: $e');
       notifyListeners();
       rethrow;
     }
@@ -280,6 +347,27 @@ class AudioPlayerProvider with ChangeNotifier {
     final currentKey = _currentArticle!.articleId ?? _currentArticle!.title;
     final articleKey = article.articleId ?? article.title;
     return currentKey == articleKey && _isPlaying;
+  }
+
+  /// Play multiple audio URLs sequentially
+  Future<void> _playSequentialUrls(List<String> urls) async {
+    try {
+      // Create concatenating audio source
+      final List<AudioSource> audioSources = urls
+          .map((url) => AudioSource.uri(Uri.parse(url)))
+          .toList();
+
+      final concatenatedSource = ConcatenatingAudioSource(
+        children: audioSources,
+      );
+
+      // Set the concatenated source and play
+      await _audioPlayerService.setAudioSource(concatenatedSource);
+      await _audioPlayerService.play();
+    } catch (e) {
+      debugPrint('❌ Error playing sequential URLs: $e');
+      rethrow;
+    }
   }
 
   /// Format duration to MM:SS

@@ -293,12 +293,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                                           await audioProvider
                                                               .togglePlayPause();
                                                         } else {
-                                                          // Play this article
+                                                          // Play this article (description then content)
                                                           try {
                                                             await audioProvider
-                                                                .playArticle(
+                                                                .playArticleFromUrl(
                                                                   widget
                                                                       .article,
+                                                                  playTitle: false,
                                                                 );
                                                           } catch (e) {
                                                             if (mounted) {

@@ -150,7 +150,7 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                         newsDetails: article,
                         onListenTapped: () async {
                           try {
-                            await context.read<AudioPlayerProvider>().playArticle(article);
+                            await context.read<AudioPlayerProvider>().playArticleFromUrl(article, playTitle: true);
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

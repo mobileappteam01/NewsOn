@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 part 'news_article.g.dart';
@@ -93,6 +92,15 @@ class NewsArticle {
   @HiveField(27)
   final bool duplicate;
 
+  @HiveField(28)
+  final String? titleAudioUrl;
+
+  @HiveField(29)
+  final String? descriptionAudioUrl;
+
+  @HiveField(30)
+  final String? contentAudioUrl;
+
   NewsArticle({
     this.articleId,
     required this.title,
@@ -122,6 +130,9 @@ class NewsArticle {
     this.aiOrg,
     this.aiSummary,
     this.duplicate = false,
+    this.titleAudioUrl,
+    this.descriptionAudioUrl,
+    this.contentAudioUrl,
   });
 
   /// Helper method to parse sentiment_stats which can be a String or Map
@@ -199,6 +210,9 @@ class NewsArticle {
       aiOrg: _parseStringOrList(json['ai_org']),
       aiSummary: json['ai_summary'] as String?,
       duplicate: json['duplicate'] == true,
+      titleAudioUrl: json['title_audio_url'] as String?,
+      descriptionAudioUrl: json['description_audio_url'] as String?,
+      contentAudioUrl: json['content_audio_url'] as String?,
     );
   }
 
@@ -233,6 +247,9 @@ class NewsArticle {
       'ai_org': aiOrg,
       'ai_summary': aiSummary,
       'duplicate': duplicate,
+      'title_audio_url': titleAudioUrl,
+      'description_audio_url': descriptionAudioUrl,
+      'content_audio_url': contentAudioUrl,
     };
   }
 
@@ -265,6 +282,9 @@ class NewsArticle {
     String? aiOrg,
     String? aiSummary,
     bool? duplicate,
+    String? titleAudioUrl,
+    String? descriptionAudioUrl,
+    String? contentAudioUrl,
   }) {
     return NewsArticle(
       articleId: articleId ?? this.articleId,
@@ -295,6 +315,9 @@ class NewsArticle {
       aiOrg: aiOrg ?? this.aiOrg,
       aiSummary: aiSummary ?? this.aiSummary,
       duplicate: duplicate ?? this.duplicate,
+      titleAudioUrl: titleAudioUrl ?? this.titleAudioUrl,
+      descriptionAudioUrl: descriptionAudioUrl ?? this.descriptionAudioUrl,
+      contentAudioUrl: contentAudioUrl ?? this.contentAudioUrl,
     );
   }
 

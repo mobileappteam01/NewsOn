@@ -165,7 +165,7 @@ class BreakingNewsCard extends StatelessWidget {
                         await audioProvider.pause();
                       } else {
                         try {
-                          await audioProvider.playArticle(article);
+                          await audioProvider.playArticleFromUrl(article, playTitle: true);
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
