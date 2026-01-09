@@ -3,7 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
-import '../../providers/tts_provider.dart';
+import '../../providers/audio_player_provider.dart';
+import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
 
@@ -26,9 +27,9 @@ class NewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
-    final ttsProvider = Provider.of<TtsProvider>(context);
+    final audioProvider = Provider.of<AudioPlayerProvider>(context);
     final isBookmarked = bookmarkProvider.isBookmarked(article);
-    final isPlaying = ttsProvider.isArticlePlaying(article);
+    final isPlaying = audioProvider.isArticlePlaying(article);
 
     return Container(
       margin: const EdgeInsets.only(
@@ -98,7 +99,8 @@ class NewsCard extends StatelessWidget {
                         child: Text(
                           article.creator != null && article.creator!.isNotEmpty
                               ? article.creator![0]
-                              : article.sourceName ?? LocalizationHelper.unknownSource(context),
+                              : article.sourceName ??
+                                  LocalizationHelper.unknownSource(context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.textTheme.bodySmall?.color
                                 ?.withOpacity(0.7),
@@ -112,52 +114,105 @@ class NewsCard extends StatelessWidget {
 
                       // Listen button with red background
                       if (showPlayButton)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isPlaying ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                LocalizationHelper.listen(context),
-                                style: TextStyle(
+                        GestureDetector(
+                          onTap: () async {
+                            try {
+                              if (isPlaying) {
+                                await audioProvider.pause();
+                              } else {
+                                // Play single article
+                                await audioProvider.playArticleFromUrl(
+                                  article,
+                                  playTitle: true,
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error playing audio: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isPlaying ? Icons.pause : Icons.play_arrow,
                                   color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  size: 14,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  LocalizationHelper.listen(context),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 
                       const SizedBox(width: 4),
 
-                      // Bookmark icon
+                      // Bookmark icon - synced with BookmarkProvider
                       InkWell(
-                        onTap: () {
-                          bookmarkProvider.toggleBookmark(article);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isBookmarked
-                                    ? LocalizationHelper.removedFromBookmarks(context)
-                                    : LocalizationHelper.addedToBookmarks(context),
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
+                        onTap: () async {
+                          try {
+                            final newBookmarkStatus = await bookmarkProvider
+                                .toggleBookmark(article);
+
+                            // Update article status in NewsProvider lists
+                            final newsProvider = Provider.of<NewsProvider>(
+                              context,
+                              listen: false,
+                            );
+                            newsProvider.updateArticleBookmarkStatus(
+                              article,
+                              newBookmarkStatus,
+                            );
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    newBookmarkStatus
+                                        ? LocalizationHelper.addedToBookmarks(
+                                          context,
+                                        )
+                                        : LocalizationHelper.removedFromBookmarks(
+                                          context,
+                                        ),
+                                  ),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(4),
@@ -167,7 +222,16 @@ class NewsCard extends StatelessWidget {
                                 : Icons.bookmark_border,
                             size: 18,
                             color:
-                                isBookmarked ? theme.colorScheme.primary : null,
+                                isBookmarked
+                                    ? (theme.brightness == Brightness.dark
+                                        ? theme.primaryColor
+                                        : const Color(
+                                          0xFFE31E24,
+                                        )) // Red when bookmarked
+                                    : (theme.brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : Colors
+                                            .grey[600]), // Grey when not bookmarked
                           ),
                         ),
                       ),

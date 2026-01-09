@@ -87,7 +87,7 @@ class BreakingNewsCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
+                            color: theme.primaryColor,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -151,7 +151,7 @@ class BreakingNewsCard extends StatelessWidget {
               Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: theme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -165,7 +165,10 @@ class BreakingNewsCard extends StatelessWidget {
                         await audioProvider.pause();
                       } else {
                         try {
-                          await audioProvider.playArticleFromUrl(article, playTitle: true);
+                          await audioProvider.playArticleFromUrl(
+                            article,
+                            playTitle: true,
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -11,6 +11,7 @@ import '../../../providers/news_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../providers/audio_player_provider.dart';
+import '../../../providers/bookmark_provider.dart';
 import '../../../core/utils/shared_functions.dart';
 import '../../../core/utils/localization_helper.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
@@ -431,10 +432,49 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     }
                                   }
                                 },
-                                onSaveTapped: () {
-                                  context.read<NewsProvider>().toggleBookmark(
-                                    article,
-                                  );
+                                onSaveTapped: () async {
+                                  try {
+                                    final bookmarkProvider =
+                                        context.read<BookmarkProvider>();
+                                    final newStatus = await bookmarkProvider
+                                        .toggleBookmark(article);
+
+                                    // Update article status in NewsProvider lists
+                                    final newsProvider =
+                                        context.read<NewsProvider>();
+                                    newsProvider.updateArticleBookmarkStatus(
+                                      article,
+                                      newStatus,
+                                    );
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            newStatus
+                                                ? 'Added to bookmarks'
+                                                : 'Removed from bookmarks',
+                                          ),
+                                          duration: const Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error: ${e.toString()}',
+                                          ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  }
                                 },
                                 onNewsTapped: () {
                                   Navigator.push(
@@ -553,7 +593,44 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   }
                                 }
                               },
-                              onSaveTapped: () {},
+                              onSaveTapped: () async {
+                                try {
+                                  final bookmarkProvider =
+                                      context.read<BookmarkProvider>();
+                                  final newStatus = await bookmarkProvider
+                                      .toggleBookmark(data);
+
+                                  // Update article status in NewsProvider lists
+                                  final newsProvider =
+                                      context.read<NewsProvider>();
+                                  newsProvider.updateArticleBookmarkStatus(
+                                    data,
+                                    newStatus,
+                                  );
+
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          newStatus
+                                              ? 'Added to bookmarks'
+                                              : 'Removed from bookmarks',
+                                        ),
+                                        duration: const Duration(seconds: 1),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: ${e.toString()}'),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
                               onNewsTapped: () async {
                                 NewsArticle newsArticle = await getNewsDetail();
                                 Navigator.push(
@@ -901,29 +978,69 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                 ),
               ),
 
-              // Bookmark icon at top right
+              // Bookmark icon at top right - synced with BookmarkProvider
               Positioned(
                 top: 16,
                 right: 16,
-                child: GestureDetector(
-                  onTap: () {
-                    context.read<NewsProvider>().toggleBookmark(article);
+                child: Consumer<BookmarkProvider>(
+                  builder: (context, bookmarkProvider, child) {
+                    final isBookmarked = bookmarkProvider.isBookmarked(article);
+                    return GestureDetector(
+                      onTap: () async {
+                        try {
+                          final newStatus = await bookmarkProvider
+                              .toggleBookmark(article);
+
+                          // Update article status in NewsProvider lists
+                          final newsProvider = context.read<NewsProvider>();
+                          newsProvider.updateArticleBookmarkStatus(
+                            article,
+                            newStatus,
+                          );
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  newStatus
+                                      ? 'Added to bookmarks'
+                                      : 'Removed from bookmarks',
+                                ),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color:
+                              isBookmarked
+                                  ? const Color(
+                                    0xFFE31E24,
+                                  ) // Red when bookmarked
+                                  : Colors.white, // White when not bookmarked
+                          size: 20,
+                        ),
+                      ),
+                    );
                   },
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      article.isBookmarked
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
                 ),
               ),
             ],

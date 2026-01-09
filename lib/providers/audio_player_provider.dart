@@ -57,6 +57,12 @@ class AudioPlayerProvider with ChangeNotifier {
       position,
     ) {
       _position = position;
+      // If position reaches duration, ensure completion state is set
+      // This handles cases where position stream detects completion before state stream
+      if (_duration > Duration.zero && position >= _duration) {
+        _position = _duration; // Ensure position equals duration
+        // Completion state will be handled by state subscription
+      }
       notifyListeners();
     });
 
@@ -76,32 +82,66 @@ class AudioPlayerProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to player state
+    // Listen to player state - handles all state updates including completion
     _stateSubscription = _audioPlayerService.playerStateStream.listen((state) {
-      _isPlaying = state.playing;
-      _isPaused =
-          state.processingState == ProcessingState.ready && !state.playing;
-      notifyListeners();
+      final wasPlaying = _isPlaying;
+      
+      // Handle completion state - ensure UI updates properly
+      if (state.processingState == ProcessingState.completed && !state.playing) {
+        _isPlaying = false;
+        _isPaused = false;
+        // Reset position to duration when completed to show progress bar at end
+        if (_duration > Duration.zero && _position < _duration) {
+          _position = _duration;
+        }
+        debugPrint('✅ Audio playback completed - UI state updated: isPlaying=$_isPlaying, position=${_position.inSeconds}s/${_duration.inSeconds}s');
+        // Notify listeners immediately when completion is detected
+        notifyListeners();
+      } else {
+        // Normal state updates (playing, paused, loading, etc.)
+        _isPlaying = state.playing;
+        _isPaused =
+            state.processingState == ProcessingState.ready && !state.playing;
+        
+        // Notify listeners on state changes
+        if (wasPlaying != _isPlaying) {
+          notifyListeners();
+        }
+      }
     });
 
-    // Listen for completion to auto-advance to next article
+    // Listen for completion to auto-advance to next article (separate from state updates)
     _completionSubscription = _audioPlayerService.playerStateStream.listen((state) {
-      // Check if audio has completed and we have a playlist
-      if (state.processingState == ProcessingState.completed && 
-          !state.playing &&
-          _playlist.isNotEmpty &&
-          _currentPlaylistIndex >= 0 &&
-          _currentPlaylistIndex < _playlist.length - 1 &&
-          !_isAutoAdvancing) {
-        _isAutoAdvancing = true;
-        // Small delay to ensure state is stable
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_playlist.isNotEmpty && _currentPlaylistIndex >= 0 && _isAutoAdvancing) {
-            // Auto-advance to next article in playlist
-            _playNextInPlaylist();
-          }
-          _isAutoAdvancing = false;
-        });
+      // Check if audio has completed
+      if (state.processingState == ProcessingState.completed && !state.playing) {
+        // Ensure UI state is updated (already done in _stateSubscription, but ensure consistency)
+        _isPlaying = false;
+        _isPaused = false;
+        if (_duration > Duration.zero && _position < _duration) {
+          _position = _duration;
+        }
+        
+        // Check if we have a playlist and should auto-advance
+        if (_playlist.isNotEmpty &&
+            _currentPlaylistIndex >= 0 &&
+            _currentPlaylistIndex < _playlist.length - 1 &&
+            !_isAutoAdvancing) {
+          _isAutoAdvancing = true;
+          debugPrint('🔄 Auto-advancing to next article in playlist...');
+          // Small delay to ensure state is stable and UI has updated
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (_playlist.isNotEmpty && _currentPlaylistIndex >= 0 && _isAutoAdvancing) {
+              // Auto-advance to next article in playlist
+              _playNextInPlaylist();
+            }
+            _isAutoAdvancing = false;
+          });
+        } else {
+          // No playlist or last item - audio completed
+          debugPrint('✅ Audio playback completed - no auto-advance needed (playlist: ${_playlist.length}, index: $_currentPlaylistIndex)');
+          // Ensure state is properly updated for UI
+          notifyListeners();
+        }
       }
     });
   }
@@ -348,14 +388,19 @@ class AudioPlayerProvider with ChangeNotifier {
   Future<void> stop() async {
     try {
       await _audioPlayerService.stop();
+      _isPlaying = false;
+      _isPaused = false;
       _currentArticle = null;
       _position = Duration.zero;
       _duration = Duration.zero;
       _playlist.clear();
       _currentPlaylistIndex = -1;
+      debugPrint('🛑 Playback stopped - UI state cleared');
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      _isPlaying = false;
+      _isPaused = false;
       notifyListeners();
     }
   }
@@ -364,6 +409,10 @@ class AudioPlayerProvider with ChangeNotifier {
   Future<void> _playNextInPlaylist() async {
     if (_playlist.isEmpty || _currentPlaylistIndex < 0) {
       _isAutoAdvancing = false;
+      // Ensure state is updated when no playlist
+      _isPlaying = false;
+      _isPaused = false;
+      notifyListeners();
       return;
     }
 
@@ -371,7 +420,13 @@ class AudioPlayerProvider with ChangeNotifier {
     if (nextIndex >= _playlist.length) {
       debugPrint('✅ Playlist completed - reached end');
       _isAutoAdvancing = false;
-      // Playlist finished, stop playback
+      // Playlist finished, ensure UI state is updated before stopping
+      _isPlaying = false;
+      _isPaused = false;
+      if (_duration > Duration.zero) {
+        _position = _duration;
+      }
+      notifyListeners();
       await stop();
       return;
     }
@@ -385,10 +440,19 @@ class AudioPlayerProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('❌ Error playing next article: $e');
       _isAutoAdvancing = false;
+      // Ensure state is updated on error
+      _isPlaying = false;
+      _isPaused = false;
+      notifyListeners();
       // Try to continue with next article after a delay
       Future.delayed(const Duration(seconds: 1), () {
         if (_playlist.isNotEmpty && _currentPlaylistIndex < _playlist.length - 1) {
           _playNextInPlaylist();
+        } else {
+          // No more articles, ensure state is updated
+          _isPlaying = false;
+          _isPaused = false;
+          notifyListeners();
         }
       });
     }

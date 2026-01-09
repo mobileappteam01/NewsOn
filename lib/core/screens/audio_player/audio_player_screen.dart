@@ -19,390 +19,399 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = Provider.of<AudioPlayerProvider>(context);
-    final configProvider = Provider.of<RemoteConfigProvider>(context);
-    final config = configProvider.config;
+    // Use Consumer to listen to AudioPlayerProvider changes
+    return Consumer<AudioPlayerProvider>(
+      builder: (context, audioProvider, child) {
+        final configProvider = Provider.of<RemoteConfigProvider>(context);
+        final config = configProvider.config;
 
-    if (audioProvider.currentArticle == null) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(
-          child: Text(
-            'No audio playing',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
-
-    final article = audioProvider.currentArticle!;
-    final position = _isDragging ? _dragPosition : audioProvider.position;
-    final duration = audioProvider.duration;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // App Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_downward, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Now Playing',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
-                    onPressed: () {
-                      // Show options menu
-                    },
-                  ),
-                ],
+        if (audioProvider.currentArticle == null) {
+          return Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
+            body: const Center(
+              child: Text(
+                'No audio playing',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          );
+        }
 
-            // Album Art / Article Image
-            Expanded(
-              child: Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 30,
-                        spreadRadius: 10,
+        final article = audioProvider.currentArticle!;
+        final position = _isDragging ? _dragPosition : audioProvider.position;
+        final duration = audioProvider.duration;
+
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // App Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_downward,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => Navigator.pop(context),
                       ),
+                      const Spacer(),
+                      Text(
+                        'Now Playing',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      // IconButton(
+                      //   icon: const Icon(Icons.more_vert, color: Colors.white),
+                      //   onPressed: () {
+                      //     // Show options menu
+                      //   },
+                      // ),
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child:
-                          article.imageUrl != null
-                              ? CachedNetworkImage(
-                                imageUrl: article.imageUrl!,
-                                fit: BoxFit.cover,
-                                placeholder:
-                                    (context, url) => Container(
-                                      color: Colors.grey[900],
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
+                ),
+
+                // Album Art / Article Image
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 40),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.5),
+                            blurRadius: 30,
+                            spreadRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child:
+                              article.imageUrl != null
+                                  ? CachedNetworkImage(
+                                    imageUrl: article.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    placeholder:
+                                        (context, url) => Container(
+                                          color: Colors.grey[900],
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                    errorWidget:
+                                        (context, url, error) => Container(
+                                          color: Colors.grey[900],
+                                          child: Icon(
+                                            Icons.article,
+                                            color: Colors.grey[600],
+                                            size: 80,
+                                          ),
+                                        ),
+                                  )
+                                  : Container(
+                                    color: Colors.grey[900],
+                                    child: Icon(
+                                      Icons.article,
+                                      color: Colors.grey[600],
+                                      size: 80,
                                     ),
-                                errorWidget:
-                                    (context, url, error) => Container(
-                                      color: Colors.grey[900],
-                                      child: Icon(
-                                        Icons.article,
-                                        color: Colors.grey[600],
-                                        size: 80,
-                                      ),
-                                    ),
-                              )
-                              : Container(
-                                color: Colors.grey[900],
-                                child: Icon(
-                                  Icons.article,
-                                  color: Colors.grey[600],
-                                  size: 80,
-                                ),
-                              ),
+                                  ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            // Article Info
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Text(
-                    article.title,
-                    style: GoogleFonts.playfairDisplay(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    article.sourceName ?? 'News',
-                    style: GoogleFonts.inter(
-                      color: Colors.grey[400],
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Progress Bar
-                  Column(
+                // Article Info
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
                     children: [
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 4,
-                          thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 8,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 16,
-                          ),
-                          activeTrackColor: config.primaryColorValue,
-                          inactiveTrackColor: Colors.grey[800],
-                          thumbColor: Colors.white,
+                      const SizedBox(height: 20),
+                      Text(
+                        article.title,
+                        style: GoogleFonts.playfairDisplay(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: Slider(
-                          value: () {
-                            final maxValue =
-                                duration.inMilliseconds > 0
-                                    ? duration.inMilliseconds.toDouble()
-                                    : 100.0;
-                            final currentValue =
-                                duration.inMilliseconds > 0
-                                    ? position.inMilliseconds.toDouble()
-                                    : 0.0;
-                            // Clamp value to ensure it's within bounds
-                            return currentValue.clamp(0.0, maxValue);
-                          }(),
-                          max:
-                              duration.inMilliseconds > 0
-                                  ? duration.inMilliseconds.toDouble()
-                                  : 100.0,
-                          min: 0.0,
-                          onChanged: (value) {
-                            setState(() {
-                              _isDragging = true;
-                              final maxMs =
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        article.sourceName ?? 'News',
+                        style: GoogleFonts.inter(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Progress Bar
+                      Column(
+                        children: [
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 4,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 8,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 16,
+                              ),
+                              activeTrackColor: config.primaryColorValue,
+                              inactiveTrackColor: Colors.grey[800],
+                              thumbColor: Colors.white,
+                            ),
+                            child: Slider(
+                              value: () {
+                                final maxValue =
+                                    duration.inMilliseconds > 0
+                                        ? duration.inMilliseconds.toDouble()
+                                        : 100.0;
+                                final currentValue =
+                                    duration.inMilliseconds > 0
+                                        ? position.inMilliseconds.toDouble()
+                                        : 0.0;
+                                // Clamp value to ensure it's within bounds
+                                return currentValue.clamp(0.0, maxValue);
+                              }(),
+                              max:
                                   duration.inMilliseconds > 0
-                                      ? duration.inMilliseconds
-                                      : 100;
-                              _dragPosition = Duration(
-                                milliseconds: value.toInt().clamp(0, maxMs),
-                              );
-                            });
-                          },
-                          onChangeEnd: (value) {
-                            setState(() {
-                              _isDragging = false;
-                            });
-                            final maxMs =
-                                duration.inMilliseconds > 0
-                                    ? duration.inMilliseconds
-                                    : 100;
-                            audioProvider.seek(
-                              Duration(
-                                milliseconds: value.toInt().clamp(0, maxMs),
-                              ),
-                            );
-                          },
-                        ),
+                                      ? duration.inMilliseconds.toDouble()
+                                      : 100.0,
+                              min: 0.0,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isDragging = true;
+                                  final maxMs =
+                                      duration.inMilliseconds > 0
+                                          ? duration.inMilliseconds
+                                          : 100;
+                                  _dragPosition = Duration(
+                                    milliseconds: value.toInt().clamp(0, maxMs),
+                                  );
+                                });
+                              },
+                              onChangeEnd: (value) {
+                                setState(() {
+                                  _isDragging = false;
+                                });
+                                final maxMs =
+                                    duration.inMilliseconds > 0
+                                        ? duration.inMilliseconds
+                                        : 100;
+                                audioProvider.seek(
+                                  Duration(
+                                    milliseconds: value.toInt().clamp(0, maxMs),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  audioProvider.formatDuration(position),
+                                  style: GoogleFonts.inter(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  audioProvider.formatDuration(duration),
+                                  style: GoogleFonts.inter(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              audioProvider.formatDuration(position),
+
+                      const SizedBox(height: 32),
+
+                      // Playback Controls
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Speed control
+                          IconButton(
+                            icon: Text(
+                              '${audioProvider.playbackSpeed}x',
                               style: GoogleFonts.inter(
-                                color: Colors.grey[400],
-                                fontSize: 12,
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            Text(
-                              audioProvider.formatDuration(duration),
-                              style: GoogleFonts.inter(
-                                color: Colors.grey[400],
-                                fontSize: 12,
-                              ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              _showSpeedDialog(context, audioProvider);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Previous (skip back 10 seconds)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.replay_10,
+                              color: Colors.white,
+                              size: 28,
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Playback Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Speed control
-                      IconButton(
-                        icon: Text(
-                          '${audioProvider.playbackSpeed}x',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              final newPosition =
+                                  position - const Duration(seconds: 10);
+                              final clampedPosition =
+                                  newPosition < Duration.zero
+                                      ? Duration.zero
+                                      : (duration > Duration.zero &&
+                                              newPosition > duration
+                                          ? duration
+                                          : newPosition);
+                              audioProvider.seek(clampedPosition);
+                            },
                           ),
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          _showSpeedDialog(context, audioProvider);
-                        },
-                      ),
-                      const SizedBox(width: 8),
+                          const SizedBox(width: 4),
 
-                      // Previous (skip back 10 seconds)
-                      IconButton(
-                        icon: const Icon(
-                          Icons.replay_10,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          final newPosition =
-                              position - const Duration(seconds: 10);
-                          final clampedPosition =
-                              newPosition < Duration.zero
-                                  ? Duration.zero
-                                  : (duration > Duration.zero &&
-                                          newPosition > duration
-                                      ? duration
-                                      : newPosition);
-                          audioProvider.seek(clampedPosition);
-                        },
-                      ),
-                      const SizedBox(width: 4),
-
-                      // Play/Pause
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: config.primaryColorValue,
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            audioProvider.isPlaying
-                                ? Icons.pause
-                                : Icons.play_arrow,
-                            color: Colors.white,
-                            size: 36,
+                          // Play/Pause
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: config.primaryColorValue,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                audioProvider.isPlaying
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                                color: Colors.white,
+                                size: 36,
+                              ),
+                              iconSize: 36,
+                              padding: const EdgeInsets.all(12),
+                              onPressed: () => audioProvider.togglePlayPause(),
+                            ),
                           ),
-                          iconSize: 36,
-                          padding: const EdgeInsets.all(12),
-                          onPressed: () => audioProvider.togglePlayPause(),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
+                          const SizedBox(width: 4),
 
-                      // Next (skip forward 10 seconds)
-                      IconButton(
-                        icon: const Icon(
-                          Icons.forward_10,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          final newPosition =
-                              position + const Duration(seconds: 10);
-                          final clampedPosition =
-                              newPosition < Duration.zero
-                                  ? Duration.zero
-                                  : (duration > Duration.zero &&
-                                          newPosition > duration
-                                      ? duration
-                                      : newPosition);
-                          audioProvider.seek(clampedPosition);
-                        },
-                      ),
-                      const SizedBox(width: 8),
+                          // Next (skip forward 10 seconds)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.forward_10,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              final newPosition =
+                                  position + const Duration(seconds: 10);
+                              final clampedPosition =
+                                  newPosition < Duration.zero
+                                      ? Duration.zero
+                                      : (duration > Duration.zero &&
+                                              newPosition > duration
+                                          ? duration
+                                          : newPosition);
+                              audioProvider.seek(clampedPosition);
+                            },
+                          ),
+                          const SizedBox(width: 8),
 
-                      // Volume control
-                      IconButton(
-                        icon: Icon(
-                          audioProvider.volume > 0.5
-                              ? Icons.volume_up
-                              : audioProvider.volume > 0
-                              ? Icons.volume_down
-                              : Icons.volume_off,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          _showVolumeDialog(context, audioProvider);
-                        },
+                          // Volume control
+                          IconButton(
+                            icon: Icon(
+                              audioProvider.volume > 0.5
+                                  ? Icons.volume_up
+                                  : audioProvider.volume > 0
+                                  ? Icons.volume_down
+                                  : Icons.volume_off,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              _showVolumeDialog(context, audioProvider);
+                            },
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 24),
+
+                      // Additional controls
+                      // Row(
+                      //   mainAxisAlignment: MainAxisAlignment.center,
+                      //   children: [
+                      //     IconButton(
+                      //       icon: const Icon(Icons.share, color: Colors.white),
+                      //       onPressed: () {
+                      //         // Share functionality
+                      //       },
+                      //     ),
+                      //     IconButton(
+                      //       icon: const Icon(
+                      //         Icons.bookmark_border,
+                      //         color: Colors.white,
+                      //       ),
+                      //       onPressed: () {
+                      //         // Bookmark functionality
+                      //       },
+                      //     ),
+                      //     IconButton(
+                      //       icon: const Icon(Icons.stop, color: Colors.white),
+                      //       onPressed: () {
+                      //         audioProvider.stop();
+                      //         Navigator.pop(context);
+                      //       },
+                      //     ),
+                      //   ],
+                      // ),
+                      const SizedBox(height: 32),
                     ],
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Additional controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.share, color: Colors.white),
-                        onPressed: () {
-                          // Share functionality
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.bookmark_border,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          // Bookmark functionality
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.stop, color: Colors.white),
-                        onPressed: () {
-                          audioProvider.stop();
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

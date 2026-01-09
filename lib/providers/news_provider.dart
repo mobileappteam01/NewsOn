@@ -378,11 +378,16 @@ class NewsProvider with ChangeNotifier {
   }
 
   /// Toggle bookmark for an article
+  /// Toggle bookmark - delegates to BookmarkProvider for API sync
+  /// Note: This method should be called from UI, but UI should primarily use BookmarkProvider directly
+  /// This is kept for backward compatibility
   Future<bool> toggleBookmark(NewsArticle article) async {
     try {
+      // Use local storage for now (backward compatibility)
+      // For full API sync, use BookmarkProvider.toggleBookmark from UI
       final isBookmarked = await _repository.toggleBookmark(article);
 
-      // Update article in lists
+      // Update article in lists to reflect bookmark status
       _updateArticleInLists(article, isBookmarked);
 
       notifyListeners();
@@ -392,6 +397,12 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Update article bookmark status in lists (called by BookmarkProvider after API sync)
+  void updateArticleBookmarkStatus(NewsArticle article, bool isBookmarked) {
+    _updateArticleInLists(article, isBookmarked);
+    notifyListeners();
   }
 
   /// Update article bookmark status in all lists

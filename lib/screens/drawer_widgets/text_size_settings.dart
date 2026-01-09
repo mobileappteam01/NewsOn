@@ -36,12 +36,8 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
   Future<void> _saveTextSize() async {
     await StorageService.saveSetting(AppConstants.textSizeKey, _textSize);
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(LocalizationHelper.textSizeSaved(context)),
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(LocalizationHelper.textSizeSaved(context))),
       );
     }
   }
@@ -51,9 +47,10 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
+        final theme = Theme.of(context);
 
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: theme.scaffoldBackgroundColor,
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -88,7 +85,6 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
                   Text(
                     LocalizationHelper.textSize(context),
                     style: GoogleFonts.playfairDisplay(
-                      color: config.primaryColorValue,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
@@ -122,10 +118,7 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
                     child: SingleChildScrollView(
                       child: Text(
                         config.textSizePreviewText,
-                        style: GoogleFonts.poppins(
-                          fontSize: _textSize,
-                          color: Colors.black87,
-                        ),
+                        style: GoogleFonts.poppins(fontSize: _textSize),
                       ),
                     ),
                   ),

@@ -332,6 +332,39 @@ class StorageService {
     return null;
   }
 
+  // ==================== Bookmark List Cache ====================
+
+  /// Save bookmark list to cache
+  static Future<void> saveBookmarkListCache(List<NewsArticle> bookmarks) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = bookmarks.map((a) => a.toJson()).toList();
+      final jsonString = jsonEncode(jsonList);
+      await _settingsBox!.put(AppConstants.bookmarkListCacheKey, jsonString);
+      debugPrint('💾 Bookmark list cached (${bookmarks.length} bookmarks)');
+    } catch (e) {
+      debugPrint('❌ Error saving bookmark list cache: $e');
+    }
+  }
+
+  /// Get cached bookmark list
+  static List<NewsArticle> getBookmarkListCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.bookmarkListCacheKey) as String?;
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List<dynamic>;
+        return jsonList
+            .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading bookmark list cache: $e');
+    }
+    return [];
+  }
+
   // ==================== Cleanup ====================
 
   /// Close all boxes

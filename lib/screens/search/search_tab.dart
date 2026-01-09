@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
+import '../../providers/bookmark_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/widgets/audio_mini_player.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../widgets/news_grid_views.dart';
@@ -101,84 +103,101 @@ class _SearchTabState extends State<SearchTab>
         title: Text(LocalizationHelper.search(context)),
         elevation: 0,
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Search bar
-          Container(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+          Column(
+            children: [
+              // Search bar
+              Container(
+                padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              autofocus: false,
-              decoration: InputDecoration(
-                hintText: 'Search news...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _searchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            context.read<NewsProvider>().clearSearch();
-                            setState(() {});
-                          },
-                        )
-                        : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.borderRadius,
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: false,
+                  decoration: InputDecoration(
+                    hintText: 'Search news...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                context.read<NewsProvider>().clearSearch();
+                                setState(() {});
+                              },
+                            )
+                            : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surface,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  onSubmitted:
+                      (value) => _performSearch(value, immediate: true),
+                  onChanged: (value) {
+                    setState(() {});
+                    if (value.trim().isNotEmpty) {
+                      _performSearch(value);
+                    } else {
+                      context.read<NewsProvider>().clearSearch();
+                    }
+                  },
                 ),
               ),
-              onSubmitted: (value) => _performSearch(value, immediate: true),
-              onChanged: (value) {
-                setState(() {});
-                if (value.trim().isNotEmpty) {
-                  _performSearch(value);
-                } else {
-                  context.read<NewsProvider>().clearSearch();
-                }
-              },
-            ),
-          ),
 
-          // Content area
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                if (newsProvider.currentQuery != null) {
-                  await newsProvider.searchNews(
-                    newsProvider.currentQuery!,
-                    refresh: true,
-                  );
-                }
-              },
-              child:
-                  newsProvider.currentQuery == null
-                      ? _buildRecentSearches(theme, remoteConfig)
-                      : newsProvider.isLoading && newsProvider.articles.isEmpty
-                      ? const LoadingShimmer()
-                      : newsProvider.error != null
-                      ? _buildError(theme, newsProvider, remoteConfig)
-                      : newsProvider.articles.isEmpty
-                      ? _buildNoResults(theme, remoteConfig)
-                      : _buildSearchResults(newsProvider, theme, remoteConfig),
-            ),
+              // Content area
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    if (newsProvider.currentQuery != null) {
+                      await newsProvider.searchNews(
+                        newsProvider.currentQuery!,
+                        refresh: true,
+                      );
+                    }
+                  },
+                  child:
+                      newsProvider.currentQuery == null
+                          ? _buildRecentSearches(theme, remoteConfig)
+                          : newsProvider.isLoading &&
+                              newsProvider.articles.isEmpty
+                          ? const LoadingShimmer()
+                          : newsProvider.error != null
+                          ? _buildError(theme, newsProvider, remoteConfig)
+                          : newsProvider.articles.isEmpty
+                          ? _buildNoResults(theme, remoteConfig)
+                          : _buildSearchResults(
+                            newsProvider,
+                            theme,
+                            remoteConfig,
+                          ),
+                ),
+              ),
+            ],
+          ),
+          // Audio Mini Player (Spotify-like)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: const AudioMiniPlayer(),
           ),
         ],
       ),
@@ -247,7 +266,7 @@ class _SearchTabState extends State<SearchTab>
                 Icon(
                   Icons.search,
                   size: 64,
-                  color: theme.colorScheme.primary.withOpacity(0.5),
+                  color: theme.primaryColor.withOpacity(0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -421,25 +440,28 @@ class _SearchTabState extends State<SearchTab>
                   try {
                     final newsProvider = context.read<NewsProvider>();
                     final searchResults = newsProvider.articles;
-                    
+
                     // Find the index of current article in search results
                     final startIndex = searchResults.indexWhere(
-                      (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
+                      (a) =>
+                          (a.articleId ?? a.title) ==
+                          (article.articleId ?? article.title),
                     );
-                    
+
                     if (startIndex >= 0 && startIndex < searchResults.length) {
                       // Set playlist with all search results and start from clicked article
-                      await context.read<AudioPlayerProvider>().setPlaylistAndPlay(
-                        searchResults,
-                        startIndex,
-                        playTitle: true,
-                      );
+                      await context
+                          .read<AudioPlayerProvider>()
+                          .setPlaylistAndPlay(
+                            searchResults,
+                            startIndex,
+                            playTitle: true,
+                          );
                     } else {
                       // Fallback: play single article
-                      await context.read<AudioPlayerProvider>().playArticleFromUrl(
-                        article,
-                        playTitle: true,
-                      );
+                      await context
+                          .read<AudioPlayerProvider>()
+                          .playArticleFromUrl(article, playTitle: true);
                     }
                   } catch (e) {
                     if (mounted) {
@@ -452,8 +474,42 @@ class _SearchTabState extends State<SearchTab>
                     }
                   }
                 },
-                onSaveTapped: () {
-                  context.read<NewsProvider>().toggleBookmark(article);
+                onSaveTapped: () async {
+                  try {
+                    final bookmarkProvider = context.read<BookmarkProvider>();
+                    final newStatus = await bookmarkProvider.toggleBookmark(
+                      article,
+                    );
+
+                    // Update article status in NewsProvider lists
+                    final newsProvider = context.read<NewsProvider>();
+                    newsProvider.updateArticleBookmarkStatus(
+                      article,
+                      newStatus,
+                    );
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            newStatus
+                                ? 'Added to bookmarks'
+                                : 'Removed from bookmarks',
+                          ),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${e.toString()}'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
                 },
                 onNewsTapped: () {
                   Navigator.push(

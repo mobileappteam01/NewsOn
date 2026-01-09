@@ -96,7 +96,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bookmarkProvider = Provider.of<BookmarkProvider>(context);
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
@@ -459,11 +458,50 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                       ),
                                     ),
                                     giveWidth(12),
-                                    showSaveButton(false, () {
-                                      bookmarkProvider.toggleBookmark(
-                                        widget.article,
-                                      );
-                                    }, theme),
+                                    Builder(
+                                      builder: (context) {
+                                        final theme = Theme.of(context);
+                                        final bookmarkProvider = Provider.of<BookmarkProvider>(context, listen: true);
+                                        final isBookmarked = bookmarkProvider.isBookmarked(widget.article);
+                                        return showSaveButton(
+                                          isBookmarked,
+                                          () async {
+                                            try {
+                                              final newStatus = await bookmarkProvider.toggleBookmark(widget.article);
+                                              
+                                              // Update article status in NewsProvider
+                                              if (mounted) {
+                                                final newsProvider = Provider.of<NewsProvider>(context, listen: false);
+                                                newsProvider.updateArticleBookmarkStatus(widget.article, newStatus);
+                                              }
+
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      newStatus
+                                                          ? 'Added to bookmarks'
+                                                          : 'Removed from bookmarks',
+                                                    ),
+                                                    duration: const Duration(seconds: 1),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error: ${e.toString()}'),
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          theme,
+                                        );
+                                      },
+                                    ),
                                     giveWidth(12),
                                     showShareButton(() {
                                       Share.share(

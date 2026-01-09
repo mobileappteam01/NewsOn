@@ -57,11 +57,7 @@ Widget showImage(String? url, BoxFit fit, {double? height, double? width}) {
       height: height ?? 250,
       color: Colors.grey.shade200,
       child: const Center(
-        child: Icon(
-          Icons.image_not_supported,
-          color: Colors.grey,
-          size: 48,
-        ),
+        child: Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
       ),
     );
   }
@@ -211,11 +207,20 @@ showShareButton(Function() onTapped, ThemeData theme) {
 }
 
 showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
+  final isDark = theme.brightness == Brightness.dark;
   return GestureDetector(
     onTap: () => onTapped(),
     child: Icon(
       isSaved ? Icons.bookmark : Icons.bookmark_border,
-      color: theme.colorScheme.secondary,
+      color:
+          isSaved
+              ? (isDark
+                  ? theme.primaryColor
+                  : const Color(0xFFE31E24)) // Red when bookmarked
+              : (isDark
+                  ? Colors.grey[400]
+                  : Colors.grey[600]), // Grey when not bookmarked
+      size: 24,
     ),
   );
 }
@@ -351,14 +356,14 @@ Future fetchDBData(String key) async {
     if (snapshot.exists) {
       final data = snapshot.value;
       debugPrint("$key has dataaa : $data");
-      
+
       // Cache the data for offline use
       try {
         await StorageService.saveRealtimeDbCache(key, data);
       } catch (e) {
         debugPrint("⚠️ Error saving $key to cache: $e");
       }
-      
+
       return data;
     } else {
       debugPrint("$key has no dataaa");

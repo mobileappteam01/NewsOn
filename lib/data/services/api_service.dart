@@ -204,14 +204,47 @@ class ApiService {
     final baseUrl = getBaseUrl();
     final endpoint = getEndpoint(module, endpointKey);
 
-    // Ensure base URL doesn't end with / and endpoint doesn't start with /
-    final cleanBaseUrl =
-        baseUrl.endsWith('/')
-            ? baseUrl.substring(0, baseUrl.length - 1)
-            : baseUrl;
+    debugPrint('🔗 Building URL - Module: $module, EndpointKey: $endpointKey');
+    debugPrint('🔗 Base URL: $baseUrl');
+    debugPrint('🔗 Endpoint from Firebase: $endpoint');
+
+    // If endpoint is already a full URL, use it directly
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+      debugPrint('🔗 Using full URL endpoint: $endpoint');
+      return endpoint;
+    }
+
+    // Parse base URL to get domain
+    final baseUri = Uri.parse(baseUrl);
+    final domain = '${baseUri.scheme}://${baseUri.host}';
+
+    // If endpoint starts with /api/, use it directly with domain
+    // This handles cases where endpoint is stored as full path like /api/bookmark/removeBookmark
+    if (endpoint.startsWith('/api/')) {
+      final fullUrl = '$domain$endpoint';
+      debugPrint('🔗 Endpoint starts with /api/, building: $fullUrl');
+      return fullUrl;
+    }
+
+    // If endpoint starts with /, append to domain
+    if (endpoint.startsWith('/')) {
+      final fullUrl = '$domain$endpoint';
+      debugPrint('🔗 Endpoint starts with /, building: $fullUrl');
+      return fullUrl;
+    }
+
+    // If baseUrl has a path component, preserve it
+    final basePath =
+        baseUri.path.isNotEmpty && baseUri.path != '/' ? baseUri.path : '';
+    final cleanBasePath =
+        basePath.endsWith('/')
+            ? basePath.substring(0, basePath.length - 1)
+            : basePath;
     final cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
 
-    return '$cleanBaseUrl$cleanEndpoint';
+    final finalUrl = '$domain$cleanBasePath$cleanEndpoint';
+    debugPrint('🔗 Final URL: $finalUrl');
+    return finalUrl;
   }
 
   /// Make GET request
@@ -384,20 +417,113 @@ class ApiService {
   }
 
   /// Make DELETE request
+  /// [pathParameters] - Map of path parameters to replace in the endpoint URL
+  ///   Example: {'id': '123'} will replace {id} or :id in the endpoint
   Future<ApiResponse> delete(
     String module,
     String endpointKey, {
     Map<String, String>? headers,
+    String? bearerToken,
+    Map<String, String>? queryParameters,
+    Map<String, String>? pathParameters,
   }) async {
     try {
       final url = buildUrl(module, endpointKey);
 
       debugPrint('🌐 DELETE Request: $url');
+      if (queryParameters != null && queryParameters.isNotEmpty) {
+        debugPrint('📋 Query Parameters: $queryParameters');
+      }
+
+      // Add Bearer token to headers if provided
+      final finalHeaders = <String, String>{};
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+        debugPrint('📋 Custom headers added: $headers');
+      }
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+        debugPrint('🔐 Bearer token added to request');
+      }
+
+      // Replace path parameters in URL if provided
+      String finalUrl = url;
+      if (pathParameters != null && pathParameters.isNotEmpty) {
+        debugPrint('🔧 Processing path parameters: $pathParameters');
+        debugPrint('🔧 Original URL: $finalUrl');
+
+        // First, try to replace {param} or :param patterns in the URL
+        bool hasPlaceholders = false;
+        pathParameters.forEach((key, value) {
+          if (finalUrl.contains('{$key}') || finalUrl.contains(':$key')) {
+            hasPlaceholders = true;
+            finalUrl = finalUrl.replaceAll('{$key}', value);
+            finalUrl = finalUrl.replaceAll(':$key', value);
+            debugPrint('🔧 Replaced placeholder {$key} with $value');
+          }
+        });
+
+        debugPrint('🔧 URL after placeholder replacement: $finalUrl');
+        debugPrint('🔧 Has placeholders: $hasPlaceholders');
+        debugPrint('🔧 Final URL contains {: ${finalUrl.contains('{')}');
+        debugPrint('🔧 Final URL contains :: ${finalUrl.contains(':')}');
+
+        // If URL doesn't have placeholder patterns, append path parameters to the end
+        // This handles cases where the endpoint is stored as /api/bookmark/removeBookmark
+        // and we need to append /{newsId} to make it /api/bookmark/removeBookmark/{newsId}
+        if (!hasPlaceholders) {
+          final paramValues = pathParameters.values.toList();
+          final allParams = paramValues.join('/');
+          debugPrint('🔧 Appending path parameters to URL: $allParams');
+
+          // Remove trailing slash if present, then append parameters
+          final cleanUrl =
+              finalUrl.endsWith('/')
+                  ? finalUrl.substring(0, finalUrl.length - 1)
+                  : finalUrl;
+          finalUrl = '$cleanUrl/$allParams';
+
+          debugPrint('🔧 Final URL after appending: $finalUrl');
+        } else {
+          debugPrint('✅ URL already had placeholders, replaced them');
+        }
+
+        debugPrint('✅ Final URL with path parameters: $finalUrl');
+        debugPrint('📋 Path parameters used: $pathParameters');
+      } else {
+        debugPrint(
+          '⚠️ No path parameters provided, using original URL: $finalUrl',
+        );
+      }
+
+      // Log the final URL that will be used
+      debugPrint('🌐 Final DELETE URL: $finalUrl');
+
+      debugPrint('📤 Final DELETE headers: $finalHeaders');
+      if (pathParameters != null) {
+        debugPrint('📤 Path parameters: $pathParameters');
+      }
 
       final response = await _dio.delete(
-        url,
-        options: Options(headers: headers),
+        finalUrl,
+        queryParameters: queryParameters,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
       );
+
+      // Check if response indicates an error (4xx or 5xx)
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
 
       return _handleDioResponse(response);
     } on DioException catch (e) {

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
+import '../providers/bookmark_provider.dart';
 import '../core/utils/date_formatter.dart';
 
 class NewsGridView extends StatelessWidget {
@@ -73,25 +74,49 @@ class NewsGridView extends StatelessWidget {
     String type,
     NewsArticle newsDetails,
     ThemeData theme,
+    BuildContext context,
   ) {
-    return type.toLowerCase() == 'category'
-        ? Text(
-          newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
-          style: GoogleFonts.inter(
-            color: config.primaryColorValue,
-            fontWeight: FontWeight.w500,
-            fontSize: 11,
-          ),
-        )
-        : type.toLowerCase() == 'postedtime'
-        ? Text(
-          _getTimeAgo(newsDetails),
-          style: GoogleFonts.inter(color: config.primaryColorValue),
-        )
-        : GestureDetector(
-          onTap: () => onSaveTapped(), // ✅ FIXED
-          child: Icon(Icons.bookmark, color: theme.colorScheme.secondary),
-        );
+    if (type.toLowerCase() == 'category') {
+      return Text(
+        newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
+        style: GoogleFonts.inter(
+          color: config.primaryColorValue,
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
+      );
+    } else if (type.toLowerCase() == 'postedtime') {
+      return Text(
+        _getTimeAgo(newsDetails),
+        style: GoogleFonts.inter(color: config.primaryColorValue),
+      );
+    } else if (type.toLowerCase() == 'save') {
+      // Bookmark icon - synced with BookmarkProvider
+      return Consumer<BookmarkProvider>(
+        builder: (context, bookmarkProvider, child) {
+          final isBookmarked = bookmarkProvider.isBookmarked(newsDetails);
+          final isDark = theme.brightness == Brightness.dark;
+
+          return GestureDetector(
+            onTap: () => onSaveTapped(),
+            child: Icon(
+              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              color:
+                  isBookmarked
+                      ? (isDark
+                          ? theme.primaryColor
+                          : const Color(0xFFE31E24)) // Red when bookmarked
+                      : (isDark
+                          ? Colors.grey[400]
+                          : Colors.grey[600]), // Grey when not bookmarked
+              size: 24,
+            ),
+          );
+        },
+      );
+    } else {
+      return const SizedBox.shrink();
+    }
   }
 
   showListenButton(RemoteConfigModel config, BuildContext context) {
@@ -192,7 +217,13 @@ class NewsGridView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  showCommonWidget(config, 'category', newsDetails, theme),
+                  showCommonWidget(
+                    config,
+                    'category',
+                    newsDetails,
+                    theme,
+                    context,
+                  ),
                   giveHeight(3),
                   SizedBox(
                     child: Text(
@@ -205,13 +236,25 @@ class NewsGridView extends StatelessWidget {
                     ),
                   ),
                   giveHeight(3),
-                  showCommonWidget(config, 'postedtime', newsDetails, theme),
+                  showCommonWidget(
+                    config,
+                    'postedtime',
+                    newsDetails,
+                    theme,
+                    context,
+                  ),
                   giveHeight(3),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       showListenButton(config, context),
-                      showCommonWidget(config, 'save', newsDetails, theme),
+                      showCommonWidget(
+                        config,
+                        'save',
+                        newsDetails,
+                        theme,
+                        context,
+                      ),
                       showShareButton(theme),
                     ],
                   ),
