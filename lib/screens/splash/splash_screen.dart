@@ -103,10 +103,22 @@ class _SplashScreenState extends State<SplashScreen>
                       child: SizedBox(
                         height: MediaQuery.of(context).size.height * 0.45,
                         width: double.infinity,
-                        child: showImage(
-                          config.splashAnimatedGif!,
-                          BoxFit.cover,
-                        ),
+                        child: config.splashAnimatedGif != null &&
+                                config.splashAnimatedGif!.isNotEmpty
+                            ? showImage(
+                                config.splashAnimatedGif,
+                                BoxFit.cover,
+                              )
+                            : Container(
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.newspaper,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                   ),

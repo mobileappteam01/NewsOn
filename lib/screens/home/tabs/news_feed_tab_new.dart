@@ -229,6 +229,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               context,
                               article,
                               remoteConfig,
+                              index, // Pass index for playlist
                             );
                           },
                           options: CarouselOptions(
@@ -385,12 +386,36 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 newsDetails: article,
                                 onListenTapped: () async {
                                   try {
-                                    await context
-                                        .read<AudioPlayerProvider>()
-                                        .playArticleFromUrl(
-                                          article,
-                                          playTitle: true,
-                                        );
+                                    final newsProvider =
+                                        context.read<NewsProvider>();
+                                    final todayNews = newsProvider.todayNews;
+
+                                    // Find the index of current article in today's news
+                                    final startIndex = todayNews.indexWhere(
+                                      (a) =>
+                                          (a.articleId ?? a.title) ==
+                                          (article.articleId ?? article.title),
+                                    );
+
+                                    if (startIndex >= 0 &&
+                                        startIndex < todayNews.length) {
+                                      // Set playlist with all today's news and start from clicked article
+                                      await context
+                                          .read<AudioPlayerProvider>()
+                                          .setPlaylistAndPlay(
+                                            todayNews,
+                                            startIndex,
+                                            playTitle: true,
+                                          );
+                                    } else {
+                                      // Fallback: play single article
+                                      await context
+                                          .read<AudioPlayerProvider>()
+                                          .playArticleFromUrl(
+                                            article,
+                                            playTitle: true,
+                                          );
+                                    }
                                   } catch (e) {
                                     if (mounted) {
                                       ScaffoldMessenger.of(
@@ -482,12 +507,39 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               newsDetails: data,
                               onListenTapped: () async {
                                 try {
-                                  await context
-                                      .read<AudioPlayerProvider>()
-                                      .playArticleFromUrl(
-                                        data,
-                                        playTitle: true,
-                                      );
+                                  final newsProvider =
+                                      context.read<NewsProvider>();
+                                  final flashNews =
+                                      newsProvider.breakingNews
+                                          .take(5)
+                                          .toList();
+
+                                  // Find the index of current article in flash news
+                                  final startIndex = flashNews.indexWhere(
+                                    (a) =>
+                                        (a.articleId ?? a.title) ==
+                                        (data.articleId ?? data.title),
+                                  );
+
+                                  if (startIndex >= 0 &&
+                                      startIndex < flashNews.length) {
+                                    // Set playlist with all flash news and start from clicked article
+                                    await context
+                                        .read<AudioPlayerProvider>()
+                                        .setPlaylistAndPlay(
+                                          flashNews,
+                                          startIndex,
+                                          playTitle: true,
+                                        );
+                                  } else {
+                                    // Fallback: play single article
+                                    await context
+                                        .read<AudioPlayerProvider>()
+                                        .playArticleFromUrl(
+                                          data,
+                                          playTitle: true,
+                                        );
+                                  }
                                 } catch (e) {
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -725,8 +777,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   Widget _buildBreakingNewsCard(
     BuildContext context,
     NewsArticle article,
-    RemoteConfigModel config,
-  ) {
+    RemoteConfigModel config, [
+    int? articleIndex,
+  ]) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -798,9 +851,39 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         alignment: Alignment.bottomRight,
                         child: showListenButton(config, () async {
                           try {
-                            await context
-                                .read<AudioPlayerProvider>()
-                                .playArticleFromUrl(article, playTitle: true);
+                            final newsProvider = context.read<NewsProvider>();
+                            final breakingNews =
+                                newsProvider.breakingNews.isNotEmpty
+                                    ? newsProvider.breakingNews
+                                    : widget.newsList
+                                        .map((e) => _mapToArticle(e))
+                                        .toList();
+
+                            // Find the index of current article in the list
+                            final startIndex =
+                                articleIndex ??
+                                breakingNews.indexWhere(
+                                  (a) =>
+                                      (a.articleId ?? a.title) ==
+                                      (article.articleId ?? article.title),
+                                );
+
+                            if (startIndex >= 0 &&
+                                startIndex < breakingNews.length) {
+                              // Set playlist with all breaking news and start from clicked article
+                              await context
+                                  .read<AudioPlayerProvider>()
+                                  .setPlaylistAndPlay(
+                                    breakingNews,
+                                    startIndex,
+                                    playTitle: true,
+                                  );
+                            } else {
+                              // Fallback: play single article
+                              await context
+                                  .read<AudioPlayerProvider>()
+                                  .playArticleFromUrl(article, playTitle: true);
+                            }
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

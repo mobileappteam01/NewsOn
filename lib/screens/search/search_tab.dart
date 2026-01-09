@@ -419,10 +419,28 @@ class _SearchTabState extends State<SearchTab>
                 newsDetails: article,
                 onListenTapped: () async {
                   try {
-                    await context.read<AudioPlayerProvider>().playArticleFromUrl(
-                      article,
-                      playTitle: true,
+                    final newsProvider = context.read<NewsProvider>();
+                    final searchResults = newsProvider.articles;
+                    
+                    // Find the index of current article in search results
+                    final startIndex = searchResults.indexWhere(
+                      (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
                     );
+                    
+                    if (startIndex >= 0 && startIndex < searchResults.length) {
+                      // Set playlist with all search results and start from clicked article
+                      await context.read<AudioPlayerProvider>().setPlaylistAndPlay(
+                        searchResults,
+                        startIndex,
+                        playTitle: true,
+                      );
+                    } else {
+                      // Fallback: play single article
+                      await context.read<AudioPlayerProvider>().playArticleFromUrl(
+                        article,
+                        playTitle: true,
+                      );
+                    }
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

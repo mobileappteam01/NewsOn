@@ -113,8 +113,8 @@ class RemoteConfigModel {
 
     // Welcome
     this.welcomeBgImg = '',
-    this.welcomeTitleText = '',
-    this.welcomeDescText = '',
+    this.welcomeTitleText = 'Welcome',
+    this.welcomeDescText = 'Get started with your personalized news experience',
 
     // Select Category
     this.selectCategoryTitle = '',
@@ -193,7 +193,6 @@ class RemoteConfigModel {
     this.headlineImg = '',
     this.listenIcon = '',
     this.appIcon, // Dynamic app icon from Firebase Realtime Database
-
     // Drawer Contents
     this.drawerMenu = const [],
   });

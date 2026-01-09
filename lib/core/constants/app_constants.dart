@@ -9,6 +9,10 @@ class AppConstants {
   static const String settingsBoxName = 'settings';
   static const String remoteConfigCacheKey = 'remote_config_cache';
   static const String apiConfigCacheKey = 'api_config_cache';
+  static const String breakingNewsCacheKey = 'breaking_news_cache';
+  static const String todayNewsCacheKey = 'today_news_cache';
+  static const String articlesCacheKey = 'articles_cache';
+  static const String realtimeDbCacheKey = 'realtime_db_cache';
   static const String themeKey = 'theme_mode';
   static const String languageKey = 'language';
   static const String countryKey = 'country';

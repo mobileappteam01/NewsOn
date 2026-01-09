@@ -12,6 +12,7 @@ import '../../data/services/storage_service.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/news_provider.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 
@@ -294,13 +295,44 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                                               .togglePlayPause();
                                                         } else {
                                                           // Play this article (description then content)
+                                                          // Try to continue from active playlist, or find section and create playlist
                                                           try {
-                                                            await audioProvider
-                                                                .playArticleFromUrl(
-                                                                  widget
-                                                                      .article,
-                                                                  playTitle: false,
-                                                                );
+                                                            final newsProvider = context.read<NewsProvider>();
+                                                            List<NewsArticle>? playlist;
+                                                            int? startIndex;
+                                                            
+                                                            // Check if article is in breaking news
+                                                            final breakingIndex = newsProvider.breakingNews.indexWhere(
+                                                              (a) => (a.articleId ?? a.title) == (widget.article.articleId ?? widget.article.title),
+                                                            );
+                                                            if (breakingIndex >= 0) {
+                                                              playlist = newsProvider.breakingNews;
+                                                              startIndex = breakingIndex;
+                                                            } else {
+                                                              // Check if article is in today's news
+                                                              final todayIndex = newsProvider.todayNews.indexWhere(
+                                                                (a) => (a.articleId ?? a.title) == (widget.article.articleId ?? widget.article.title),
+                                                              );
+                                                              if (todayIndex >= 0) {
+                                                                playlist = newsProvider.todayNews;
+                                                                startIndex = todayIndex;
+                                                              }
+                                                            }
+                                                            
+                                                            if (playlist != null && startIndex != null && startIndex < playlist.length) {
+                                                              // Set playlist and continue playing from this article
+                                                              await audioProvider.setPlaylistAndPlay(
+                                                                playlist,
+                                                                startIndex,
+                                                                playTitle: false, // Detail screen plays description + content
+                                                              );
+                                                            } else {
+                                                              // No playlist found, play single article
+                                                              await audioProvider.playArticleFromUrl(
+                                                                widget.article,
+                                                                playTitle: false,
+                                                              );
+                                                            }
                                                           } catch (e) {
                                                             if (mounted) {
                                                               ScaffoldMessenger.of(

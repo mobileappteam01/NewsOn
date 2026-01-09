@@ -150,7 +150,22 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                         newsDetails: article,
                         onListenTapped: () async {
                           try {
-                            await context.read<AudioPlayerProvider>().playArticleFromUrl(article, playTitle: true);
+                            // Find the index of current article in the list
+                            final startIndex = _allBreakingNews.indexWhere(
+                              (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
+                            );
+                            
+                            if (startIndex >= 0 && startIndex < _allBreakingNews.length) {
+                              // Set playlist with all breaking news and start from clicked article
+                              await context.read<AudioPlayerProvider>().setPlaylistAndPlay(
+                                _allBreakingNews,
+                                startIndex,
+                                playTitle: true,
+                              );
+                            } else {
+                              // Fallback: play single article
+                              await context.read<AudioPlayerProvider>().playArticleFromUrl(article, playTitle: true);
+                            }
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

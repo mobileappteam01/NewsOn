@@ -24,6 +24,13 @@ class AudioPlayerProvider with ChangeNotifier {
   double _volume = 1.0;
   String? _error;
 
+  // Playlist system for auto-play
+  List<NewsArticle> _playlist = [];
+  int _currentPlaylistIndex = -1;
+  bool _playTitleMode = true; // true for home screen, false for detail screen
+  bool _isAutoAdvancing = false; // Prevent duplicate auto-advance calls
+  StreamSubscription<PlayerState>? _completionSubscription;
+
   // Stream subscriptions
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
@@ -76,6 +83,27 @@ class AudioPlayerProvider with ChangeNotifier {
           state.processingState == ProcessingState.ready && !state.playing;
       notifyListeners();
     });
+
+    // Listen for completion to auto-advance to next article
+    _completionSubscription = _audioPlayerService.playerStateStream.listen((state) {
+      // Check if audio has completed and we have a playlist
+      if (state.processingState == ProcessingState.completed && 
+          !state.playing &&
+          _playlist.isNotEmpty &&
+          _currentPlaylistIndex >= 0 &&
+          _currentPlaylistIndex < _playlist.length - 1 &&
+          !_isAutoAdvancing) {
+        _isAutoAdvancing = true;
+        // Small delay to ensure state is stable
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (_playlist.isNotEmpty && _currentPlaylistIndex >= 0 && _isAutoAdvancing) {
+            // Auto-advance to next article in playlist
+            _playNextInPlaylist();
+          }
+          _isAutoAdvancing = false;
+        });
+      }
+    });
   }
 
   // Getters
@@ -90,6 +118,9 @@ class AudioPlayerProvider with ChangeNotifier {
   double get volume => _volume;
   String? get error => _error;
   bool get hasCurrentArticle => _currentArticle != null;
+  List<NewsArticle> get playlist => List.unmodifiable(_playlist);
+  int get currentPlaylistIndex => _currentPlaylistIndex;
+  int get playlistLength => _playlist.length;
 
   /// Set ElevenLabs API key
   void setApiKey(String apiKey) {
@@ -170,6 +201,36 @@ class AudioPlayerProvider with ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  /// Set playlist and start playing from a specific article
+  /// [articles] - list of articles to play sequentially
+  /// [startIndex] - index to start playing from (default: 0)
+  /// [playTitle] - if true, plays only title_audio_url (for home screen)
+  /// if false, plays description_audio_url then content_audio_url (for detail screen)
+  Future<void> setPlaylistAndPlay(
+    List<NewsArticle> articles,
+    int startIndex, {
+    bool playTitle = true,
+  }) async {
+    if (articles.isEmpty) {
+      debugPrint('⚠️ Cannot set empty playlist');
+      return;
+    }
+
+    if (startIndex < 0 || startIndex >= articles.length) {
+      debugPrint('⚠️ Invalid start index: $startIndex');
+      return;
+    }
+
+    _playlist = List.from(articles);
+    _currentPlaylistIndex = startIndex;
+    _playTitleMode = playTitle;
+
+    debugPrint('📋 Playlist set with ${_playlist.length} articles, starting at index $startIndex');
+    
+    // Start playing the article at startIndex
+    await playArticleFromUrl(_playlist[startIndex], playTitle: playTitle);
   }
 
   /// Play article from audio URL(s)
@@ -283,17 +344,75 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
-  /// Stop playback
+  /// Stop playback and clear playlist
   Future<void> stop() async {
     try {
       await _audioPlayerService.stop();
       _currentArticle = null;
       _position = Duration.zero;
       _duration = Duration.zero;
+      _playlist.clear();
+      _currentPlaylistIndex = -1;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
+    }
+  }
+
+  /// Play next article in playlist (called automatically on completion)
+  Future<void> _playNextInPlaylist() async {
+    if (_playlist.isEmpty || _currentPlaylistIndex < 0) {
+      _isAutoAdvancing = false;
+      return;
+    }
+
+    final nextIndex = _currentPlaylistIndex + 1;
+    if (nextIndex >= _playlist.length) {
+      debugPrint('✅ Playlist completed - reached end');
+      _isAutoAdvancing = false;
+      // Playlist finished, stop playback
+      await stop();
+      return;
+    }
+
+    debugPrint('⏭️ Auto-advancing to next article: ${nextIndex + 1}/${_playlist.length}');
+    _currentPlaylistIndex = nextIndex;
+    
+    try {
+      await playArticleFromUrl(_playlist[nextIndex], playTitle: _playTitleMode);
+      _isAutoAdvancing = false;
+    } catch (e) {
+      debugPrint('❌ Error playing next article: $e');
+      _isAutoAdvancing = false;
+      // Try to continue with next article after a delay
+      Future.delayed(const Duration(seconds: 1), () {
+        if (_playlist.isNotEmpty && _currentPlaylistIndex < _playlist.length - 1) {
+          _playNextInPlaylist();
+        }
+      });
+    }
+  }
+
+  /// Skip to next article in playlist (manual skip)
+  Future<void> skipToNext() async {
+    await _playNextInPlaylist();
+  }
+
+  /// Skip to previous article in playlist
+  Future<void> skipToPrevious() async {
+    if (_playlist.isEmpty || _currentPlaylistIndex <= 0) {
+      return;
+    }
+
+    final prevIndex = _currentPlaylistIndex - 1;
+    debugPrint('⏮️ Skipping to previous article: ${prevIndex + 1}/${_playlist.length}');
+    _currentPlaylistIndex = prevIndex;
+    
+    try {
+      await playArticleFromUrl(_playlist[prevIndex], playTitle: _playTitleMode);
+    } catch (e) {
+      debugPrint('❌ Error playing previous article: $e');
     }
   }
 
@@ -384,6 +503,7 @@ class AudioPlayerProvider with ChangeNotifier {
     _durationSubscription?.cancel();
     _bufferedSubscription?.cancel();
     _stateSubscription?.cancel();
+    _completionSubscription?.cancel();
     _audioPlayerService.dispose();
     super.dispose();
   }

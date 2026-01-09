@@ -103,6 +103,23 @@ class ApiConfigService {
     try {
       print('🔧 Initializing API Config from Realtime Database...');
 
+      // Step 1: Try to load from cache first (for offline support)
+      final cachedData = StorageService.getRealtimeDbCache('api_config');
+      if (cachedData != null) {
+        try {
+          final configMap = Map<String, dynamic>.from(cachedData as Map);
+          _cachedConfig = ApiConfigModel.fromJson(configMap);
+          _isInitialized = true;
+          print('📦 Loaded API Config from cache');
+          // Return cached data immediately, then try to fetch fresh data
+          _fetchRealtimeDbInBackground();
+          return _cachedConfig!;
+        } catch (e) {
+          print('⚠️ Error parsing cached API Config: $e');
+        }
+      }
+
+      // Step 2: Try to fetch from Realtime Database
       final ref = _database.ref('api_config');
       final snapshot = await ref.get();
 
@@ -115,6 +132,9 @@ class ApiConfigService {
         _isInitialized = true;
         print('✅ API Config loaded from Realtime Database');
 
+        // Cache the data for offline use
+        await StorageService.saveRealtimeDbCache('api_config', data);
+
         // Listen for real-time updates
         _setupRealtimeListener();
 
@@ -126,8 +146,30 @@ class ApiConfigService {
       }
     } catch (e) {
       print('❌ Error loading API Config from Realtime Database: $e');
+      // If we have cached data, use it
+      if (_cachedConfig != null) {
+        print('📦 Using cached API Config due to error');
+        return _cachedConfig!;
+      }
       // Fallback to Remote Config
       return await initializeFromRemoteConfig();
+    }
+  }
+
+  /// Fetch Realtime Database data in background (for refresh)
+  Future<void> _fetchRealtimeDbInBackground() async {
+    try {
+      final ref = _database.ref('api_config');
+      final snapshot = await ref.get();
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<Object?, Object?>;
+        // Update cache with fresh data
+        await StorageService.saveRealtimeDbCache('api_config', data);
+        print('🔄 Updated API Config cache from Realtime Database');
+      }
+    } catch (e) {
+      print('⚠️ Background fetch failed for API Config: $e');
+      // Silently fail - we already have cached data
     }
   }
 
@@ -142,6 +184,10 @@ class ApiConfigService {
             data.map((key, value) => MapEntry(key.toString(), value)),
           );
           _cachedConfig = ApiConfigModel.fromJson(configMap);
+          
+          // Update cache with fresh data
+          StorageService.saveRealtimeDbCache('api_config', data);
+          
           print('🔄 API Config updated from Realtime Database');
         } catch (e) {
           print('❌ Error updating API Config from Realtime Database: $e');
