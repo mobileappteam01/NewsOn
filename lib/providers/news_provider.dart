@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/repositories/news_repository.dart';
+import '../data/services/storage_service.dart';
 import 'language_provider.dart';
 
 /// Provider for managing news state
@@ -116,33 +117,61 @@ class NewsProvider with ChangeNotifier {
     try {
       _isLoading = true;
       _error = null;
-      notifyListeners();
+
+      // Step 1: Load from cache first (for instant offline display)
+      if (page == 1) {
+        final cachedNews = StorageService.getBreakingNewsCache();
+        if (cachedNews.isNotEmpty) {
+          _breakingNews = cachedNews;
+          _isLoading = false;
+          notifyListeners(); // Show cached data immediately
+          debugPrint("📦 Loaded ${cachedNews.length} breaking news from cache");
+        }
+      }
 
       // Update language code from provider if available
       if (_languageProvider != null) {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
-      final response = await _repository.fetchBreakingNews(
-        language: _currentLanguageCode,
-        limit: limit,
-        page: page,
-      );
+      // Step 2: Try to fetch fresh data from API
+      try {
+        final response = await _repository.fetchBreakingNews(
+          language: _currentLanguageCode,
+          limit: limit,
+          page: page,
+        );
 
-      if (response.results.isNotEmpty) {
-        debugPrint("First article title: ${response.results.first.title}");
+        if (response.results.isNotEmpty) {
+          debugPrint("First article title: ${response.results.first.title}");
+        }
+
+        _breakingNews = response.results;
+        _isLoading = false;
+        debugPrint("✅ Breaking news fetched: ${_breakingNews.length} articles");
+        notifyListeners();
+      } catch (apiError) {
+        // If API fails and we have cached data, keep using it
+        if (_breakingNews.isNotEmpty) {
+          debugPrint(
+            "⚠️ API fetch failed, using cached breaking news: $apiError",
+          );
+          _isLoading = false;
+          _error = null; // Don't show error if we have cached data
+          notifyListeners();
+        } else {
+          // No cached data, show error
+          rethrow;
+        }
       }
-
-      _breakingNews = response.results;
-      _isLoading = false;
-      debugPrint("Breaking news assigned: ${_breakingNews.length} articles");
-      notifyListeners();
     } catch (e, stackTrace) {
-      debugPrint("Error fetching breaking news: $e");
+      debugPrint("❌ Error fetching breaking news: $e");
       debugPrint("Stack trace: $stackTrace");
       _error = e.toString();
       _isLoading = false;
-      _breakingNews = [];
+      if (_breakingNews.isEmpty) {
+        _breakingNews = [];
+      }
       notifyListeners();
     }
   }
@@ -162,6 +191,18 @@ class NewsProvider with ChangeNotifier {
       _error = null;
       _currentCategory = category;
       _currentQuery = null;
+
+      // Step 1: Load from cache first (for instant offline display)
+      if (refresh || _articles.isEmpty) {
+        final cachedArticles = StorageService.getArticlesCache();
+        if (cachedArticles.isNotEmpty) {
+          _articles = cachedArticles;
+          _isLoading = false;
+          notifyListeners(); // Show cached data immediately
+          debugPrint("📦 Loaded ${cachedArticles.length} articles from cache");
+        }
+      }
+
       notifyListeners();
 
       // Update language code from provider if available
@@ -169,17 +210,35 @@ class NewsProvider with ChangeNotifier {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
-      final response = await _repository.fetchNewsByCategory(
-        category,
-        language: _currentLanguageCode,
-      );
-      _articles = response.results;
-      _nextPage = response.nextPage;
-      _isLoading = false;
-      notifyListeners();
+      // Step 2: Try to fetch fresh data from API
+      try {
+        final response = await _repository.fetchNewsByCategory(
+          category,
+          language: _currentLanguageCode,
+        );
+        _articles = response.results;
+        _nextPage = response.nextPage;
+        _isLoading = false;
+        debugPrint("✅ Category news fetched: ${_articles.length} articles");
+        notifyListeners();
+      } catch (apiError) {
+        // If API fails and we have cached data, keep using it
+        if (_articles.isNotEmpty) {
+          debugPrint("⚠️ API fetch failed, using cached articles: $apiError");
+          _isLoading = false;
+          _error = null; // Don't show error if we have cached data
+          notifyListeners();
+        } else {
+          // No cached data, show error
+          rethrow;
+        }
+      }
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
+      if (_articles.isEmpty) {
+        _articles = [];
+      }
       notifyListeners();
     }
   }
@@ -253,6 +312,20 @@ class NewsProvider with ChangeNotifier {
       _error = null;
       _currentQuery = query;
       _currentCategory = null;
+
+      // Step 1: Load from cache first (for instant offline display)
+      if (refresh || _articles.isEmpty) {
+        final cachedArticles = StorageService.getArticlesCache();
+        if (cachedArticles.isNotEmpty) {
+          _articles = cachedArticles;
+          _isLoading = false;
+          notifyListeners(); // Show cached data immediately
+          debugPrint(
+            "📦 Loaded ${cachedArticles.length} search results from cache",
+          );
+        }
+      }
+
       notifyListeners();
 
       // Update language code from provider if available
@@ -260,17 +333,37 @@ class NewsProvider with ChangeNotifier {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
-      final response = await _repository.searchNews(
-        query,
-        language: _currentLanguageCode,
-      );
-      _articles = response.results;
-      _nextPage = response.nextPage;
-      _isLoading = false;
-      notifyListeners();
+      // Step 2: Try to fetch fresh data from API
+      try {
+        final response = await _repository.searchNews(
+          query,
+          language: _currentLanguageCode,
+        );
+        _articles = response.results;
+        _nextPage = response.nextPage;
+        _isLoading = false;
+        debugPrint("✅ Search results fetched: ${_articles.length} articles");
+        notifyListeners();
+      } catch (apiError) {
+        // If API fails and we have cached data, keep using it
+        if (_articles.isNotEmpty) {
+          debugPrint(
+            "⚠️ API fetch failed, using cached search results: $apiError",
+          );
+          _isLoading = false;
+          _error = null; // Don't show error if we have cached data
+          notifyListeners();
+        } else {
+          // No cached data, show error
+          rethrow;
+        }
+      }
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
+      if (_articles.isEmpty) {
+        _articles = [];
+      }
       notifyListeners();
     }
   }
@@ -285,11 +378,16 @@ class NewsProvider with ChangeNotifier {
   }
 
   /// Toggle bookmark for an article
+  /// Toggle bookmark - delegates to BookmarkProvider for API sync
+  /// Note: This method should be called from UI, but UI should primarily use BookmarkProvider directly
+  /// This is kept for backward compatibility
   Future<bool> toggleBookmark(NewsArticle article) async {
     try {
+      // Use local storage for now (backward compatibility)
+      // For full API sync, use BookmarkProvider.toggleBookmark from UI
       final isBookmarked = await _repository.toggleBookmark(article);
 
-      // Update article in lists
+      // Update article in lists to reflect bookmark status
       _updateArticleInLists(article, isBookmarked);
 
       notifyListeners();
@@ -299,6 +397,12 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Update article bookmark status in lists (called by BookmarkProvider after API sync)
+  void updateArticleBookmarkStatus(NewsArticle article, bool isBookmarked) {
+    _updateArticleInLists(article, isBookmarked);
+    notifyListeners();
   }
 
   /// Update article bookmark status in all lists
@@ -339,6 +443,24 @@ class NewsProvider with ChangeNotifier {
     }
   }
 
+  /// Refresh all news sections (called when network comes online)
+  Future<void> refreshAllNews() async {
+    try {
+      debugPrint('🔄 Refreshing all news sections...');
+      // Refresh breaking news
+      await fetchBreakingNews();
+      // Refresh today's news
+      if (_selectedDate != null) {
+        await fetchNewsByDate(_selectedDate);
+      } else {
+        await fetchNewsByDate(DateTime.now());
+      }
+      debugPrint('✅ All news sections refreshed');
+    } catch (e) {
+      debugPrint('⚠️ Error refreshing all news: $e');
+    }
+  }
+
   /// Fetch news for a specific date (archive)
   /// [date] - The date to fetch news for (defaults to today if null)
   /// [limit] - Number of items to fetch (default: 5 for home page, 50 for View All)
@@ -352,6 +474,18 @@ class NewsProvider with ChangeNotifier {
       _isLoadingToday = true;
       _error = null;
       _selectedDate = date ?? DateTime.now();
+
+      // Step 1: Load from cache first (for instant offline display)
+      if (page == 1) {
+        final cachedNews = StorageService.getTodayNewsCache();
+        if (cachedNews.isNotEmpty) {
+          _todayNews = cachedNews;
+          _isLoadingToday = false;
+          notifyListeners(); // Show cached data immediately
+          debugPrint("📦 Loaded ${cachedNews.length} today news from cache");
+        }
+      }
+
       notifyListeners();
 
       // Format date as YYYY-MM-DD
@@ -362,19 +496,37 @@ class NewsProvider with ChangeNotifier {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
 
-      final response = await _repository.fetchTodayNews(
-        date: dateString,
-        language: _currentLanguageCode,
-        limit: limit,
-        page: page,
-      );
+      // Step 2: Try to fetch fresh data from API
+      try {
+        final response = await _repository.fetchTodayNews(
+          date: dateString,
+          language: _currentLanguageCode,
+          limit: limit,
+          page: page,
+        );
 
-      _todayNews = response.results;
-      _isLoadingToday = false;
-      notifyListeners();
+        _todayNews = response.results;
+        _isLoadingToday = false;
+        debugPrint("✅ Today news fetched: ${_todayNews.length} articles");
+        notifyListeners();
+      } catch (apiError) {
+        // If API fails and we have cached data, keep using it
+        if (_todayNews.isNotEmpty) {
+          debugPrint("⚠️ API fetch failed, using cached today news: $apiError");
+          _isLoadingToday = false;
+          _error = null; // Don't show error if we have cached data
+          notifyListeners();
+        } else {
+          // No cached data, show error
+          rethrow;
+        }
+      }
     } catch (e) {
       _error = e.toString();
       _isLoadingToday = false;
+      if (_todayNews.isEmpty) {
+        _todayNews = [];
+      }
       notifyListeners();
     }
   }

@@ -21,6 +21,7 @@ import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/remote_config_provider.dart';
 import 'data/services/dynamic_icon_service.dart';
+import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
 
 String newsAPIKey = '';
@@ -33,13 +34,20 @@ final detector = LanguageDetector();
 // Global reference to audio player provider for updating API key
 AudioPlayerProvider? _globalAudioPlayerProvider;
 
+// Global reference to news provider for network refresh
+NewsProvider? _globalNewsProvider;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
   await Firebase.initializeApp();
 
-  // Fetch all API keys and app icon FIRST before initializing providers
+  // Initialize local storage FIRST (required for cache operations)
+  await StorageService.initialize();
+
+  // Fetch all API keys and app icon AFTER StorageService is initialized
+  // This allows fetchDBData to use cache when offline
   await fetchIPAddressAndURLS();
   await fetchAppIcon(); // Fetch dynamic app icon from Realtime Database
   // Wait a bit more to ensure ElevenLabs API key is fetched and provider is updated
@@ -47,8 +55,9 @@ void main() async {
     const Duration(milliseconds: 1000),
   ); // Give time for async fetch to complete
 
-  // Initialize local storage
-  await StorageService.initialize();
+  // Initialize Network Service for connectivity monitoring
+  final networkService = NetworkService();
+  await networkService.initialize();
 
   // Initialize User Service - Load saved user data and token
   await UserService().initialize();
@@ -123,13 +132,42 @@ void main() async {
     // Continue app launch even if FCM initialization fails
   }
 
-  runApp(NewsOnApp(remoteConfigProvider: remoteConfigProvider));
+  // Setup background refresh when network comes online
+  networkService.onOnline(() async {
+    debugPrint('🔄 Network came online - refreshing data...');
+    try {
+      // Refresh Remote Config
+      await remoteConfigProvider.forceRefresh();
+
+      // Refresh API Config
+      await ApiConstants.initialize();
+
+      // Refresh all news if NewsProvider is available
+      if (_globalNewsProvider != null) {
+        await _globalNewsProvider!.refreshAllNews();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error refreshing data on network connect: $e');
+    }
+  });
+
+  runApp(
+    NewsOnApp(
+      remoteConfigProvider: remoteConfigProvider,
+      networkService: networkService,
+    ),
+  );
 }
 
 class NewsOnApp extends StatelessWidget {
   final RemoteConfigProvider remoteConfigProvider;
+  final NetworkService networkService;
 
-  const NewsOnApp({super.key, required this.remoteConfigProvider});
+  const NewsOnApp({
+    super.key,
+    required this.remoteConfigProvider,
+    required this.networkService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -140,10 +178,15 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         // NewsProvider depends on LanguageProvider for language-based API calls
         ChangeNotifierProxyProvider<LanguageProvider, NewsProvider>(
-          create: (_) => NewsProvider(),
+          create: (_) {
+            final provider = NewsProvider();
+            _globalNewsProvider = provider; // Store global reference
+            return provider;
+          },
           update: (_, languageProvider, previous) {
             previous ??= NewsProvider();
             previous.setLanguageProvider(languageProvider);
+            _globalNewsProvider = previous; // Update global reference
             return previous;
           },
         ),

@@ -87,7 +87,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ],
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: showImage(config.welcomeBgImg, BoxFit.cover),
+                        child: config.welcomeBgImg != null &&
+                                config.welcomeBgImg.isNotEmpty
+                            ? showImage(config.welcomeBgImg, BoxFit.cover)
+                            : Container(
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.wb_sunny,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                     Align(

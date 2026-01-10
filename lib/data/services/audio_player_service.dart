@@ -87,6 +87,16 @@ class AudioPlayerService {
     }
   }
 
+  /// Set audio source (for concatenating multiple sources)
+  Future<void> setAudioSource(AudioSource source) async {
+    try {
+      await _audioPlayer.setAudioSource(source);
+    } catch (e) {
+      debugPrint('Error setting audio source: $e');
+      rethrow;
+    }
+  }
+
   /// Play audio from asset
   Future<void> playFromAsset(String assetPath) async {
     try {

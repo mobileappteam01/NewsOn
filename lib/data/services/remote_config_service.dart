@@ -209,23 +209,35 @@ class RemoteConfigService {
   }
 
   /// Get current config as RemoteConfigModel
-  /// Returns cached data if available, otherwise uses Firebase Remote Config
+  /// Returns cached data if available, otherwise uses Firebase Remote Config or defaults
   RemoteConfigModel getConfig() {
-    // First, try to get from Firebase Remote Config (works offline with cached values)
+    // Priority 1: Try to get from Firebase Remote Config (works offline with cached values)
     try {
-      return _buildConfigFromRemoteConfig();
+      final config = _buildConfigFromRemoteConfig();
+      // Validate that config has at least app name (not empty)
+      if (config.appName.isNotEmpty) {
+        return config;
+      }
+      // If config is empty, fall through to cached/default
     } catch (e) {
       print('⚠️ Error getting config from Remote Config: $e');
-      // Fallback to cached data
+      // Fall through to cached/default
+    }
+
+    // Priority 2: Try cached data
+    try {
       final cachedConfig = StorageService.getRemoteConfigCache();
-      if (cachedConfig != null) {
+      if (cachedConfig != null && cachedConfig.appName.isNotEmpty) {
         print('📦 Using cached Remote Config');
         return cachedConfig;
       }
-      // Last resort: return default config
-      print('📦 Using default Remote Config');
-      return RemoteConfigModel();
+    } catch (e) {
+      print('⚠️ Error loading cached Remote Config: $e');
     }
+
+    // Priority 3: Last resort - return default config (always has values)
+    print('📦 Using default Remote Config');
+    return RemoteConfigModel();
   }
 
   /// Build RemoteConfigModel from Firebase Remote Config

@@ -12,6 +12,7 @@ import '../../data/services/storage_service.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/news_provider.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 
@@ -95,7 +96,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bookmarkProvider = Provider.of<BookmarkProvider>(context);
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
@@ -293,13 +293,45 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                                           await audioProvider
                                                               .togglePlayPause();
                                                         } else {
-                                                          // Play this article
+                                                          // Play this article (description then content)
+                                                          // Try to continue from active playlist, or find section and create playlist
                                                           try {
-                                                            await audioProvider
-                                                                .playArticle(
-                                                                  widget
-                                                                      .article,
-                                                                );
+                                                            final newsProvider = context.read<NewsProvider>();
+                                                            List<NewsArticle>? playlist;
+                                                            int? startIndex;
+                                                            
+                                                            // Check if article is in breaking news
+                                                            final breakingIndex = newsProvider.breakingNews.indexWhere(
+                                                              (a) => (a.articleId ?? a.title) == (widget.article.articleId ?? widget.article.title),
+                                                            );
+                                                            if (breakingIndex >= 0) {
+                                                              playlist = newsProvider.breakingNews;
+                                                              startIndex = breakingIndex;
+                                                            } else {
+                                                              // Check if article is in today's news
+                                                              final todayIndex = newsProvider.todayNews.indexWhere(
+                                                                (a) => (a.articleId ?? a.title) == (widget.article.articleId ?? widget.article.title),
+                                                              );
+                                                              if (todayIndex >= 0) {
+                                                                playlist = newsProvider.todayNews;
+                                                                startIndex = todayIndex;
+                                                              }
+                                                            }
+                                                            
+                                                            if (playlist != null && startIndex != null && startIndex < playlist.length) {
+                                                              // Set playlist and continue playing from this article
+                                                              await audioProvider.setPlaylistAndPlay(
+                                                                playlist,
+                                                                startIndex,
+                                                                playTitle: false, // Detail screen plays description + content
+                                                              );
+                                                            } else {
+                                                              // No playlist found, play single article
+                                                              await audioProvider.playArticleFromUrl(
+                                                                widget.article,
+                                                                playTitle: false,
+                                                              );
+                                                            }
                                                           } catch (e) {
                                                             if (mounted) {
                                                               ScaffoldMessenger.of(
@@ -426,11 +458,50 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                       ),
                                     ),
                                     giveWidth(12),
-                                    showSaveButton(false, () {
-                                      bookmarkProvider.toggleBookmark(
-                                        widget.article,
-                                      );
-                                    }, theme),
+                                    Builder(
+                                      builder: (context) {
+                                        final theme = Theme.of(context);
+                                        final bookmarkProvider = Provider.of<BookmarkProvider>(context, listen: true);
+                                        final isBookmarked = bookmarkProvider.isBookmarked(widget.article);
+                                        return showSaveButton(
+                                          isBookmarked,
+                                          () async {
+                                            try {
+                                              final newStatus = await bookmarkProvider.toggleBookmark(widget.article);
+                                              
+                                              // Update article status in NewsProvider
+                                              if (mounted) {
+                                                final newsProvider = Provider.of<NewsProvider>(context, listen: false);
+                                                newsProvider.updateArticleBookmarkStatus(widget.article, newStatus);
+                                              }
+
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      newStatus
+                                                          ? 'Added to bookmarks'
+                                                          : 'Removed from bookmarks',
+                                                    ),
+                                                    duration: const Duration(seconds: 1),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error: ${e.toString()}'),
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          theme,
+                                        );
+                                      },
+                                    ),
                                     giveWidth(12),
                                     showShareButton(() {
                                       Share.share(

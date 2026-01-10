@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/news_article.dart';
@@ -205,6 +206,163 @@ class StorageService {
   static Future<void> clearApiConfigCache() async {
     if (_settingsBox == null) await initialize();
     await _settingsBox!.delete(AppConstants.apiConfigCacheKey);
+  }
+
+  // ==================== News Articles Cache ====================
+
+  /// Save breaking news to cache
+  static Future<void> saveBreakingNewsCache(List<NewsArticle> articles) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = articles.map((a) => a.toJson()).toList();
+      final jsonString = jsonEncode(jsonList);
+      await _settingsBox!.put(AppConstants.breakingNewsCacheKey, jsonString);
+      debugPrint('💾 Breaking news cached (${articles.length} articles)');
+    } catch (e) {
+      debugPrint('❌ Error saving breaking news cache: $e');
+    }
+  }
+
+  /// Get cached breaking news
+  static List<NewsArticle> getBreakingNewsCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.breakingNewsCacheKey) as String?;
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List<dynamic>;
+        return jsonList
+            .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading breaking news cache: $e');
+    }
+    return [];
+  }
+
+  /// Save today's news to cache
+  static Future<void> saveTodayNewsCache(List<NewsArticle> articles) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = articles.map((a) => a.toJson()).toList();
+      final jsonString = jsonEncode(jsonList);
+      await _settingsBox!.put(AppConstants.todayNewsCacheKey, jsonString);
+      debugPrint('💾 Today news cached (${articles.length} articles)');
+    } catch (e) {
+      debugPrint('❌ Error saving today news cache: $e');
+    }
+  }
+
+  /// Get cached today's news
+  static List<NewsArticle> getTodayNewsCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.todayNewsCacheKey) as String?;
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List<dynamic>;
+        return jsonList
+            .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading today news cache: $e');
+    }
+    return [];
+  }
+
+  /// Save articles to cache (for search/category results)
+  static Future<void> saveArticlesCache(List<NewsArticle> articles) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = articles.map((a) => a.toJson()).toList();
+      final jsonString = jsonEncode(jsonList);
+      await _settingsBox!.put(AppConstants.articlesCacheKey, jsonString);
+      debugPrint('💾 Articles cached (${articles.length} articles)');
+    } catch (e) {
+      debugPrint('❌ Error saving articles cache: $e');
+    }
+  }
+
+  /// Get cached articles
+  static List<NewsArticle> getArticlesCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.articlesCacheKey) as String?;
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List<dynamic>;
+        return jsonList
+            .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading articles cache: $e');
+    }
+    return [];
+  }
+
+  // ==================== Realtime Database Cache ====================
+
+  /// Save Realtime Database data to cache
+  static Future<void> saveRealtimeDbCache(String key, dynamic data) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonString = jsonEncode(data);
+      await _settingsBox!.put('${AppConstants.realtimeDbCacheKey}_$key', jsonString);
+      debugPrint('💾 Realtime DB data cached for key: $key');
+    } catch (e) {
+      debugPrint('❌ Error saving Realtime DB cache: $e');
+    }
+  }
+
+  /// Get cached Realtime Database data
+  static dynamic getRealtimeDbCache(String key) {
+    if (_settingsBox == null) return null;
+    try {
+      final jsonString =
+          _settingsBox!.get('${AppConstants.realtimeDbCacheKey}_$key') as String?;
+      if (jsonString != null) {
+        return jsonDecode(jsonString);
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading Realtime DB cache: $e');
+    }
+    return null;
+  }
+
+  // ==================== Bookmark List Cache ====================
+
+  /// Save bookmark list to cache
+  static Future<void> saveBookmarkListCache(List<NewsArticle> bookmarks) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = bookmarks.map((a) => a.toJson()).toList();
+      final jsonString = jsonEncode(jsonList);
+      await _settingsBox!.put(AppConstants.bookmarkListCacheKey, jsonString);
+      debugPrint('💾 Bookmark list cached (${bookmarks.length} bookmarks)');
+    } catch (e) {
+      debugPrint('❌ Error saving bookmark list cache: $e');
+    }
+  }
+
+  /// Get cached bookmark list
+  static List<NewsArticle> getBookmarkListCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.bookmarkListCacheKey) as String?;
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List<dynamic>;
+        return jsonList
+            .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading bookmark list cache: $e');
+    }
+    return [];
   }
 
   // ==================== Cleanup ====================

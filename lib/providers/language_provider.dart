@@ -8,14 +8,14 @@ class LanguageProvider extends ChangeNotifier {
 
   // Supported languages with their locale codes
   final Map<String, Locale> supportedLanguages = {
-    // 'English': const Locale('en'),
+    'English': const Locale('en'),
     'Tamil': const Locale('ta'),
     // 'Hindi': const Locale('hi'),
   };
 
   // Language names for display
   final List<String> languageNames = [
-    // 'English',
+    'English',
     'Tamil',
     // 'Hindi',
   ];

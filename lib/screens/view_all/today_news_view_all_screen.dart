@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
+import '../../providers/bookmark_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/news_grid_views.dart';
 import '../../data/models/news_article.dart';
 import '../news_detail/news_detail_screen.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../core/widgets/audio_mini_player.dart';
 import '../../screens/home/tabs/news_feed_tab_new.dart' as news_feed;
 
 /// View All screen for Today's News with pagination
@@ -127,7 +129,9 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
         title: Text('News for $dateString'),
         backgroundColor: theme.scaffoldBackgroundColor,
       ),
-      body: _isLoadingMore && _allTodayNews.isEmpty
+      body: Stack(
+        children: [
+          _isLoadingMore && _allTodayNews.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _allTodayNews.isEmpty
               ? Center(
@@ -157,7 +161,22 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                         newsDetails: article,
                         onListenTapped: () async {
                           try {
-                            await context.read<AudioPlayerProvider>().playArticle(article);
+                            // Find the index of current article in the list
+                            final startIndex = _allTodayNews.indexWhere(
+                              (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
+                            );
+                            
+                            if (startIndex >= 0 && startIndex < _allTodayNews.length) {
+                              // Set playlist with all today's news and start from clicked article
+                              await context.read<AudioPlayerProvider>().setPlaylistAndPlay(
+                                _allTodayNews,
+                                startIndex,
+                                playTitle: true,
+                              );
+                            } else {
+                              // Fallback: play single article
+                              await context.read<AudioPlayerProvider>().playArticleFromUrl(article, playTitle: true);
+                            }
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -169,8 +188,36 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                             }
                           }
                         },
-                        onSaveTapped: () {
-                          newsProvider.toggleBookmark(article);
+                        onSaveTapped: () async {
+                          try {
+                            final bookmarkProvider = context.read<BookmarkProvider>();
+                            final newStatus = await bookmarkProvider.toggleBookmark(article);
+                            
+                            // Update article status in NewsProvider lists
+                            newsProvider.updateArticleBookmarkStatus(article, newStatus);
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    newStatus
+                                        ? 'Added to bookmarks'
+                                        : 'Removed from bookmarks',
+                                  ),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
                         },
                         onNewsTapped: () {
                           Navigator.push(
@@ -192,6 +239,15 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                     },
                   ),
                 ),
+          // Audio Mini Player (Spotify-like)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: const AudioMiniPlayer(),
+          ),
+        ],
+      ),
     );
   }
 }

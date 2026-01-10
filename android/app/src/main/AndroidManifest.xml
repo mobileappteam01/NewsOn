@@ -4,18 +4,19 @@
     <application
         android:label="News on"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-        <!-- Main Activity - No launcher intent-filter to prevent duplicate entries -->
-        <!-- Only activity-aliases should have launcher intent-filters -->
+        android:icon="@mipmap/launcher_icon">
+        <!-- Main Activity - Primary launcher for Flutter build system -->
         <activity
             android:name=".MainActivity"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:icon="@mipmap/launcher_icon"
+            android:label="News On">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -24,16 +25,20 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
         </activity>
 
-        <!-- Default Icon (Main Launcher) - Enabled by default -->
+        <!-- Default Icon Alias (Disabled - MainActivity is the default) -->
         <activity-alias
             android:name=".MainActivityDefault"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:enabled="true"
-            android:label="News on">
+            android:icon="@mipmap/launcher_icon"
+            android:enabled="false"
+            android:label="News On">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -45,7 +50,7 @@
             android:name=".MainActivityDynamic1"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@mipmap/launcher_icon"
             android:enabled="false"
             android:label="News on">
             <intent-filter>
@@ -59,7 +64,7 @@
             android:name=".MainActivityDynamic2"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@mipmap/launcher_icon"
             android:enabled="false"
             android:label="News on">
             <intent-filter>

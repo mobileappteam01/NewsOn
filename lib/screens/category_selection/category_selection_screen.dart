@@ -594,7 +594,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                 //                 );
                 //               },
                 //       style: ElevatedButton.styleFrom(
-                //         // backgroundColor: theme.colorScheme.primary,
+                //         // backgroundColor: theme.primaryColor,
                 //         foregroundColor: Colors.white,
                 //         shape: RoundedRectangleBorder(
                 //           borderRadius: BorderRadius.circular(

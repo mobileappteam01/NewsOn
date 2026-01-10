@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../core/utils/localization_helper.dart';
+import '../../data/services/storage_service.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 showRefreshButton() {
@@ -48,11 +49,21 @@ giveWidth(int value) {
   return SizedBox(width: value.toDouble());
 }
 
-Widget showImage(String url, BoxFit fit, {double? height, double? width}) {
+Widget showImage(String? url, BoxFit fit, {double? height, double? width}) {
+  // Handle empty or null URLs
+  if (url == null || url.isEmpty || url.trim().isEmpty) {
+    return Container(
+      width: width ?? double.infinity,
+      height: height ?? 250,
+      color: Colors.grey.shade200,
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
+      ),
+    );
+  }
+
   return Consumer<RemoteConfigProvider>(
     builder: (context, configProvider, child) {
-      final parsedURL = configProvider.config.noResultsFound!;
-
       // 🧊 Normal image (non-GIF)
       return CachedNetworkImage(
         imageUrl: url.trim(),
@@ -70,28 +81,17 @@ Widget showImage(String url, BoxFit fit, {double? height, double? width}) {
               ),
             ),
         errorWidget:
-            (context, url, error) => Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    parsedURL,
-                    width: width ?? MediaQuery.of(context).size.width,
-                    height: height ?? 250,
-                    fit: fit,
-                  ),
+            (context, url, error) => Container(
+              width: width ?? MediaQuery.of(context).size.width,
+              height: height ?? 250,
+              color: Colors.grey.shade200,
+              child: const Center(
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: Colors.grey,
+                  size: 48,
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  "No Results Found",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
+              ),
             ),
       );
     },
@@ -207,11 +207,20 @@ showShareButton(Function() onTapped, ThemeData theme) {
 }
 
 showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
+  final isDark = theme.brightness == Brightness.dark;
   return GestureDetector(
     onTap: () => onTapped(),
     child: Icon(
       isSaved ? Icons.bookmark : Icons.bookmark_border,
-      color: theme.colorScheme.secondary,
+      color:
+          isSaved
+              ? (isDark
+                  ? theme.primaryColor
+                  : const Color(0xFFE31E24)) // Red when bookmarked
+              : (isDark
+                  ? Colors.grey[400]
+                  : Colors.grey[600]), // Grey when not bookmarked
+      size: 24,
     ),
   );
 }
@@ -318,20 +327,89 @@ commonappBar(imgURL, Function() backPressed) {
 }
 
 Future fetchDBData(String key) async {
-  await Firebase.initializeApp();
-  final dbRef = FirebaseDatabase.instance.ref();
-  final snapshot = await dbRef.child(key).get();
-  if (snapshot.exists) {
-    debugPrint("$key has dataaa : ${snapshot.value}");
-    return snapshot.value;
-  } else {
-    debugPrint("$key has no dataaa");
+  try {
+    // Step 1: Try to load from cache first (for offline support)
+    final cachedData = StorageService.getRealtimeDbCache(key);
+    if (cachedData != null) {
+      debugPrint("📦 Loaded $key from cache");
+      // Return cached data immediately, then try to fetch fresh data in background
+      _fetchDBDataInBackground(key);
+      return cachedData;
+    }
+  } catch (e) {
+    debugPrint("⚠️ Error loading $key from cache: $e");
+    // Continue to try fetching from Firebase
+  }
+
+  // Step 2: Try to fetch from Firebase
+  // Note: Firebase is already initialized in main.dart, but we check anyway
+  try {
+    // Firebase.initializeApp() is safe to call multiple times (checks if already initialized)
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      // Firebase already initialized, ignore error
+      debugPrint("ℹ️ Firebase already initialized: $e");
+    }
+    final dbRef = FirebaseDatabase.instance.ref();
+    final snapshot = await dbRef.child(key).get();
+    if (snapshot.exists) {
+      final data = snapshot.value;
+      debugPrint("$key has dataaa : $data");
+
+      // Cache the data for offline use
+      try {
+        await StorageService.saveRealtimeDbCache(key, data);
+      } catch (e) {
+        debugPrint("⚠️ Error saving $key to cache: $e");
+      }
+
+      return data;
+    } else {
+      debugPrint("$key has no dataaa");
+      return null;
+    }
+  } catch (e) {
+    debugPrint("❌ Error fetching $key from Firebase: $e");
+    // Try to return cached data if available, even if stale
+    try {
+      final cachedData = StorageService.getRealtimeDbCache(key);
+      if (cachedData != null) {
+        debugPrint("📦 Using stale cached data for $key");
+        return cachedData;
+      }
+    } catch (cacheError) {
+      debugPrint("⚠️ Error loading cached data for $key: $cacheError");
+    }
     return null;
   }
 }
 
+/// Fetch Realtime Database data in background (for refresh)
+Future<void> _fetchDBDataInBackground(String key) async {
+  try {
+    // Firebase is already initialized in main.dart, but check anyway
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      // Firebase already initialized, ignore error
+      debugPrint("ℹ️ Firebase already initialized in background: $e");
+    }
+    final dbRef = FirebaseDatabase.instance.ref();
+    final snapshot = await dbRef.child(key).get();
+    if (snapshot.exists) {
+      final data = snapshot.value;
+      // Update cache with fresh data
+      await StorageService.saveRealtimeDbCache(key, data);
+      debugPrint("🔄 Updated $key cache from Firebase");
+    }
+  } catch (e) {
+    debugPrint("⚠️ Background fetch failed for $key: $e");
+    // Silently fail - we already have cached data
+  }
+}
+
 Widget showLogoutModalBottomSheet(BuildContext context) {
-  final RemoteConfigModel config = RemoteConfigModel();
   final theme = Theme.of(context);
   return Stack(
     children: [

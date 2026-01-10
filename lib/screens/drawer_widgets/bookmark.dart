@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
-import '../../widgets/news_grid_views.dart';
+import '../../providers/bookmark_provider.dart';
+import '../../core/widgets/news_card.dart';
+import '../news_detail/news_detail_screen.dart';
 
 class BookMark extends StatefulWidget {
   const BookMark({super.key});
@@ -15,74 +16,204 @@ class BookMark extends StatefulWidget {
 }
 
 class _BookMarkState extends State<BookMark> {
-  List newsList = [
-    {
-      "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
-      "category": "Politics",
-      "headLines":
-          "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
-      "updatedAt": "15Min ago",
-    },
-    {
-      "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
-      "category": "Politics",
-      "headLines":
-          "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
-      "updatedAt": "15Min ago",
-    },
-  ];
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BookmarkProvider>().loadBookmarks(refresh: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
         final theme = Theme.of(context);
-        final isDark = theme.brightness == Brightness.dark;
+        final bookmarkProvider = Provider.of<BookmarkProvider>(context);
+
+        final displayedBookmarks =
+            _searchQuery.isEmpty
+                ? bookmarkProvider.bookmarks
+                : bookmarkProvider.searchBookmarks(_searchQuery);
 
         return Scaffold(
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
-                children: [
-                  // Header
-                  commonappBar(config.appNameLogo, () {
-                    Navigator.pop(context);
-                  }),
-                  giveHeight(12),
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: Text(
+                          LocalizationHelper.bookmarks(context),
+                          style: GoogleFonts.playfairDisplay(
+                            color: config.primaryColorValue,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                  // Title
-                  Text(
-                    LocalizationHelper.bookmarks(context),
-                    style: GoogleFonts.playfairDisplay(
-                      color: config.primaryColorValue,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                // Search bar
+                if (bookmarkProvider.hasBookmarks)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: LocalizationHelper.search(context),
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
                     ),
                   ),
-                  giveHeight(20),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: 6,
-                    itemBuilder: (c, i) {
-                      var details = newsList[0];
-                      return NewsGridView(
-                        type: 'listview',
-                        newsDetails: details,
-                        onListenTapped: () {},
-                        onNewsTapped: () {},
-                        onSaveTapped: () {},
-                        onShareTapped: () {},
-                      );
-                    },
-                  ),
 
-                  // 🔹 User name section
-                ],
-              ),
+                const SizedBox(height: 16),
+
+                // Bookmarks list
+                Expanded(
+                  child:
+                      bookmarkProvider.isLoading &&
+                              bookmarkProvider.bookmarks.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : bookmarkProvider.error != null &&
+                              bookmarkProvider.bookmarks.isEmpty
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 64,
+                                  color: Colors.red.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Error loading bookmarks',
+                                  style: theme.textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  bookmarkProvider.error ?? 'Unknown error',
+                                  style: theme.textTheme.bodyMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    bookmarkProvider.loadBookmarks(
+                                      refresh: true,
+                                    );
+                                  },
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                          : !bookmarkProvider.hasBookmarks
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.bookmark_border,
+                                  size: 64,
+                                  color: theme.primaryColor.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No Bookmarks',
+                                  style: theme.textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Articles you bookmark will appear here',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          )
+                          : displayedBookmarks.isEmpty
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.search_off, size: 64),
+                                const SizedBox(height: 16),
+                                Text(
+                                  LocalizationHelper.noResultsFound(context),
+                                  style: theme.textTheme.titleLarge,
+                                ),
+                              ],
+                            ),
+                          )
+                          : RefreshIndicator(
+                            onRefresh: () async {
+                              await bookmarkProvider.loadBookmarks(
+                                refresh: true,
+                              );
+                            },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount:
+                                  displayedBookmarks.length +
+                                  (bookmarkProvider.hasMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == displayedBookmarks.length) {
+                                  // Load more indicator
+                                  if (bookmarkProvider.hasMore) {
+                                    bookmarkProvider.loadMoreBookmarks();
+                                    return const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }
+                                final article = displayedBookmarks[index];
+                                return NewsCard(
+                                  article: article,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => NewsDetailScreen(
+                                              article: article,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                ),
+              ],
             ),
           ),
         );

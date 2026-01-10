@@ -10,7 +10,7 @@ class NewsRepository {
   final BackendNewsService _backendService;
 
   NewsRepository({required String apiKey, BackendNewsService? backendService})
-      : _backendService = backendService ?? BackendNewsService();
+    : _backendService = backendService ?? BackendNewsService();
 
   /// Fetch news with optional filters (deprecated - use specific methods)
   /// This method is kept for backward compatibility but should use specific methods
@@ -27,7 +27,12 @@ class NewsRepository {
     }
     // If category is provided, use category fetch
     if (category != null && category.isNotEmpty) {
-      return fetchNewsByCategory(category, language: language, limit: 50, page: 1);
+      return fetchNewsByCategory(
+        category,
+        language: language,
+        limit: 50,
+        page: 1,
+      );
     }
     // Otherwise, use breaking news
     return fetchBreakingNews(language: language, limit: 50, page: 1);
@@ -53,11 +58,17 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults = response.results.map((article) {
-        final key = article.articleId ?? article.title;
-        final isBookmarked = StorageService.isBookmarked(key);
-        return article.copyWith(isBookmarked: isBookmarked);
-      }).toList();
+      final updatedResults =
+          response.results.map((article) {
+            final key = article.articleId ?? article.title;
+            final isBookmarked = StorageService.isBookmarked(key);
+            return article.copyWith(isBookmarked: isBookmarked);
+          }).toList();
+
+      // Cache articles for offline use (only first page)
+      if (page == 1) {
+        await StorageService.saveArticlesCache(updatedResults);
+      }
 
       return NewsResponse(
         status: response.status,
@@ -90,11 +101,17 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults = response.results.map((article) {
-        final key = article.articleId ?? article.title;
-        final isBookmarked = StorageService.isBookmarked(key);
-        return article.copyWith(isBookmarked: isBookmarked);
-      }).toList();
+      final updatedResults =
+          response.results.map((article) {
+            final key = article.articleId ?? article.title;
+            final isBookmarked = StorageService.isBookmarked(key);
+            return article.copyWith(isBookmarked: isBookmarked);
+          }).toList();
+
+      // Cache search results for offline use (only first page)
+      if (page == 1) {
+        await StorageService.saveArticlesCache(updatedResults);
+      }
 
       return NewsResponse(
         status: response.status,
@@ -124,11 +141,17 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults = response.results.map((article) {
-        final key = article.articleId ?? article.title;
-        final isBookmarked = StorageService.isBookmarked(key);
-        return article.copyWith(isBookmarked: isBookmarked);
-      }).toList();
+      final updatedResults =
+          response.results.map((article) {
+            final key = article.articleId ?? article.title;
+            final isBookmarked = StorageService.isBookmarked(key);
+            return article.copyWith(isBookmarked: isBookmarked);
+          }).toList();
+
+      // Cache breaking news for offline use (only first page)
+      if (page == 1) {
+        await StorageService.saveBreakingNewsCache(updatedResults);
+      }
 
       return NewsResponse(
         status: response.status,
@@ -161,11 +184,17 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults = response.results.map((article) {
-        final key = article.articleId ?? article.title;
-        final isBookmarked = StorageService.isBookmarked(key);
-        return article.copyWith(isBookmarked: isBookmarked);
-      }).toList();
+      final updatedResults =
+          response.results.map((article) {
+            final key = article.articleId ?? article.title;
+            final isBookmarked = StorageService.isBookmarked(key);
+            return article.copyWith(isBookmarked: isBookmarked);
+          }).toList();
+
+      // Cache today's news for offline use (only first page)
+      if (page == 1) {
+        await StorageService.saveTodayNewsCache(updatedResults);
+      }
 
       return NewsResponse(
         status: response.status,
