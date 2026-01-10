@@ -148,6 +148,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get logout => 'Cerrar sesión';
 
   @override
+  String get areYouSureYouWantToLogout => '¿Estás seguro de que quieres cerrar sesión?';
+
+  @override
+  String get yes => 'Sí';
+
+  @override
+  String get no => 'No';
+
+  @override
   String get selectLanguage => 'Seleccionar Idioma';
 
   @override
@@ -352,4 +361,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hotNews => 'Hot News';
+
+  @override
+  String get newsReadingSettings => 'Configuración de lectura de noticias';
+
+  @override
+  String get playTitleOnly => 'Reproducir solo el título';
+
+  @override
+  String get playDescriptionOnly => 'Reproducir solo la descripción';
+
+  @override
+  String get playFullNews => 'Reproducir noticia completa';
+
+  @override
+  String get selectNewsReadingMode => 'Seleccionar modo de lectura de noticias';
+
+  @override
+  String get settingsSaved => 'Configuración guardada';
 }

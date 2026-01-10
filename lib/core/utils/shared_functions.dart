@@ -422,7 +422,7 @@ Widget showLogoutModalBottomSheet(BuildContext context) {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Are you sure you want to logout?',
+                LocalizationHelper.areYouSureYouWantToLogout(context),
                 style: GoogleFonts.playfair(
                   fontSize: 20,
                   color: theme.colorScheme.secondary,
@@ -455,7 +455,9 @@ Widget showLogoutModalBottomSheet(BuildContext context) {
                         ),
                         child: Center(
                           child: Text(
-                            i == 0 ? "Yes" : "No",
+                            i == 0
+                                ? LocalizationHelper.yes(context)
+                                : LocalizationHelper.no(context),
                             style: GoogleFonts.inriaSerif(
                               fontSize: 15,
                               color: i == 0 ? Colors.white : Colors.black,

@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use, unused_local_variable, use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:newson/core/utils/localization_helper.dart';
+import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
@@ -284,7 +285,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       isSelected: _currentIndex == 0,
                     ),
                     _buildBottomNavItem(
-                      Image.network(config.headlineImg, height: 24),
+                      Image.network(
+                        config.headlineImg,
+                        height: 24,
+                        color:
+                            _currentIndex == 1
+                                ? config.primaryColorValue
+                                : theme.colorScheme.secondary,
+                      ),
+
                       LocalizationHelper.headlines(context),
                       onTap: () => setState(() => _currentIndex = 1),
                       isSelected: _currentIndex == 1,
@@ -337,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             icon,
-            const SizedBox(height: 4),
+            SizedBox(height: 10),
             Text(
               label,
               style: TextStyle(

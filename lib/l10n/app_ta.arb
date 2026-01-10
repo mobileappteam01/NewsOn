@@ -59,6 +59,9 @@
   "termsAndConditions": "விதிமுறைகள் மற்றும் நிபந்தனைகள்",
   "language": "மொழி",
   "logout": "வெளியேற",
+  "areYouSureYouWantToLogout": "நீங்கள் உறுதியாக வெளியேற விரும்புகிறீர்களா?",
+  "yes": "ஆம்",
+  "no": "இல்லை",
   "selectLanguage": "மொழியைத் தேர்ந்தெடுக்கவும்",
   "english": "ஆங்கிலம்",
   "hindi": "இந்தி",
@@ -137,6 +140,12 @@
   "flashNews": "ஃபிளாஷ் செய்தி",
   "liveCricketScore": "நேரடி கிரிக்கெட் ஸ்கோர்",
   "yesterday": "நேற்று",
-  "hotNews": "ஹாட் நியூஸ்"
+  "hotNews": "ஹாட் நியூஸ்",
+  "newsReadingSettings": "செய்தி வாசிப்பு அமைப்புகள்",
+  "playTitleOnly": "தலைப்பை மட்டும் இயக்க",
+  "playDescriptionOnly": "விளக்கத்தை மட்டும் இயக்க",
+  "playFullNews": "முழு செய்தியை இயக்க",
+  "selectNewsReadingMode": "செய்தி வாசிப்பு முறையைத் தேர்ந்தெடுக்கவும்",
+  "settingsSaved": "அமைப்புகள் சேமிக்கப்பட்டது"
 }
 

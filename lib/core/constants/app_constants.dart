@@ -22,6 +22,7 @@ class AppConstants {
   static const String userTokenKey = 'user_token';
   static const String userDataKey = 'user_data';
   static const String tempGoogleAccountKey = 'temp_google_account';
+  static const String newsReadingModeKey = 'news_reading_mode';
 
   // Text Size Settings
   static const double defaultTextSize = 16.0;
@@ -36,6 +37,15 @@ class AppConstants {
   static const double defaultTtsRate = 0.5;
   static const double defaultTtsPitch = 1.0;
   static const double defaultTtsVolume = 1.0;
+
+  // Auto-advance delay (Spotify-like behavior)
+  static const int autoAdvanceDelaySeconds = 3; // 3 seconds delay before auto-advancing to next article
+
+  // News Reading Modes
+  static const String readingModeTitleOnly = 'title_only'; // Play title only
+  static const String readingModeDescriptionOnly = 'description_only'; // Play description only
+  static const String readingModeFullNews = 'full_news'; // Play title + description
+  static const String defaultReadingMode = readingModeTitleOnly;
 
   // UI Constants
   static const double defaultPadding = 16.0;

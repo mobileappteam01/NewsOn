@@ -6,6 +6,7 @@ import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
 import 'text_size_settings.dart';
 import 'appearance_settings.dart';
+import 'news_reading_settings.dart';
 
 class ApplicationSettings extends StatefulWidget {
   const ApplicationSettings({super.key});
@@ -67,6 +68,18 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const AppearanceSettings(),
+                          ),
+                        ),
+                  ),
+                  _divider(),
+                  _buildSettingItem(
+                    title: LocalizationHelper.newsReadingSettings(context),
+                    theme: theme,
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NewsReadingSettings(),
                           ),
                         ),
                   ),

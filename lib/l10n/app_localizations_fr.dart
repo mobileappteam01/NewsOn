@@ -148,6 +148,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get logout => 'Déconnexion';
 
   @override
+  String get areYouSureYouWantToLogout => 'Êtes-vous sûr de vouloir vous déconnecter ?';
+
+  @override
+  String get yes => 'Oui';
+
+  @override
+  String get no => 'Non';
+
+  @override
   String get selectLanguage => 'Sélectionner la Langue';
 
   @override
@@ -352,4 +361,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get hotNews => 'Hot News';
+
+  @override
+  String get newsReadingSettings => 'Paramètres de lecture des actualités';
+
+  @override
+  String get playTitleOnly => 'Lire uniquement le titre';
+
+  @override
+  String get playDescriptionOnly => 'Lire uniquement la description';
+
+  @override
+  String get playFullNews => 'Lire l\'actualité complète';
+
+  @override
+  String get selectNewsReadingMode => 'Sélectionner le mode de lecture des actualités';
+
+  @override
+  String get settingsSaved => 'Paramètres enregistrés';
 }

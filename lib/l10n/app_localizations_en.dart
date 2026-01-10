@@ -148,6 +148,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logout => 'Logout';
 
   @override
+  String get areYouSureYouWantToLogout => 'Are you sure you want to logout?';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
   String get selectLanguage => 'Select Language';
 
   @override
@@ -352,4 +361,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hotNews => 'Hot News';
+
+  @override
+  String get newsReadingSettings => 'News Reading Settings';
+
+  @override
+  String get playTitleOnly => 'Play Title Only';
+
+  @override
+  String get playDescriptionOnly => 'Play Description Only';
+
+  @override
+  String get playFullNews => 'Play Full News';
+
+  @override
+  String get selectNewsReadingMode => 'Select News Reading Mode';
+
+  @override
+  String get settingsSaved => 'Settings saved';
 }

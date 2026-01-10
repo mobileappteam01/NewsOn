@@ -355,6 +355,25 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.logout, 'Logout');
   }
 
+  /// Get localized string for logout confirmation message
+  static String areYouSureYouWantToLogout(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.areYouSureYouWantToLogout,
+      'Are you sure you want to logout?',
+    );
+  }
+
+  /// Get localized string for yes button
+  static String yes(BuildContext context) {
+    return _getString(context, (l10n) => l10n.yes, 'Yes');
+  }
+
+  /// Get localized string for no button
+  static String no(BuildContext context) {
+    return _getString(context, (l10n) => l10n.no, 'No');
+  }
+
   /// Get localized string for select language
   static String selectLanguage(BuildContext context) {
     return _getString(
@@ -772,5 +791,47 @@ class LocalizationHelper {
   /// Get localized string for hot news
   static String hotNews(BuildContext context) {
     return _getString(context, (l10n) => l10n.hotNews, 'Hot News');
+  }
+
+  /// Get localized string for news reading settings
+  static String newsReadingSettings(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.newsReadingSettings,
+      'News Reading Settings',
+    );
+  }
+
+  /// Get localized string for play title only
+  static String playTitleOnly(BuildContext context) {
+    return _getString(context, (l10n) => l10n.playTitleOnly, 'Play Title Only');
+  }
+
+  /// Get localized string for play description only
+  static String playDescriptionOnly(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.playDescriptionOnly,
+      'Play Description Only',
+    );
+  }
+
+  /// Get localized string for play full news
+  static String playFullNews(BuildContext context) {
+    return _getString(context, (l10n) => l10n.playFullNews, 'Play Full News');
+  }
+
+  /// Get localized string for select news reading mode
+  static String selectNewsReadingMode(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.selectNewsReadingMode,
+      'Select News Reading Mode',
+    );
+  }
+
+  /// Get localized string for settings saved
+  static String settingsSaved(BuildContext context) {
+    return _getString(context, (l10n) => l10n.settingsSaved, 'Settings saved');
   }
 }
