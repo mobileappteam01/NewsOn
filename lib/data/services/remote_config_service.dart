@@ -93,7 +93,7 @@ class RemoteConfigService {
   Map<String, dynamic> _getDefaultValues() {
     return {
       // App Texts
-      'app_name': 'NewsOn',
+      'app_name': 'Newson',
       'splash_welcome_text': 'WELCOME TO',
       'splash_app_name_text': 'NEWSON',
       'splash_swipe_text': 'Swipe To Get Started',
