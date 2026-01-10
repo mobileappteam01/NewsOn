@@ -34,6 +34,9 @@ class ApiConfigModel {
   // API Key (can be overridden from Remote Config)
   final String? apiKey;
 
+  // App update configuration
+  final String appupdate;
+
   ApiConfigModel({
     this.baseUrl = 'https://newsdata.io/api/1',
     this.breakingNewsEndPoint = '/latest',
@@ -54,6 +57,7 @@ class ApiConfigModel {
     this.categoriesJson =
         '["top","business","entertainment","environment","food","health","politics","science","sports","technology","tourism","world"]',
     this.apiKey,
+    this.appupdate = 'api/updation/getLatestUpdationForMobile',
   });
 
   /// Parse categories from JSON string
@@ -96,12 +100,17 @@ class ApiConfigModel {
       apiKeyParam: json['api_key_param'] as String? ?? 'apikey',
       categoryParam: json['category_param'] as String? ?? 'category',
       countryParam: json['country_param'] as String? ?? 'country',
-      languageParam: json['language_param'] as String? ?? 'language', // Backend API uses 'language' parameter
+      languageParam:
+          json['language_param'] as String? ??
+          'language', // Backend API uses 'language' parameter
       queryParam: json['query_param'] as String? ?? 'q',
       pageParam: json['page_param'] as String? ?? 'page',
       sizeParam: json['size_param'] as String? ?? 'size',
       defaultLanguage: json['default_language'] as String? ?? 'ta',
       defaultCountry: json['default_country'] as String? ?? 'us',
+      appupdate:
+          json['appupdate'] as String? ??
+          'api/updation/getLatestUpdationForMobile',
       defaultPageSize: json['default_page_size'] as int? ?? 10,
       requestTimeoutSeconds: json['request_timeout_seconds'] as int? ?? 30,
       categoriesJson:
@@ -132,6 +141,7 @@ class ApiConfigModel {
       'request_timeout_seconds': requestTimeoutSeconds,
       'categories_json': categoriesJson,
       'api_key': apiKey,
+      'app_update': appupdate,
     };
   }
 
@@ -155,6 +165,7 @@ class ApiConfigModel {
     int? requestTimeoutSeconds,
     String? categoriesJson,
     String? apiKey,
+    String? appupdate,
   }) {
     return ApiConfigModel(
       baseUrl: baseUrl ?? this.baseUrl,
@@ -176,6 +187,7 @@ class ApiConfigModel {
           requestTimeoutSeconds ?? this.requestTimeoutSeconds,
       categoriesJson: categoriesJson ?? this.categoriesJson,
       apiKey: apiKey ?? this.apiKey,
+      appupdate: appupdate ?? this.appupdate,
     );
   }
 }

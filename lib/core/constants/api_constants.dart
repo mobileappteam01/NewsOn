@@ -13,6 +13,7 @@ class ApiConstants {
 
   // Base URL - Dynamic
   static String get baseUrl => _config.baseUrl;
+  static String get appupdate => _config.appupdate;
 
   // Endpoints - Dynamic
   static String get breakingNewsEndPoint => _config.breakingNewsEndPoint;
