@@ -30,6 +30,7 @@ class _CategoriesTabState extends State<CategoriesTab>
   int _currentPageIndex = 0;
   NewsArticle? _lastPlayedArticle;
   bool _isSwiping = false;
+  bool _isAutoAdvanceAnimating = false; // Flag to prevent stopping audio during auto-advance
   DateTime _selectedDate = DateTime.now();
   bool _hasInitialized = false;
 
@@ -106,6 +107,16 @@ class _CategoriesTabState extends State<CategoriesTab>
       return;
     }
 
+    // If auto-advance animation is in progress, just update the page index
+    // Don't stop audio - it's already playing the next article
+    if (_isAutoAdvanceAnimating) {
+      debugPrint('🔄 [AUTO-ADVANCE] Page animation completed in categories: $newIndex');
+      setState(() {
+        _currentPageIndex = newIndex;
+      });
+      return;
+    }
+
     setState(() {
       _isSwiping = true;
     });
@@ -113,7 +124,7 @@ class _CategoriesTabState extends State<CategoriesTab>
     // Stop current audio if playing (user swiped to different article)
     final audioProvider = context.read<AudioPlayerProvider>();
     if (audioProvider.isPlaying || audioProvider.isPaused) {
-      debugPrint('🛑 Stopping audio due to page swipe in categories tab');
+      debugPrint('🛑 Stopping audio due to user swipe in categories tab');
       audioProvider.stop();
     }
 
@@ -528,7 +539,10 @@ class _CategoriesTabState extends State<CategoriesTab>
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted &&
                   _pageController.hasClients &&
-                  targetIndex != _currentPageIndex) {
+                  targetIndex != _currentPageIndex &&
+                  !_isAutoAdvanceAnimating) {
+                // Set flag BEFORE animation to prevent _handlePageChange from stopping audio
+                _isAutoAdvanceAnimating = true;
                 _isSwiping = true;
                 _pageController
                     .animateToPage(
@@ -541,8 +555,13 @@ class _CategoriesTabState extends State<CategoriesTab>
                         setState(() {
                           _currentPageIndex = targetIndex;
                           _isSwiping = false;
+                          _isAutoAdvanceAnimating = false;
                         });
+                        debugPrint('✅ [AUTO-ADVANCE] Categories page synced to article ${targetIndex + 1}/${_articlesList.length}');
                       }
+                    }).catchError((e) {
+                      _isAutoAdvanceAnimating = false;
+                      _isSwiping = false;
                     });
               }
             });

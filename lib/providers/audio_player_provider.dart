@@ -396,33 +396,26 @@ class AudioPlayerProvider with ChangeNotifier {
             debugPrint('🎵 [DESCRIPTION ONLY MODE] Playing description from URL: $descriptionUrl');
           }
         } else if (readingMode == AppConstants.readingModeFullNews) {
-          // Play full news: title → description → content (if present)
-          // Order: 1. Title (always), 2. Description (if available), 3. Content (if available)
-          final titleUrl = article.titleAudioUrl;
-          final descriptionUrl = article.descriptionAudioUrl;
+          // Play full news: Play CONTENT URL only (full article content audio)
+          // Fallback chain: content → description → title
           final contentUrl = article.contentAudioUrl;
+          final descriptionUrl = article.descriptionAudioUrl;
+          final titleUrl = article.titleAudioUrl;
           
-          if (titleUrl == null || titleUrl.isEmpty) {
-            throw Exception('Title audio URL not available for full news mode');
-          }
-          
-          // 1. Title (always first)
-          urlsToPlay.add(titleUrl);
-          debugPrint('🎵 [FULL NEWS MODE] Adding title URL: $titleUrl');
-          
-          // 2. Description (if available, play after title)
-          if (descriptionUrl != null && descriptionUrl.isNotEmpty) {
-            urlsToPlay.add(descriptionUrl);
-            debugPrint('🎵 [FULL NEWS MODE] Adding description URL: $descriptionUrl');
-          }
-          
-          // 3. Content (if available, play after description)
           if (contentUrl != null && contentUrl.isNotEmpty) {
             urlsToPlay.add(contentUrl);
-            debugPrint('🎵 [FULL NEWS MODE] Adding content URL: $contentUrl');
+            debugPrint('🎵 [FULL NEWS MODE] Playing content URL: $contentUrl');
+          } else if (descriptionUrl != null && descriptionUrl.isNotEmpty) {
+            // Fallback to description if content not available
+            urlsToPlay.add(descriptionUrl);
+            debugPrint('🎵 [FULL NEWS MODE - FALLBACK] Content not available, playing description URL: $descriptionUrl');
+          } else if (titleUrl != null && titleUrl.isNotEmpty) {
+            // Fallback to title if neither content nor description available
+            urlsToPlay.add(titleUrl);
+            debugPrint('🎵 [FULL NEWS MODE - FALLBACK] Content/Description not available, playing title URL: $titleUrl');
+          } else {
+            throw Exception('No audio URL available for full news mode');
           }
-          
-          debugPrint('🎵 [FULL NEWS MODE] Playlist order: Title → Description → Content (${urlsToPlay.length} URLs total)');
         } else {
           // Fallback to default (title only) - this should not happen if storage is working correctly
           // But if reading mode is invalid/null, default to title only as per user requirement

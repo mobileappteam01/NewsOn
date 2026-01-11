@@ -107,7 +107,7 @@ void main() async {
     debugPrint("❌ Failed to initialize API Service: $e");
     // Continue app launch even if API service initialization fails
     // The app can still work, but API calls will fail until initialized
-  }
+  }  
 
   // Initialize FCM Service - Request permissions and get token ready
   // Note: This may fail on emulators without Google Play Services
