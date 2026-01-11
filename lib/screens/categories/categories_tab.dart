@@ -215,31 +215,31 @@ class _CategoriesTabState extends State<CategoriesTab>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           // Back button (left) - navigates back (but we're in tab, so could do nothing or navigate)
-                          InkWell(
-                            onTap: () {
-                              // In tab navigation, back might not make sense, but we can clear state if needed
-                              // For now, just stop any playing audio
-                              final audioProvider =
-                                  context.read<AudioPlayerProvider>();
-                              if (audioProvider.isPlaying ||
-                                  audioProvider.isPaused) {
-                                audioProvider.stop();
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(25),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Colors.black45,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                          ),
+                          // InkWell(
+                          //   onTap: () {
+                          //     // In tab navigation, back might not make sense, but we can clear state if needed
+                          //     // For now, just stop any playing audio
+                          //     final audioProvider =
+                          //         context.read<AudioPlayerProvider>();
+                          //     if (audioProvider.isPlaying ||
+                          //         audioProvider.isPaused) {
+                          //       audioProvider.stop();
+                          //     }
+                          //   },
+                          //   borderRadius: BorderRadius.circular(25),
+                          //   child: Container(
+                          //     padding: const EdgeInsets.all(8),
+                          //     decoration: const BoxDecoration(
+                          //       color: Colors.black45,
+                          //       shape: BoxShape.circle,
+                          //     ),
+                          //     child: const Icon(
+                          //       Icons.arrow_back,
+                          //       color: Colors.white,
+                          //       size: 24,
+                          //     ),
+                          //   ),
+                          // ),
 
                           // Logo (center)
                           showImage(

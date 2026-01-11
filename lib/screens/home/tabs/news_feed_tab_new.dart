@@ -253,64 +253,64 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
                     // Category tabs
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: SizedBox(
-                          height: 36,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: categories.length,
-                            itemBuilder: (context, index) {
-                              final category = categories[index];
-                              final isSelected = _selectedCategory == category;
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() => _selectedCategory = category);
-                                  if (category != 'All') {
-                                    // Convert display name back to API format (lowercase)
-                                    final apiCategory = category.toLowerCase();
-                                    context
-                                        .read<NewsProvider>()
-                                        .fetchNewsByCategory(apiCategory);
-                                  } else {
-                                    // If "All" is selected, fetch breaking news
-                                    context
-                                        .read<NewsProvider>()
-                                        .fetchBreakingNews();
-                                  }
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isSelected
-                                            ? const Color(0xFFE31E24)
-                                            : Colors.black,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      category,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
+                    // SliverToBoxAdapter(
+                    //   child: Padding(
+                    //     padding: const EdgeInsets.symmetric(vertical: 8),
+                    //     child: SizedBox(
+                    //       height: 36,
+                    //       child: ListView.builder(
+                    //         scrollDirection: Axis.horizontal,
+                    //         padding: const EdgeInsets.symmetric(horizontal: 16),
+                    //         itemCount: categories.length,
+                    //         itemBuilder: (context, index) {
+                    //           final category = categories[index];
+                    //           final isSelected = _selectedCategory == category;
+                    //           return GestureDetector(
+                    //             onTap: () {
+                    //               setState(() => _selectedCategory = category);
+                    //               if (category != 'All') {
+                    //                 // Convert display name back to API format (lowercase)
+                    //                 final apiCategory = category.toLowerCase();
+                    //                 context
+                    //                     .read<NewsProvider>()
+                    //                     .fetchNewsByCategory(apiCategory);
+                    //               } else {
+                    //                 // If "All" is selected, fetch breaking news
+                    //                 context
+                    //                     .read<NewsProvider>()
+                    //                     .fetchBreakingNews();
+                    //               }
+                    //             },
+                    //             child: Container(
+                    //               margin: const EdgeInsets.only(right: 8),
+                    //               padding: const EdgeInsets.symmetric(
+                    //                 horizontal: 20,
+                    //                 vertical: 8,
+                    //               ),
+                    //               decoration: BoxDecoration(
+                    //                 color:
+                    //                     isSelected
+                    //                         ? const Color(0xFFE31E24)
+                    //                         : Colors.black,
+                    //                 borderRadius: BorderRadius.circular(20),
+                    //               ),
+                    //               child: Center(
+                    //                 child: Text(
+                    //                   category,
+                    //                   style: const TextStyle(
+                    //                     color: Colors.white,
+                    //                     fontSize: 13,
+                    //                     fontWeight: FontWeight.w600,
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           );
+                    //         },
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
 
                     // Today heading (dynamic based on selected date)
                     SliverToBoxAdapter(
