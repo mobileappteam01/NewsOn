@@ -32,8 +32,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   late int _initialIndex;
   double _contentTextSize = AppConstants.defaultTextSize;
   int _currentPageIndex = 0;
-  NewsArticle? _lastPlayedArticle;
-  bool _isSwiping = false;
+  bool _isAnimating = false; // Prevent duplicate animations
 
   @override
   void initState() {
@@ -41,11 +40,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadTextSize();
     _initializePageView();
-    
-    // Listen to audio player provider to detect when article changes (auto-advance)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _listenToAudioPlayerChanges();
-    });
   }
 
   /// Initialize PageView with article list based on source
@@ -103,65 +97,75 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     _pageController = PageController(initialPage: _initialIndex);
   }
 
-  /// Handle page change - dispose audio and update state
-  /// Called when user swipes left/right or when auto-advance navigates PageView
-  void _handlePageChange(int newIndex) {
+  /// Handle user swipe - STOP audio and update page
+  void _onUserSwipe(int newIndex) {
     if (newIndex == _currentPageIndex || newIndex < 0 || newIndex >= _articlesList.length) {
       return;
     }
     
-    final previousIndex = _currentPageIndex;
-    final isSwipingForward = newIndex > previousIndex;
-    final swipeDirection = isSwipingForward ? 'RIGHT (next)' : 'LEFT (previous)';
-    final currentArticle = _articlesList[previousIndex];
-    final newArticle = _articlesList[newIndex];
+    debugPrint('👆 [USER SWIPE] Page: $_currentPageIndex → $newIndex');
     
-    debugPrint('🔄 Page changed: Index $previousIndex → $newIndex (swipe $swipeDirection)');
-    debugPrint('   From: "${currentArticle.title.substring(0, currentArticle.title.length > 40 ? 40 : currentArticle.title.length)}..."');
-    debugPrint('   To: "${newArticle.title.substring(0, newArticle.title.length > 40 ? 40 : newArticle.title.length)}..."');
-    
-    // Mark as swiping to prevent auto-advance from interfering during swipe
-    setState(() {
-      _isSwiping = true;
-    });
-    
-    // Stop and dispose current audio if playing (user swiped to different article)
-    // CRITICAL: Always stop audio when user swipes, regardless of which article is playing
-    // This ensures proper audio disposal and prevents conflicts
+    // STOP audio when user swipes
     final audioProvider = context.read<AudioPlayerProvider>();
-    if (audioProvider.isPlaying || audioProvider.isPaused) {
-      debugPrint('🛑 Stopping and disposing audio due to page swipe (user manually navigated)');
-      // Stop current audio playback and cancel any pending auto-advance timer
+    if (audioProvider.hasCurrentArticle) {
+      debugPrint('🛑 Stopping audio due to user swipe');
       audioProvider.stop();
     }
     
-    // Reset last played article to allow play on new page
-    _lastPlayedArticle = null;
-    
-    // Update current page index (swipe animation is handled by PageView)
     setState(() {
       _currentPageIndex = newIndex;
-      _isSwiping = false; // Mark swipe as complete
     });
+  }
+
+  /// Check if audio has auto-advanced and sync PageView
+  void _checkAndSyncAutoAdvance(AudioPlayerProvider audioProvider) {
+    // Skip if in list view mode (playTitleMode=true) - only handle detail screen (playTitleMode=false)
+    if (audioProvider.playTitleMode) return;
     
-    debugPrint('✅ Page change completed: Now showing article ${newIndex + 1}/${_articlesList.length}');
+    // Skip if no playlist or invalid index
+    if (audioProvider.playlist.isEmpty) return;
+    
+    final audioIndex = audioProvider.currentPlaylistIndex;
+    if (audioIndex < 0 || audioIndex >= audioProvider.playlist.length) return;
+    if (audioIndex >= _articlesList.length) return;
+    
+    // Check if audio has moved to a different article than current page
+    // This happens when auto-advance plays the next article
+    if (audioIndex != _currentPageIndex) {
+      debugPrint('🔄 [AUTO-ADVANCE] Audio at $audioIndex, page at $_currentPageIndex - syncing...');
+      
+      // Animate to new page (prevent duplicate animations)
+      if (mounted && _pageController.hasClients && !_isAnimating) {
+        _isAnimating = true;
+        _pageController.animateToPage(
+          audioIndex,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ).then((_) {
+          if (mounted) {
+            setState(() {
+              _currentPageIndex = audioIndex;
+              _isAnimating = false;
+            });
+            debugPrint('✅ [AUTO-ADVANCE] PageView synced to article ${audioIndex + 1}/${_articlesList.length}');
+          }
+        }).catchError((e) {
+          _isAnimating = false;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Stop and dispose audio when page is disposed
+    // Stop audio when leaving screen
     final audioProvider = context.read<AudioPlayerProvider>();
-    if (audioProvider.isPlaying || audioProvider.isPaused) {
+    if (audioProvider.hasCurrentArticle) {
       audioProvider.stop();
     }
     _pageController.dispose();
     super.dispose();
-  }
-
-  /// Listen to audio player provider changes for auto-navigation (PageView update)
-  void _listenToAudioPlayerChanges() {
-    // Auto-navigation is handled in the Consumer builder
   }
 
   @override
@@ -171,7 +175,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     }
   }
 
-  void _loadTextSize() {
+  void _loadTextSize() { 
     final savedSize = StorageService.getSetting(
       AppConstants.textSizeKey,
       defaultValue: AppConstants.defaultTextSize,
@@ -196,21 +200,54 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
           return Stack(
             children: [
               // PageView for swipeable navigation
-              // Swipe LEFT = previous article (goes to lower index)
-              // Swipe RIGHT = next article (goes to higher index)
-              PageView.builder(
-                controller: _pageController,
-                itemCount: _articlesList.length,
-                onPageChanged: (index) {
-                  // This is called when page animation completes (after swipe or auto-advance)
-                  if (index != _currentPageIndex && index >= 0 && index < _articlesList.length) {
-                    _handlePageChange(index);
+              NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  // Detect user scroll/swipe start
+                  if (notification is ScrollStartNotification) {
+                    if (notification.dragDetails != null) {
+                      // User initiated scroll (not programmatic)
+                      debugPrint('👆 User started swiping');
+                    }
                   }
+                  return false;
                 },
-                itemBuilder: (context, index) {
-                  final article = _articlesList[index];
-                  return _buildArticlePage(article, config, theme);
-                },
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _articlesList.length,
+                  onPageChanged: (index) {
+                    if (index != _currentPageIndex) {
+                      // If we're animating (auto-advance triggered the animation), don't treat as user swipe
+                      if (_isAnimating) {
+                        debugPrint('🔄 [AUTO-ADVANCE] Page animation completed: $index');
+                        setState(() {
+                          _currentPageIndex = index;
+                        });
+                        return;
+                      }
+                      
+                      // Check if this is auto-advance (audio provider index matches) or user swipe
+                      final audioProvider = context.read<AudioPlayerProvider>();
+                      final isAutoAdvance = audioProvider.currentPlaylistIndex == index &&
+                          (audioProvider.isPlaying || audioProvider.hasCurrentArticle) &&
+                          !audioProvider.playTitleMode;
+                      
+                      if (isAutoAdvance) {
+                        // Auto-advance - just update page index, don't stop audio
+                        debugPrint('🔄 [AUTO-ADVANCE] Page synced: $index');
+                        setState(() {
+                          _currentPageIndex = index;
+                        });
+                      } else {
+                        // User swipe - stop audio
+                        _onUserSwipe(index);
+                      }
+                    }
+                  },
+                  itemBuilder: (context, index) {
+                    final article = _articlesList[index];
+                    return _buildArticlePage(article, config, theme);
+                  },
+                ),
               ),
 
               // Audio Loading Overlay
@@ -230,77 +267,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   ) {
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
-        // Find the index of this article in our list
+        // Get current article index
         final articleIndex = _articlesList.indexWhere(
           (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
         );
         
-        // Only check for auto-advance when viewing the current page (the page that was previously playing)
-        // This prevents duplicate checks on off-screen pages and ensures we only navigate when on the playing page
-        final isCurrentVisiblePage = articleIndex >= 0 && articleIndex == _currentPageIndex;
-        final articleKey = article.articleId ?? article.title;
-        final currentlyPlayingArticle = audioProvider.currentArticle;
-        final currentlyPlayingKey = currentlyPlayingArticle?.articleId ?? currentlyPlayingArticle?.title;
-        
-        // Listen to audio player changes for auto-advance (update PageView)
-        // Only check when on the current visible page, audio has advanced, and the displayed article doesn't match the playing article
-        if (isCurrentVisiblePage &&
-            audioProvider.playlist.isNotEmpty &&
-            audioProvider.currentPlaylistIndex >= 0 &&
-            audioProvider.currentPlaylistIndex < audioProvider.playlist.length &&
-            currentlyPlayingArticle != null &&
-            currentlyPlayingKey != articleKey &&
-            currentlyPlayingKey != (_lastPlayedArticle?.articleId ?? _lastPlayedArticle?.title) &&
-            !audioProvider.playTitleMode &&
-            !_isSwiping &&
-            mounted &&
-            _pageController.hasClients) {
-          
-          // Auto-advance detected: current article changed (audio advanced to next article)
-          final newIndex = audioProvider.currentPlaylistIndex;
-          final newArticle = audioProvider.playlist[newIndex];
-          final currentArticle = audioProvider.currentArticle!;
-          
-          // Verify the current article matches the playlist article at current index
-          final newArticleKey = newArticle.articleId ?? newArticle.title;
-          final currentArticleKey = currentArticle.articleId ?? currentArticle.title;
-          final isSameArticle = newArticleKey == currentArticleKey;
-          
-          // Also check that we haven't already navigated to this article
-          final lastPlayedKey = _lastPlayedArticle?.articleId ?? _lastPlayedArticle?.title;
-          final hasNotNavigatedYet = lastPlayedKey != newArticleKey;
-          
-          // Check if new article is in our articles list
-          final targetIndex = _articlesList.indexWhere(
-            (a) => (a.articleId ?? a.title) == newArticleKey,
-          );
-          
-          if (isSameArticle && hasNotNavigatedYet && targetIndex >= 0 && targetIndex < _articlesList.length && targetIndex != _currentPageIndex) {
-            // Update last played article BEFORE navigation to prevent duplicate navigations
-            _lastPlayedArticle = newArticle;
-            
-            debugPrint('🔄 Auto-advance detected: Navigating PageView from index $_currentPageIndex (${article.title.substring(0, article.title.length > 30 ? 30 : article.title.length)}...) to $targetIndex/${_articlesList.length} (${newArticle.title.substring(0, newArticle.title.length > 30 ? 30 : newArticle.title.length)}...)');
-            
-            // Navigate PageView to the new article (auto-advance)
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _pageController.hasClients && targetIndex != _currentPageIndex) {
-                _isSwiping = true; // Prevent duplicate auto-navigation during animation
-                _pageController.animateToPage(
-                  targetIndex,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                ).then((_) {
-                  if (mounted) {
-                    setState(() {
-                      _currentPageIndex = targetIndex;
-                      _isSwiping = false;
-                    });
-                    debugPrint('✅ Auto-advance PageView navigation completed: Now showing article ${targetIndex + 1}/${_articlesList.length}');
-                  }
-                });
-              }
-            });
-          }
+        // Only check auto-advance for the currently visible page
+        if (articleIndex == _currentPageIndex) {
+          _checkAndSyncAutoAdvance(audioProvider);
         }
 
         return SingleChildScrollView(
@@ -408,7 +382,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
           ),
 
           /// 🔹 CONTENT AREA
-          Container(
+          Container( 
             width: double.infinity,
             padding: const EdgeInsets.symmetric(
               horizontal: 20,
@@ -512,7 +486,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                 const Icon(
                   Icons.graphic_eq_rounded,
                   color: Colors.white,
-                  size: 20,
+                  size: 28,
                 ),
                 giveWidth(4),
 
@@ -543,7 +517,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         : Icon(
                             isPlaying ? Icons.pause : Icons.play_arrow,
                             color: Colors.white,
-                            size: 22,
+                            size: 30,
                           ),
                   ),
                 ),
@@ -656,8 +630,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     AudioPlayerProvider audioProvider,
   ) async {
     try {
-      final newsProvider = context.read<NewsProvider>();
-      
       // Check if article is in our current articles list
       final articleIndex = _articlesList.indexWhere(
         (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
@@ -665,61 +637,19 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
       
       if (articleIndex >= 0 && _articlesList.length > 1) {
         // Use current articles list as playlist
-        _lastPlayedArticle = article;
         await audioProvider.setPlaylistAndPlay(
           _articlesList,
           articleIndex,
-          playTitle: false, // Detail screen plays description only
+          playTitle: false, // Detail screen plays CONTENT audio only
         );
-        debugPrint('🎵 Playing article from PageView playlist: index $articleIndex/${_articlesList.length}');
+        debugPrint('🎵 [DETAIL] Playing content audio: index $articleIndex/${_articlesList.length}');
       } else {
-        // Single article or not in list - try to find playlist from news provider
-        List<NewsArticle>? playlist;
-        int? startIndex;
-        
-        // Check if article is in breaking news
-        final breakingIndex = newsProvider.breakingNews.indexWhere(
-          (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
+        // Single article - play directly
+        await audioProvider.playArticleFromUrl(
+          article,
+          playTitle: false, // Detail screen plays CONTENT audio only
         );
-        if (breakingIndex >= 0) {
-          playlist = newsProvider.breakingNews;
-          startIndex = breakingIndex;
-        } else {
-          // Check if article is in flash news (first 5 breaking news)
-          final flashNews = newsProvider.breakingNews.take(5).toList();
-          final flashIndex = flashNews.indexWhere(
-            (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
-          );
-          if (flashIndex >= 0) {
-            playlist = flashNews;
-            startIndex = flashIndex;
-          } else {
-            // Check if article is in today's news
-            final todayIndex = newsProvider.todayNews.indexWhere(
-              (a) => (a.articleId ?? a.title) == (article.articleId ?? article.title),
-            );
-            if (todayIndex >= 0) {
-              playlist = newsProvider.todayNews;
-              startIndex = todayIndex;
-            }
-          }
-        }
-        
-        if (playlist != null && startIndex != null && startIndex < playlist.length) {
-          _lastPlayedArticle = article;
-          await audioProvider.setPlaylistAndPlay(
-            playlist,
-            startIndex,
-            playTitle: false,
-          );
-        } else {
-          // No playlist found, play single article
-          _lastPlayedArticle = article;
-          await audioProvider.playArticleFromUrl(
-            article,
-            playTitle: false,
-          );
-        }
+        debugPrint('🎵 [DETAIL] Playing single article content audio');
       }
     } catch (e) {
       if (mounted) {

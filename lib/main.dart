@@ -101,7 +101,7 @@ void main() async {
 
   // Initialize API Service - Fetch base URL and all endpoints at startup
   try {
-    await ApiService().initialize();
+    await ApiService().initialize(); 
     debugPrint("✅ API Service initialized - Base URL and endpoints loaded");
   } catch (e) {
     debugPrint("❌ Failed to initialize API Service: $e");

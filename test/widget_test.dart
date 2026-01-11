@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newson/core/services/network_service.dart';
 
 import 'package:newson/main.dart';
 import 'package:newson/providers/remote_config_provider.dart';
@@ -16,7 +17,7 @@ void main() {
     // Build our app and trigger a frame.
     final remoteConfigProvider = RemoteConfigProvider();
   await remoteConfigProvider.initialize();
-    await tester.pumpWidget( NewsOnApp(remoteConfigProvider: remoteConfigProvider,));
+    await tester.pumpWidget( NewsOnApp(remoteConfigProvider: remoteConfigProvider,networkService: NetworkService(),));
 
     // Verify that the app builds without crashing
     expect(find.byType(MaterialApp), findsOneWidget);

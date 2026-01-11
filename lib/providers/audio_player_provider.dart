@@ -62,17 +62,23 @@ class AudioPlayerProvider with ChangeNotifier {
     ) {
       _position = position;
       
-      // IMPORTANT: For concatenated sources (multiple URLs), duration initially reports only the first URL's duration
-      // We should NOT detect completion based on position reaching duration for concatenated sources
-      // Instead, ONLY rely on the state stream's ProcessingState.completed which properly detects when ALL URLs are done
-      // The position stream should ONLY be used for updating the progress bar UI, not for completion detection
+      // Log position every 10 seconds for debugging
+      if (position.inSeconds > 0 && position.inSeconds % 10 == 0 && _isPlaying) {
+        debugPrint('📍 Position: ${position.inSeconds}s / ${_duration.inSeconds}s (isPlaying=$_isPlaying, hasCompleted=$_hasCompleted)');
+      }
       
-      // For single URLs, duration is accurate from the start
-      // For concatenated sources, duration updates as more URLs load, but we can't reliably detect completion from position
-      // So we disable position-based completion detection entirely and rely only on ProcessingState.completed
+      // Position-based completion detection as fallback
+      // This handles cases where ProcessingState.completed doesn't fire
+      // Use a small buffer (500ms) to account for timing differences
+      if (_duration > Duration.zero && 
+          position.inMilliseconds >= (_duration.inMilliseconds - 500) &&
+          _isPlaying &&
+          !_hasCompleted &&
+          !_isAutoAdvancing) {
+        debugPrint('✅ [POSITION] Audio completed: position=${position.inSeconds}s >= duration=${_duration.inSeconds}s');
+        _handleAudioCompletion();
+      }
       
-      // Just update the position and notify listeners for UI updates (progress bar)
-      // Completion detection is handled by the state stream below
       notifyListeners();
     });
 
@@ -110,80 +116,9 @@ class AudioPlayerProvider with ChangeNotifier {
       final wasPaused = _isPaused;
       
       // Handle completion state - ensure UI updates properly
-      // IMPORTANT: ProcessingState.completed is the ONLY reliable way to detect completion for concatenated sources
-      // This fires when ALL URLs in a ConcatenatingAudioSource have finished playing
       if (state.processingState == ProcessingState.completed && !state.playing) {
-        // Force state to completed (not playing, not paused)
-        _isPlaying = false;
-        _isPaused = false;
-        _hasCompleted = true; // Mark as completed
-        
-        // IMPORTANT: Don't clear _currentArticle here - keep it so audio player bar stays visible during auto-advance delay
-        // Only clear _currentArticle when stopping or starting new article
-        
-        // Reset position to duration when completed to show progress bar at end
-        if (_duration > Duration.zero && _position < _duration) {
-          _position = _duration;
-        }
-        debugPrint('✅ Audio playback completed (ALL URLs finished) - UI state updated: isPlaying=$_isPlaying, isPaused=$_isPaused, position=${_position.inSeconds}s/${_duration.inSeconds}s, currentArticle=${_currentArticle?.title}');
-        
-        // Notify listeners immediately to update UI (pause icon → play icon)
-        // This ensures UI updates instantly when audio completes (like Spotify)
-        // Audio player bar should remain visible because _currentArticle is still set
-        notifyListeners();
-        
-        // Check if we have a playlist and should auto-advance
-        final shouldAutoAdvance = _playlist.isNotEmpty &&
-            _currentPlaylistIndex >= 0 &&
-            _currentPlaylistIndex < _playlist.length - 1 &&
-            !_isAutoAdvancing;
-        
-        if (shouldAutoAdvance) {
-          // Only set up auto-advance timer if not already advancing (avoid duplicate timers)
-          // This prevents restarting the delay if both position and state streams detect completion
-          if (!_isAutoAdvancing) {
-            _isAutoAdvancing = true;
-            debugPrint('✅ Audio completed - UI updated to play icon. Will auto-advance to next article in ${AppConstants.autoAdvanceDelaySeconds} seconds...');
-            
-            // Cancel any existing auto-advance timer (safety check - in case timer exists but flag wasn't set)
-            _autoAdvanceTimer?.cancel();
-            
-            // CRITICAL: Store the index when auto-advance timer is set
-            // This ensures we can validate that we're still on the same article when timer fires
-            _autoAdvanceFromIndex = _currentPlaylistIndex;
-            
-            // Spotify-like delay: Show play icon first, then auto-advance after delay
-            _autoAdvanceTimer = Timer(Duration(seconds: AppConstants.autoAdvanceDelaySeconds), () {
-              // Double-check conditions before auto-advancing (in case user stopped or changed playlist)
-              // Note: We don't check _hasCompleted here because state stream might have reset it
-              // Instead, we check if we're still in the same position in the playlist
-              if (_playlist.isNotEmpty && 
-                  _currentPlaylistIndex >= 0 && 
-                  _currentPlaylistIndex < _playlist.length - 1 &&
-                  _currentPlaylistIndex == _autoAdvanceFromIndex &&
-                  _isAutoAdvancing) {
-                debugPrint('🔄 Auto-advancing to next article in playlist (Spotify-like ${AppConstants.autoAdvanceDelaySeconds}s delay)...');
-                _autoAdvanceFromIndex = null; // Clear stored index before advancing
-                // Auto-advance to next article in playlist
-                _playNextInPlaylist();
-              } else {
-                // Conditions changed, cancel auto-advance
-                _isAutoAdvancing = false;
-                _autoAdvanceFromIndex = null;
-                debugPrint('⚠️ Auto-advance cancelled - conditions changed (playlist: ${_playlist.length}, index: $_currentPlaylistIndex, storedIndex: $_autoAdvanceFromIndex, autoAdvancing: $_isAutoAdvancing)');
-              }
-            });
-          } else {
-            debugPrint('ℹ️ Auto-advance already in progress - skipping duplicate setup');
-          }
-        } else {
-          // No playlist or last item - audio completed, state is properly reset
-          debugPrint('✅ Audio playback completed - no auto-advance needed (playlist: ${_playlist.length}, index: $_currentPlaylistIndex)');
-          // Cancel any existing timer (in case it was set up by position stream)
-          _autoAdvanceTimer?.cancel();
-          _isAutoAdvancing = false;
-          _autoAdvanceFromIndex = null;
-        }
+        debugPrint('✅ [STATE] ProcessingState.completed detected');
+        _handleAudioCompletion();
       } else if (state.processingState == ProcessingState.idle && !state.playing) {
         // Handle idle state (stopped/completed but not explicitly stopped)
         if (_isPlaying || _isPaused) {
@@ -426,6 +361,15 @@ class AudioPlayerProvider with ChangeNotifier {
         // Home screen/list views: Use stored news reading preference
         final readingMode = forceMode ?? StorageService.getNewsReadingMode();
         final List<String> urlsToPlay = [];
+        
+        // Debug: Log the reading mode being used
+        debugPrint('🎧 ========== AUDIO PLAYBACK MODE ==========');
+        debugPrint('🎧 Reading Mode from Settings: "$readingMode"');
+        debugPrint('🎧 Expected modes: title_only="${AppConstants.readingModeTitleOnly}", description_only="${AppConstants.readingModeDescriptionOnly}", full_news="${AppConstants.readingModeFullNews}"');
+        debugPrint('🎧 Article: ${article.title.substring(0, article.title.length > 50 ? 50 : article.title.length)}...');
+        debugPrint('🎧 Title URL: ${article.titleAudioUrl ?? "NULL"}');
+        debugPrint('🎧 Description URL: ${article.descriptionAudioUrl ?? "NULL"}');
+        debugPrint('🎧 Content URL: ${article.contentAudioUrl ?? "NULL"}');
 
         if (readingMode == AppConstants.readingModeTitleOnly) {
           // Play title only
@@ -434,43 +378,51 @@ class AudioPlayerProvider with ChangeNotifier {
             throw Exception('Title audio URL not available');
           }
           urlsToPlay.add(titleUrl);
-          debugPrint('🎵 Playing title only from URL: $titleUrl');
+          debugPrint('🎵 [TITLE ONLY MODE] Playing title from URL: $titleUrl');
         } else if (readingMode == AppConstants.readingModeDescriptionOnly) {
           // Play description only
           final descriptionUrl = article.descriptionAudioUrl;
           if (descriptionUrl == null || descriptionUrl.isEmpty) {
-            throw Exception('Description audio URL not available');
+            // Fallback to title if description not available
+            debugPrint('⚠️ Description URL not available, falling back to title');
+            final titleUrl = article.titleAudioUrl;
+            if (titleUrl == null || titleUrl.isEmpty) {
+              throw Exception('Neither description nor title audio URL available');
+            }
+            urlsToPlay.add(titleUrl);
+            debugPrint('🎵 [DESCRIPTION MODE - FALLBACK] Playing title from URL: $titleUrl');
+          } else {
+            urlsToPlay.add(descriptionUrl);
+            debugPrint('🎵 [DESCRIPTION ONLY MODE] Playing description from URL: $descriptionUrl');
           }
-          urlsToPlay.add(descriptionUrl);
-          debugPrint('🎵 Playing description only from URL: $descriptionUrl');
         } else if (readingMode == AppConstants.readingModeFullNews) {
-          // Play full news: title → content (if present) → description
-          // Order: 1. Title (always), 2. Content (if available), 3. Description (if available)
+          // Play full news: title → description → content (if present)
+          // Order: 1. Title (always), 2. Description (if available), 3. Content (if available)
           final titleUrl = article.titleAudioUrl;
-          final contentUrl = article.contentAudioUrl;
           final descriptionUrl = article.descriptionAudioUrl;
+          final contentUrl = article.contentAudioUrl;
           
           if (titleUrl == null || titleUrl.isEmpty) {
-            throw Exception('Title audio URL not available');
+            throw Exception('Title audio URL not available for full news mode');
           }
           
           // 1. Title (always first)
           urlsToPlay.add(titleUrl);
-          debugPrint('🎵 [Full News] Adding title URL: $titleUrl');
+          debugPrint('🎵 [FULL NEWS MODE] Adding title URL: $titleUrl');
           
-          // 2. Content (if available, play after title)
-          if (contentUrl != null && contentUrl.isNotEmpty) {
-            urlsToPlay.add(contentUrl);
-            debugPrint('🎵 [Full News] Adding content URL: $contentUrl');
-          }
-          
-          // 3. Description (if available, play after content)
+          // 2. Description (if available, play after title)
           if (descriptionUrl != null && descriptionUrl.isNotEmpty) {
             urlsToPlay.add(descriptionUrl);
-            debugPrint('🎵 [Full News] Adding description URL: $descriptionUrl');
+            debugPrint('🎵 [FULL NEWS MODE] Adding description URL: $descriptionUrl');
           }
           
-          debugPrint('🎵 [Full News] Playlist order: Title → Content → Description (${urlsToPlay.length} URLs total)');
+          // 3. Content (if available, play after description)
+          if (contentUrl != null && contentUrl.isNotEmpty) {
+            urlsToPlay.add(contentUrl);
+            debugPrint('🎵 [FULL NEWS MODE] Adding content URL: $contentUrl');
+          }
+          
+          debugPrint('🎵 [FULL NEWS MODE] Playlist order: Title → Description → Content (${urlsToPlay.length} URLs total)');
         } else {
           // Fallback to default (title only) - this should not happen if storage is working correctly
           // But if reading mode is invalid/null, default to title only as per user requirement
@@ -479,7 +431,13 @@ class AudioPlayerProvider with ChangeNotifier {
             throw Exception('Title audio URL not available');
           }
           urlsToPlay.add(titleUrl);
-          debugPrint('🎵 Playing title only (default fallback - reading mode: $readingMode)');
+          debugPrint('⚠️ [FALLBACK MODE] Unknown reading mode "$readingMode", playing title only from URL: $titleUrl');
+        }
+        
+        debugPrint('🎧 ========== STARTING PLAYBACK ==========');
+        debugPrint('🎧 Total URLs to play: ${urlsToPlay.length}');
+        for (int i = 0; i < urlsToPlay.length; i++) {
+          debugPrint('🎧 URL ${i + 1}: ${urlsToPlay[i]}');
         }
 
         _isLoading = false;
@@ -487,25 +445,35 @@ class AudioPlayerProvider with ChangeNotifier {
 
         if (urlsToPlay.length == 1) {
           // Single URL - play directly
+          debugPrint('🎵 Playing single URL directly');
           await _audioPlayerService.playFromUrl(urlsToPlay[0]);
         } else {
           // Multiple URLs - play sequentially
+          debugPrint('🎵 Playing ${urlsToPlay.length} URLs sequentially');
           await _playSequentialUrls(urlsToPlay);
         }
       } else {
-        // Detail screen: Play ONLY description URL (no content)
-        final descriptionUrl = article.descriptionAudioUrl;
-
-        if (descriptionUrl == null || descriptionUrl.isEmpty) {
-          throw Exception('Description audio URL not available');
+        // Detail screen: Play content URL (full article content audio)
+        // Fallback to description URL if content URL is not available
+        String? audioUrl = article.contentAudioUrl;
+        String urlType = 'content';
+        
+        if (audioUrl == null || audioUrl.isEmpty) {
+          // Fallback to description URL
+          audioUrl = article.descriptionAudioUrl;
+          urlType = 'description (fallback)';
         }
 
-        debugPrint('🎵 Playing description only from URL (detail screen): $descriptionUrl');
+        if (audioUrl == null || audioUrl.isEmpty) {
+          throw Exception('No audio URL available (content or description)');
+        }
+
+        debugPrint('🎵 [DETAIL SCREEN] Playing $urlType audio URL: $audioUrl');
         _isLoading = false;
         notifyListeners();
 
-        // Play only description URL - single URL, direct play
-        await _audioPlayerService.playFromUrl(descriptionUrl);
+        // Play the audio URL
+        await _audioPlayerService.playFromUrl(audioUrl);
       }
     } catch (e) {
       _error = e.toString();
@@ -603,6 +571,65 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
+  /// Handle audio completion - update UI and trigger auto-advance if needed
+  void _handleAudioCompletion() {
+    // Prevent duplicate handling
+    if (_hasCompleted) {
+      debugPrint('ℹ️ Audio completion already handled - skipping');
+      return;
+    }
+    
+    // Force state to completed (not playing, not paused)
+    _isPlaying = false;
+    _isPaused = false;
+    _hasCompleted = true;
+    
+    // Reset position to duration when completed
+    if (_duration > Duration.zero && _position < _duration) {
+      _position = _duration;
+    }
+    
+    debugPrint('✅ Audio completed - isPlaying=$_isPlaying, playlist=${_playlist.length}, index=$_currentPlaylistIndex');
+    
+    // Notify listeners immediately to update UI (pause icon → play icon)
+    notifyListeners();
+    
+    // Check if we should auto-advance
+    final shouldAutoAdvance = _playlist.isNotEmpty &&
+        _currentPlaylistIndex >= 0 &&
+        _currentPlaylistIndex < _playlist.length - 1 &&
+        !_isAutoAdvancing;
+    
+    if (shouldAutoAdvance) {
+      _isAutoAdvancing = true;
+      _autoAdvanceFromIndex = _currentPlaylistIndex;
+      
+      debugPrint('⏳ Will auto-advance to next article in ${AppConstants.autoAdvanceDelaySeconds} seconds...');
+      
+      _autoAdvanceTimer?.cancel();
+      _autoAdvanceTimer = Timer(Duration(seconds: AppConstants.autoAdvanceDelaySeconds), () {
+        if (_playlist.isNotEmpty && 
+            _currentPlaylistIndex >= 0 && 
+            _currentPlaylistIndex < _playlist.length - 1 &&
+            _currentPlaylistIndex == _autoAdvanceFromIndex &&
+            _isAutoAdvancing) {
+          debugPrint('🔄 Auto-advancing to next article...');
+          _autoAdvanceFromIndex = null;
+          _playNextInPlaylist();
+        } else {
+          _isAutoAdvancing = false;
+          _autoAdvanceFromIndex = null;
+          debugPrint('⚠️ Auto-advance cancelled - conditions changed');
+        }
+      });
+    } else {
+      debugPrint('✅ No auto-advance needed (playlist: ${_playlist.length}, index: $_currentPlaylistIndex)');
+      _autoAdvanceTimer?.cancel();
+      _isAutoAdvancing = false;
+      _autoAdvanceFromIndex = null;
+    }
+  }
+
   /// Play next article in playlist (called automatically on completion with Spotify-like delay)
   Future<void> _playNextInPlaylist() async {
     // Cancel any existing auto-advance timer before playing next
@@ -679,16 +706,21 @@ class AudioPlayerProvider with ChangeNotifier {
       // Update index AFTER getting the article (safer)
       _currentPlaylistIndex = nextIndex;
       
-      // IMPORTANT: Update current article BEFORE starting playback
-      // This ensures the audio player bar stays visible during the transition
-      _currentArticle = nextArticle;
-      
       // Reset auto-advance flag before starting new audio (will be set again when this audio completes)
       _isAutoAdvancing = false;
       // Reset completion flag since we're starting new audio
       _hasCompleted = false;
       
-      // Notify listeners to update UI (audio player bar should now show new article)
+      // CRITICAL: Reset position and duration for progress bar
+      _position = Duration.zero;
+      _duration = Duration.zero;
+      debugPrint('🔄 Progress bar reset: position=0s, duration=0s');
+      
+      // IMPORTANT: Clear current article BEFORE calling playArticleFromUrl
+      // This prevents the "same article" check from returning early
+      _currentArticle = null;
+      
+      // Notify listeners to update UI
       notifyListeners();
       
       // Play next article using the same reading mode

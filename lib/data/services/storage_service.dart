@@ -134,15 +134,21 @@ class StorageService {
   static Future<void> saveNewsReadingMode(String mode) async {
     if (_settingsBox == null) await initialize();
     await _settingsBox!.put(AppConstants.newsReadingModeKey, mode);
+    debugPrint('💾 StorageService.saveNewsReadingMode() saved: "$mode"');
   }
 
   /// Get news reading mode preference
   static String getNewsReadingMode() {
-    if (_settingsBox == null) return AppConstants.defaultReadingMode;
-    return _settingsBox!.get(
+    if (_settingsBox == null) {
+      debugPrint('⚠️ StorageService: Settings box is null, returning default reading mode: ${AppConstants.defaultReadingMode}');
+      return AppConstants.defaultReadingMode;
+    }
+    final mode = _settingsBox!.get(
       AppConstants.newsReadingModeKey,
       defaultValue: AppConstants.defaultReadingMode,
     ) as String;
+    debugPrint('📖 StorageService.getNewsReadingMode() returning: "$mode"');
+    return mode;
   }
 
   /// Clear all settings

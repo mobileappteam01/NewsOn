@@ -31,7 +31,13 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
   }
 
   Future<void> _saveReadingMode(String mode) async {
+    debugPrint('🎧 NewsReadingSettings: User selected mode: "$mode"');
     await StorageService.saveNewsReadingMode(mode);
+    
+    // Verify the save was successful by reading it back
+    final savedMode = StorageService.getNewsReadingMode();
+    debugPrint('🎧 NewsReadingSettings: Verified saved mode: "$savedMode"');
+    
     setState(() {
       _selectedMode = mode;
     });
@@ -39,11 +45,24 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(LocalizationHelper.settingsSaved(context)),
+          content: Text('${LocalizationHelper.settingsSaved(context)} - Mode: ${_getModeDisplayName(mode)}'),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
       );
+    }
+  }
+  
+  String _getModeDisplayName(String mode) {
+    switch (mode) {
+      case AppConstants.readingModeTitleOnly:
+        return 'Title Only';
+      case AppConstants.readingModeDescriptionOnly:
+        return 'Description Only';
+      case AppConstants.readingModeFullNews:
+        return 'Full News';
+      default:
+        return mode;
     }
   }
 
