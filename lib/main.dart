@@ -10,16 +10,18 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/api_constants.dart';
 import 'data/services/storage_service.dart';
-import 'data/services/api_service.dart';
+import 'data/services/api_service.dart'; 
 import 'data/services/user_service.dart';
 import 'data/services/fcm_service.dart';
 import 'providers/news_provider.dart';
 import 'providers/bookmark_provider.dart';
-import 'providers/tts_provider.dart';
+import 'providers/tts_provider.dart'; 
 import 'providers/audio_player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/dynamic_language_provider.dart';
 import 'providers/remote_config_provider.dart';
+import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
@@ -95,13 +97,18 @@ void main() async {
   await ApiConstants.initialize();
   debugPrint("✅ Dynamic API Configuration initialized");
 
+  // Initialize Dynamic Localization Service
+  // This fetches available languages from Remote Config and downloads translations
+  await DynamicLocalizationService().initialize();
+  debugPrint("✅ Dynamic Localization Service initialized");
+
   // Optional: Use Realtime Database for real-time API config updates
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
-  // await ApiConstants.initializeFromRealtimeDatabase();
+  // await ApiConstants.initializeFromRealtimeDatabase(); 
 
   // Initialize API Service - Fetch base URL and all endpoints at startup
-  try {
-    await ApiService().initialize(); 
+  try { 
+    await ApiService().initialize();
     debugPrint("✅ API Service initialized - Base URL and endpoints loaded");
   } catch (e) {
     debugPrint("❌ Failed to initialize API Service: $e");
@@ -123,10 +130,10 @@ void main() async {
         "The app will continue without push notifications.",
       );
     }
-  } catch (e) {
+  } catch (e) { 
     debugPrint("❌ Failed to initialize FCM Service: $e");
     debugPrint(
-      "ℹ️ App will continue without FCM. "
+      "ℹ️ App will continue without FCM."
       "This is expected on some devices/emulators.",
     );
     // Continue app launch even if FCM initialization fails
@@ -176,6 +183,12 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: remoteConfigProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        // Dynamic Language Provider - Fetches languages from Firebase
+        ChangeNotifierProvider(create: (_) {
+          final provider = DynamicLanguageProvider();
+          provider.initialize();
+          return provider;
+        }),
         // NewsProvider depends on LanguageProvider for language-based API calls
         ChangeNotifierProxyProvider<LanguageProvider, NewsProvider>(
           create: (_) {
@@ -223,6 +236,16 @@ class NewsOnApp extends StatelessWidget {
           configProvider,
           child,
         ) {
+          // Get the locale, but fall back to English for AppLocalizations if not supported
+          final requestedLocale = languageProvider.locale;
+          
+          // Check if the locale is supported by AppLocalizations (ARB files)
+          // Currently only 'en' and 'ta' have ARB files
+          final arbSupportedLocales = ['en', 'ta'];
+          final effectiveLocale = arbSupportedLocales.contains(requestedLocale.languageCode)
+              ? requestedLocale
+              : const Locale('en'); // Fallback to English for AppLocalizations
+          
           return MaterialApp(
             title: configProvider.config.appName,
             debugShowCheckedModeBanner: false,
@@ -231,14 +254,32 @@ class NewsOnApp extends StatelessWidget {
             themeMode: themeProvider.themeMode,
 
             // Localization configuration
-            locale: languageProvider.locale,
+            // Use effectiveLocale for Flutter's built-in localization (ARB files)
+            // Dynamic translations are handled separately by DynamicLocalizationService
+            locale: effectiveLocale,
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: languageProvider.supportedLocales,
+            // Only include locales that have ARB file support
+            supportedLocales: const [
+              Locale('en'),
+              Locale('ta'),
+            ],
+            
+            // Resolve locale - fall back to English if not supported by ARB
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (locale != null) {
+                for (final supportedLocale in supportedLocales) {
+                  if (supportedLocale.languageCode == locale.languageCode) {
+                    return supportedLocale;
+                  }
+                }
+              }
+              return const Locale('en'); // Default fallback
+            },
 
             home: const SplashScreen(),
             // home: CategorySelectionScreen(),

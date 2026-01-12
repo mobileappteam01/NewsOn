@@ -198,7 +198,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
             lineHeight: const LineHeight(1.6),
           ),
           'h1': Style(
-            color: config.primaryColorValue,
+            color: isDark ? Colors.white : Colors.black87,
             fontSize: FontSize(24),
             fontWeight: FontWeight.bold,
             margin: Margins.only(bottom: 16),
@@ -210,21 +210,27 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
             margin: Margins.only(top: 24, bottom: 12),
           ),
           'p': Style(
+            color: isDark ? Colors.white : Colors.black87,
             margin: Margins.only(bottom: 12),
             fontSize: FontSize(16),
             lineHeight: const LineHeight(1.6),
           ),
-          'ul': Style(margin: Margins.only(bottom: 12, left: 20)),
-          'li': Style(margin: Margins.only(bottom: 8)),
+          'ul': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            margin: Margins.only(bottom: 12, left: 20)),
+          'li': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            margin: Margins.only(bottom: 8)),
           'blockquote': Style(
+            color: isDark ? Colors.white : Colors.black87,
             margin: Margins.only(bottom: 16),
             padding: HtmlPaddings.all(16),
             border: Border(
               left: BorderSide(color: config.primaryColorValue, width: 4),
             ),
           ),
-          'b': Style(fontWeight: FontWeight.bold),
-          'u': Style(textDecoration: TextDecoration.underline),
+          'b': Style(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+          'u': Style(color: isDark ? Colors.white : Colors.black87, textDecoration: TextDecoration.underline),
         },
       ),
     );

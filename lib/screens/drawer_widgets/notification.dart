@@ -63,22 +63,22 @@ class _NotificationViewState extends State<NotificationView> {
                     ),
                   ),
                   giveHeight(20),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: 6,
-                    itemBuilder: (c, i) {
-                      var details = newsList[0];
-                      return NewsGridView(
-                        type: 'listview',
-                        newsDetails: details,
-                        onListenTapped: () {},
-                        onNewsTapped: () {},
-                        onSaveTapped: () {},
-                        onShareTapped: () {},
-                      );
-                    },
-                  ),
+                  // ListView.builder(
+                  //   shrinkWrap: true,
+                  //   physics: NeverScrollableScrollPhysics(),
+                  //   itemCount: 6,
+                  //   itemBuilder: (c, i) {
+                  //     var details = newsList[0];
+                  //     return NewsGridView(
+                  //       type: 'listview',
+                  //       newsDetails: details,
+                  //       onListenTapped: () {},
+                  //       onNewsTapped: () {},
+                  //       onSaveTapped: () {},
+                  //       onShareTapped: () {},
+                  //     );
+                  //   },
+                  // ),
 
                   // 🔹 User name section
                 ],

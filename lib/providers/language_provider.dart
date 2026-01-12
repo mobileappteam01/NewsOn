@@ -1,24 +1,36 @@
 import 'package:flutter/material.dart';
 import '../data/services/storage_service.dart';
+import '../data/services/dynamic_localization_service.dart';
 
 /// Provider for managing app language selection
 /// Works with Flutter's Locale system for proper localization
+/// Now supports dynamic languages from Firebase via DynamicLocalizationService
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('ta'); // Default to Tamil
 
-  // Supported languages with their locale codes
-  final Map<String, Locale> supportedLanguages = {
+  // Base supported languages (fallback if dynamic loading fails)
+  final Map<String, Locale> _baseSupportedLanguages = {
     'English': const Locale('en'),
     'Tamil': const Locale('ta'),
-    // 'Hindi': const Locale('hi'),
   };
 
-  // Language names for display
-  final List<String> languageNames = [
-    'English',
-    'Tamil',
-    // 'Hindi',
-  ];
+  /// Get supported languages - combines base + dynamic active languages
+  Map<String, Locale> get supportedLanguages {
+    final dynamicService = DynamicLocalizationService();
+    final Map<String, Locale> languages = Map.from(_baseSupportedLanguages);
+    
+    // Add only active dynamic languages from Firebase (isActive=true)
+    for (final lang in dynamicService.activeLanguages) {
+      languages[lang.name] = Locale(lang.code);
+    }
+    
+    return languages;
+  }
+
+  /// Get language names for display (only active languages)
+  List<String> get languageNames {
+    return supportedLanguages.keys.toList();
+  }
 
   LanguageProvider() {
     _loadLanguage();
@@ -101,9 +113,11 @@ class LanguageProvider extends ChangeNotifier {
   /// Get API language code from locale code
   /// This ensures we always return a valid API language code
   static String getApiLanguageCodeFromLocale(String localeCode) {
-    // Map locale codes to API language codes
-    // NewsData API supports: en, ta, hi, etc.
-    final languageMap = {'en': 'en', 'ta': 'ta', 'hi': 'hi'};
-    return languageMap[localeCode] ?? 'ta'; // Default to Tamil
+    // For dynamic languages, the locale code IS the API language code
+    // NewsData API supports: en, ta, hi, ml, etc.
+    if (localeCode.isNotEmpty) {
+      return localeCode;
+    }
+    return 'ta'; // Default to Tamil
   }
 }

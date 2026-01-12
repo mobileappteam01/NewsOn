@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
@@ -140,10 +141,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ),
                     Align(
                       alignment: const Alignment(0, 0.9),
-                      child: _SlideToStart(
-                        red: red,
-                        onCompleted: _finish,
-                        text: config.splashSwipeText,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: SwipeButton.expand(
+                          thumb: const Icon(
+                            Icons.chevron_right,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          activeThumbColor: red,
+                          activeTrackColor: const Color(0xFF4A4A4A),
+                          onSwipe: () {
+                            _finish();
+                          },
+                          child: Text(
+                            config.splashSwipeText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -157,188 +176,3 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
-class _SlideToStart extends StatefulWidget {
-  final Color red;
-  final String text;
-  final VoidCallback onCompleted;
-
-  const _SlideToStart({
-    required this.red,
-    required this.onCompleted,
-    required this.text,
-  });
-
-  @override
-  State<_SlideToStart> createState() => _SlideToStartState();
-}
-
-class _SlideToStartState extends State<_SlideToStart>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late AnimationController _pulseController;
-  double _progress = 0.0;
-  bool _completed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    )..addListener(() => setState(() {}));
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-      lowerBound: 0,
-      upperBound: 1,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  void _animateTo(double target) {
-    final tween = Tween<double>(
-      begin: _progress,
-      end: target,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _controller
-      ..reset()
-      ..forward();
-    tween.addListener(() {
-      setState(() => _progress = tween.value);
-    });
-  }
-
-  void _onPanUpdate(DragUpdateDetails d, double max) {
-    if (_completed) return;
-    final dx = d.localPosition.dx.clamp(0.0, max);
-    setState(() => _progress = dx / max);
-  }
-
-  void _onPanEnd(double max) {
-    if (_completed) return;
-    if (_progress > 0.65) {
-      _completed = true;
-      _animateTo(1.0);
-      Future.delayed(const Duration(milliseconds: 320), widget.onCompleted);
-    } else {
-      _animateTo(0.0);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.9;
-    const height = 64.0;
-    const knob = 50.0;
-    final trackColor = const Color(0xFF4A4A4A);
-    final pulse = CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    );
-
-    return GestureDetector(
-      onHorizontalDragUpdate: (d) => _onPanUpdate(d, width - knob - 14),
-      onHorizontalDragEnd: (_) => _onPanEnd(width - knob - 14),
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: trackColor,
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              offset: Offset(0, 4),
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            Center(
-              child: AnimatedBuilder(
-                animation: pulse,
-                builder: (context, _) {
-                  final offset =
-                      2 + 4 * pulse.value; // subtle drift to the right
-                  final opacity1 = 0.4 + 0.6 * (1 - pulse.value);
-                  final opacity2 = 0.4 + 0.6 * (0.5 + 0.5 * pulse.value);
-                  final opacity3 = 0.4 + 0.6 * pulse.value;
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      giveWidth(48),
-                      Text(
-                        widget.text,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Opacity(
-                        opacity: opacity1,
-                        child: const Icon(
-                          Icons.chevron_right,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(offset, 0),
-                        child: Opacity(
-                          opacity: opacity2,
-                          child: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(offset * 2, 0),
-                        child: Opacity(
-                          opacity: opacity3,
-                          child: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            Positioned(
-              left: 7 + (width - knob - 14) * _progress,
-              child: Transform.scale(
-                scale: 1.0 + 0.06 * _progress,
-                child: Container(
-                  width: knob,
-                  height: knob,
-                  decoration: BoxDecoration(
-                    color: widget.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

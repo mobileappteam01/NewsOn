@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/dynamic_language_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../utils/shared_functions.dart';
 
@@ -20,30 +21,42 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
     super.initState();
     // Initialize with current language
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final dynamicProvider = Provider.of<DynamicLanguageProvider>(
+        context,
+        listen: false,
+      );
       final languageProvider = Provider.of<LanguageProvider>(
         context,
         listen: false,
       );
       setState(() {
-        _selectedLanguage = languageProvider.selectedLanguage;
+        // Use dynamic provider if initialized, otherwise fall back to static provider
+        _selectedLanguage = dynamicProvider.isInitialized 
+            ? dynamicProvider.selectedLanguage 
+            : languageProvider.selectedLanguage;
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final languageProvider = Provider.of<LanguageProvider>(
-      context,
-      listen: false,
-    );
-
-    if (_selectedLanguage == null) {
-      _selectedLanguage = languageProvider.selectedLanguage;
-    }
-
-    return Consumer<RemoteConfigProvider>(
-      builder: (context, configProvider, child) {
+    return Consumer2<RemoteConfigProvider, DynamicLanguageProvider>(
+      builder: (context, configProvider, dynamicProvider, child) {
         final config = configProvider.config;
+        final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+        
+        // Use dynamic active languages if available, otherwise fall back to static list
+        // Only show languages with isActive=true
+        final languageNames = dynamicProvider.isInitialized && dynamicProvider.activeLanguages.isNotEmpty
+            ? dynamicProvider.languageNames
+            : languageProvider.languageNames;
+
+        if (_selectedLanguage == null) {
+          _selectedLanguage = dynamicProvider.isInitialized 
+              ? dynamicProvider.selectedLanguage 
+              : languageProvider.selectedLanguage;
+        }
+
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -90,76 +103,92 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                   ),
                 ),
 
-                // Language List
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: languageProvider.languageNames.length,
-                    itemBuilder: (context, index) {
-                      final languageName =
-                          languageProvider.languageNames[index];
-                      final isSelected = languageName == _selectedLanguage;
+                // Loading indicator if dynamic provider is loading
+                if (dynamicProvider.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
 
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedLanguage = languageName;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? config.primaryColorValue.withOpacity(0.1)
-                                    : null,
-                            border: Border(
-                              left: BorderSide(
-                                color:
-                                    isSelected
-                                        ? config.primaryColorValue
-                                        : Colors.transparent,
-                                width: 4,
-                              ),
+                // Language List
+                if (!dynamicProvider.isLoading)
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: languageNames.length,
+                      itemBuilder: (context, index) {
+                        final languageName = languageNames[index];
+                        final isSelected = languageName == _selectedLanguage;
+                        
+                        // Get native name if using dynamic provider (only from active languages)
+                        String displayName = languageName;
+                        if (dynamicProvider.isInitialized && dynamicProvider.activeLanguages.isNotEmpty) {
+                          final lang = dynamicProvider.activeLanguages[index];
+                          displayName = '${lang.name} (${lang.nativeName})';
+                        }
+
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _selectedLanguage = languageName;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_unchecked,
-                                color:
-                                    isSelected
-                                        ? config.primaryColorValue
-                                        : Colors.grey,
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                languageName, // Display full language name (English, Tamil, Hindi)
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight:
-                                      isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? config.primaryColorValue.withOpacity(0.1)
+                                      : null,
+                              border: Border(
+                                left: BorderSide(
                                   color:
                                       isSelected
                                           ? config.primaryColorValue
-                                          : null,
+                                          : Colors.transparent,
+                                  width: 4,
                                 ),
                               ),
-                            ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_unchecked,
+                                  color:
+                                      isSelected
+                                          ? config.primaryColorValue
+                                          : Colors.grey,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight:
+                                          isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                      color:
+                                          isSelected
+                                              ? config.primaryColorValue
+                                              : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
 
                 // Footer with Submit Button
                 Container(
@@ -184,9 +213,12 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                       ElevatedButton(
                         onPressed: () async {
                           if (_selectedLanguage != null) {
-                            await languageProvider.setLanguage(
-                              _selectedLanguage!,
-                            );
+                            // Update both providers for compatibility
+                            if (dynamicProvider.isInitialized) {
+                              await dynamicProvider.setLanguage(_selectedLanguage!);
+                            }
+                            await languageProvider.setLanguage(_selectedLanguage!);
+                            
                             if (mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(

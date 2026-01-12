@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../providers/audio_player_provider.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../data/services/storage_service.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -225,51 +226,120 @@ showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
   );
 }
 
+/// Shows a listen button that reacts to audio player state
+/// [config] - Remote config for styling
+/// [onListenTapped] - Callback when button is tapped (play action)
+/// [article] - The article this button is for (used to check if this article is playing)
+/// [context] - Optional BuildContext
 showListenButton(
   RemoteConfigModel config,
   Function() onListenTapped, [
   BuildContext? context,
+  NewsArticle? article,
 ]) {
   return Builder(
     builder: (ctx) {
       final buildContext = context ?? ctx;
-      return GestureDetector(
-        onTap: () => onListenTapped(), // ✅ FIXED
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: config.primaryColorValue,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              showImage(
-                config.listenIcon,
-                BoxFit.contain,
-                height: 15,
-                width: 15,
+      return Consumer<AudioPlayerProvider>(
+        builder: (context, audioProvider, child) {
+          // Check if this specific article is currently playing or paused
+          final currentArticle = audioProvider.currentArticle;
+          final isThisArticlePlaying = article != null &&
+              currentArticle != null &&
+              _isSameArticle(article, currentArticle);
+          
+          final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
+          final isPaused = isThisArticlePlaying && audioProvider.isPaused;
+          final isLoading = isThisArticlePlaying && audioProvider.isLoading;
+          
+          return GestureDetector(
+            onTap: () {
+              if (isPlaying) {
+                // If this article is playing, pause it
+                audioProvider.pause();
+              } else if (isPaused) {
+                // If this article is paused, resume it
+                audioProvider.resume();
+              } else {
+                // Otherwise, start playing this article
+                onListenTapped();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isPlaying || isPaused 
+                    ? config.primaryColorValue 
+                    : config.primaryColorValue,
               ),
-              giveWidth(12),
-              Flexible(
-                child: Text(
-                  LocalizationHelper.listen(buildContext),
-                  style: GoogleFonts.playfair(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 15,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isLoading)
+                    const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else if (isPlaying)
+                    const Icon(
+                      Icons.pause,
+                      color: Colors.white,
+                      size: 15,
+                    )
+                  else if (isPaused)
+                    const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 15,
+                    )
+                  else
+                    showImage(
+                      config.listenIcon,
+                      BoxFit.contain,
+                      height: 15,
+                      width: 15,
+                    ),
+                  giveWidth(12),
+                  Flexible(
+                    child: Text(
+                      isPlaying 
+                          ? 'Playing...' 
+                          : isPaused 
+                              ? 'Paused' 
+                              : LocalizationHelper.listen(buildContext),
+                      style: GoogleFonts.playfair(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     },
   );
+}
+
+/// Helper function to check if two articles are the same
+bool _isSameArticle(NewsArticle a, NewsArticle b) {
+  // First try to match by articleId
+  if (a.articleId != null && b.articleId != null && a.articleId!.isNotEmpty && b.articleId!.isNotEmpty) {
+    return a.articleId == b.articleId;
+  }
+  // Fallback to title comparison
+  return a.title == b.title;
 }
 
 Future<NewsArticle> getNewsDetail() async {

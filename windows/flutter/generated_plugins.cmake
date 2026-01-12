@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
   connectivity_plus
   firebase_core
+  firebase_storage
   flutter_tts
   share_plus
   url_launcher_windows

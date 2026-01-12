@@ -10,9 +10,11 @@ import '../../providers/remote_config_provider.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
+import '../../data/services/app_update_service.dart';
 import '../../core/widgets/app_drawer.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
+import '../../core/widgets/app_update_dialog.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../categories/categories_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
@@ -67,7 +69,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Fetch user profile when home page initializes
       _fetchUserProfile();
+
+      // Check for app updates
+      _checkForAppUpdate();
     });
+  }
+
+  /// Check for app updates and show dialog if available
+  Future<void> _checkForAppUpdate() async {
+    try {
+      final appUpdateService = AppUpdateService();
+      final updateInfo = await appUpdateService.checkForUpdate();
+
+      if (updateInfo != null && mounted) {
+        debugPrint('🆕 Showing app update dialog');
+        await AppUpdateDialog.show(
+          context,
+          updateInfo: updateInfo,
+          onUpdate: () async {
+            await appUpdateService.openStoreLink();
+          },
+          onLater: () {
+            debugPrint('📱 User chose to update later');
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking for app update: $e');
+      // Don't show error to user - app update check is not critical
+    }
   }
 
   /// Update FCM Token on home page initialization
@@ -338,15 +368,16 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isSelected = false,
   }) {
     const selectedColor = Color(0xFFE31E24);
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             icon,
-            SizedBox(height: 10),
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(

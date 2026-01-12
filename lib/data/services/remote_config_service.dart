@@ -205,6 +205,15 @@ class RemoteConfigService {
         {'title': 'Privacy policy', 'icon': 'Icons.privacy_tip_outlined', 'route': '/privacy'},
         {'title': 'News categories', 'icon': 'Icons.list_alt_outlined', 'route': '/categories'},
       ]),
+
+      // Dynamic Localization - Supported Languages
+      // Add new languages here or update via Firebase Console
+      // Set isActive=false to hide a language from the selector
+      'supported_languages': jsonEncode([
+        {'code': 'en', 'name': 'English', 'nativeName': 'English', 'isDefault': false, 'isActive': true, 'flagEmoji': '🇺🇸'},
+        {'code': 'ta', 'name': 'Tamil', 'nativeName': 'தமிழ்', 'isDefault': true, 'isActive': true, 'flagEmoji': '🇮🇳'},
+      ]),
+      'language_version': '1.0.0',
     };
   }
 

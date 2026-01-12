@@ -167,7 +167,21 @@
       },
       "description": "Dynamic API Configuration - All API endpoints, parameters, and settings. Can be updated without app update.",
       "valueType": "STRING"
+    },
+    "supported_languages": {
+      "defaultValue": {
+        "value": "[{\"code\":\"en\",\"name\":\"English\",\"nativeName\":\"English\",\"isDefault\":true,\"isActive\":true},{\"code\":\"ta\",\"name\":\"Tamil\",\"nativeName\":\"தமிழ்\",\"isDefault\":false,\"isActive\":true},{\"code\":\"ml\",\"name\":\"Malayalam\",\"nativeName\":\"മലയാളം\",\"isDefault\":false,\"isActive\":false},{\"code\":\"kn\",\"name\":\"Kannada\",\"nativeName\":\"ಕನ್ನಡ\",\"isDefault\":false,\"isActive\":false}]"
+      }, 
+      "description": "List of supported languages for dynamic localization. Set isActive=false to hide a language from the selector.",
+      "valueType": "STRING"
+    },
+
+    "language_version": {
+      "defaultValue": { "value": "1.0.2" },
+      "description": "Language version - increment to force app to re-download translations",
+      "valueType": "STRING"
     }
+  
   },
   "version": {
     "versionNumber": "1",

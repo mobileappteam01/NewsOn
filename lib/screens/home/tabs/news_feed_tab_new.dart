@@ -83,6 +83,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     super.dispose();
   }
 
+  /// Scroll to top of the page with smooth animation
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   showHeadingText(String text, ThemeData theme, {VoidCallback? onViewAll}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -142,11 +153,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  showImage(
-                    remoteConfig.appNameLogo,
-                    BoxFit.contain,
-                    height: 60,
-                    width: 80,
+                  GestureDetector(
+                    onTap: _scrollToTop,
+                    child: showImage(
+                      remoteConfig.appNameLogo,
+                      BoxFit.contain,
+                      height: 60,
+                      width: 80,
+                    ),
                   ),
                   Row(
                     children: [
@@ -971,7 +985,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               );
                             }
                           }
-                        }),
+                        }, context, article),
                       ),
                     ],
                   ),
