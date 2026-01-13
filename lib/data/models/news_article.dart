@@ -165,6 +165,41 @@ class NewsArticle {
     return value.toString();
   }
 
+  /// Helper method to parse category field which can be:
+  /// - List of strings (old format): ["lifestyle", "top"]
+  /// - List of objects (new format): [{"categoryName": "lifestyle", ...}, ...]
+  /// Also checks for categoryNames field as fallback
+  static List<String>? _parseCategory(Map<String, dynamic> json) {
+    // First try categoryNames (simple string array from new API)
+    if (json['categoryNames'] != null && json['categoryNames'] is List) {
+      final categoryNames = json['categoryNames'] as List;
+      if (categoryNames.isNotEmpty) {
+        return categoryNames.map((e) => e.toString()).toList();
+      }
+    }
+    
+    // Then try category field
+    final category = json['category'];
+    if (category == null) return null;
+    if (category is! List) return null;
+    if (category.isEmpty) return null;
+    
+    // Check if it's the new object format or old string format
+    final firstItem = category.first;
+    if (firstItem is Map) {
+      // New format: extract categoryName or name from each object
+      return category.map((e) {
+        if (e is Map) {
+          return (e['categoryName'] ?? e['name'] ?? '').toString();
+        }
+        return e.toString();
+      }).where((s) => s.isNotEmpty).toList();   
+    } else {
+      // Old format: simple string list
+      return category.map((e) => e.toString()).toList();
+    }
+  }
+
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
     DateTime? bookmarked;
     // Support ISO string or epoch (int) if provided
@@ -196,7 +231,7 @@ class NewsArticle {
       sourceId: json['source_id'] as String?,
       sourcePriority: json['source_priority']?.toString(),
       country: (json['country'] as List?)?.map((e) => e.toString()).toList(),
-      category: (json['category'] as List?)?.map((e) => e.toString()).toList(),
+      category: _parseCategory(json),
       language: json['language'] as String?,
       isBookmarked:
           json['isBookmarked'] == true ||

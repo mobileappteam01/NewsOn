@@ -1,13 +1,9 @@
 package com.app.newson
 
-import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
+import com.ryanheise.audioservice.AudioServiceActivity
 
-
-class MainActivity : FlutterActivity() {
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        
-    }
+class MainActivity : AudioServiceActivity() {
+    // AudioServiceActivity handles the Flutter engine configuration
+    // for background audio playback
 }
 

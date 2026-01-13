@@ -18,7 +18,7 @@ class _NotificationViewState extends State<NotificationView> {
   List newsList = [
     {
       "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
+          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FGroup%201171275635.png?alt=media&token=9ad44daf-b19b-45fc-bbe4-1eb7e780665b",
       "category": "Politics",
       "headLines":
           "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",
@@ -26,7 +26,7 @@ class _NotificationViewState extends State<NotificationView> {
     },
     {
       "img":
-          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0",
+          "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FGroup%201171275635.png?alt=media&token=9ad44daf-b19b-45fc-bbe4-1eb7e780665b",
       "category": "Politics",
       "headLines":
           "Trump Tariffs: India can get 25% off its tariffs if NewDelhi stops buying Russia...",

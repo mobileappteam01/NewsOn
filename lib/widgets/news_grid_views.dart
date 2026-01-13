@@ -77,9 +77,11 @@ class NewsGridView extends StatelessWidget {
     ThemeData theme,
     BuildContext context,
   ) {
-    if (type.toLowerCase() == 'category') {
+    if (type.toLowerCase() == 'category') { 
       return Text(
-        newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
+        newsDetails.category!.isNotEmpty
+            ? newsDetails.category![0]
+            : "",
         style: GoogleFonts.inter(
           color: config.primaryColorValue,
           fontWeight: FontWeight.w500,
@@ -125,13 +127,14 @@ class NewsGridView extends StatelessWidget {
       builder: (context, audioProvider, child) {
         // Check if this specific article is currently playing or paused
         final currentArticle = audioProvider.currentArticle;
-        final isThisArticlePlaying = currentArticle != null &&
+        final isThisArticlePlaying =
+            currentArticle != null &&
             _isSameArticle(newsDetails, currentArticle);
-        
+
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
         final isPaused = isThisArticlePlaying && audioProvider.isPaused;
         final isLoading = isThisArticlePlaying && audioProvider.isLoading;
-        
+
         return GestureDetector(
           onTap: () {
             if (isPlaying) {
@@ -166,15 +169,20 @@ class NewsGridView extends StatelessWidget {
                 else if (isPaused)
                   const Icon(Icons.play_arrow, color: Colors.white, size: 15)
                 else
-                  showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
+                  showImage(
+                    config.listenIcon,
+                    BoxFit.contain,
+                    height: 15,
+                    width: 15,
+                  ),
                 giveWidth(12),
                 Flexible(
                   child: Text(
-                    isPlaying 
-                        ? 'Playing...' 
-                        : isPaused 
-                            ? 'Paused' 
-                            : LocalizationHelper.listen(context),
+                    isPlaying
+                        ? 'Playing...'
+                        : isPaused
+                        ? 'Paused'
+                        : LocalizationHelper.listen(context),
                     style: GoogleFonts.playfair(
                       color: Colors.white,
                       fontWeight: FontWeight.w400,
@@ -191,10 +199,13 @@ class NewsGridView extends StatelessWidget {
       },
     );
   }
-  
+
   /// Helper function to check if two articles are the same
   bool _isSameArticle(NewsArticle a, NewsArticle b) {
-    if (a.articleId != null && b.articleId != null && a.articleId!.isNotEmpty && b.articleId!.isNotEmpty) {
+    if (a.articleId != null &&
+        b.articleId != null &&
+        a.articleId!.isNotEmpty &&
+        b.articleId!.isNotEmpty) {
       return a.articleId == b.articleId;
     }
     return a.title == b.title;
@@ -204,13 +215,14 @@ class NewsGridView extends StatelessWidget {
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
         final currentArticle = audioProvider.currentArticle;
-        final isThisArticlePlaying = currentArticle != null &&
+        final isThisArticlePlaying =
+            currentArticle != null &&
             _isSameArticle(newsDetails, currentArticle);
-        
+
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
         final isPaused = isThisArticlePlaying && audioProvider.isPaused;
         final isLoading = isThisArticlePlaying && audioProvider.isLoading;
-        
+
         return GestureDetector(
           onTap: () {
             if (isPlaying) {
@@ -231,25 +243,32 @@ class NewsGridView extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: isLoading
-                    ? const SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : isPlaying
+                child:
+                    isLoading
+                        ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : isPlaying
                         ? const Icon(Icons.pause, color: Colors.white, size: 20)
                         : isPaused
-                            ? const Icon(Icons.play_arrow, color: Colors.white, size: 20)
-                            : showImage(
-                                config.listenIcon,
-                                BoxFit.contain,
-                                height: 15,
-                                width: 15,
-                              ),
+                        ? const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 20,
+                        )
+                        : showImage(
+                          config.listenIcon,
+                          BoxFit.contain,
+                          height: 15,
+                          width: 15,
+                        ),
               ),
             ),
           ),

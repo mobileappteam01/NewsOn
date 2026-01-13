@@ -20,9 +20,10 @@ import 'providers/audio_player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/dynamic_language_provider.dart';
-import 'providers/remote_config_provider.dart';
-import 'data/services/dynamic_localization_service.dart';
+import 'providers/remote_config_provider.dart'; 
+import 'data/services/dynamic_localization_service.dart'; 
 import 'data/services/dynamic_icon_service.dart';
+import 'data/services/audio_background_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
 
@@ -114,6 +115,15 @@ void main() async {
     debugPrint("❌ Failed to initialize API Service: $e");
     // Continue app launch even if API service initialization fails
     // The app can still work, but API calls will fail until initialized
+  }
+
+  // Initialize Audio Background Service for background playback and notification controls
+  try {
+    await AudioBackgroundService.init();
+    debugPrint("✅ Audio Background Service initialized");
+  } catch (e) {
+    debugPrint("❌ Failed to initialize Audio Background Service: $e");
+    // Continue app launch - audio will still work but without background/notification support
   }  
 
   // Initialize FCM Service - Request permissions and get token ready

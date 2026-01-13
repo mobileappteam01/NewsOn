@@ -50,6 +50,20 @@ class AudioPlayerProvider with ChangeNotifier {
   Future<void> _initializeBackgroundService() async {
     try {
       await AudioBackgroundService.init();
+      
+      // Set up callbacks for notification controls (Previous/Next)
+      final handler = AudioBackgroundService.handler;
+      if (handler != null) {
+        handler.onSkipToNext = () {
+          debugPrint('⏭️ [Notification] Skip to next triggered');
+          skipToNext();
+        };
+        handler.onSkipToPrevious = () {
+          debugPrint('⏮️ [Notification] Skip to previous triggered');
+          skipToPrevious();
+        };
+        debugPrint('✅ Background service callbacks registered');
+      }
     } catch (e) {
       debugPrint('Failed to initialize background audio service: $e');
     }
@@ -261,14 +275,14 @@ class AudioPlayerProvider with ChangeNotifier {
       debugPrint('▶️ Starting playback...');
       await _audioPlayerService.playFromBytes(audioBytes);
 
-      // Also play in background service for notification controls
+      // Update background service with current article metadata
       try {
         final handler = AudioBackgroundService.handler;
-        if (handler != null && handler is NewsAudioHandler) {
-          await handler.playArticle(article, audioBytes);
+        if (handler != null) {
+          await handler.setCurrentArticle(article);
         }
       } catch (e) {
-        debugPrint('Failed to start background service: $e');
+        debugPrint('Failed to update background service: $e');
         // Continue with regular playback even if background service fails
       }
     } catch (e) {
@@ -355,6 +369,11 @@ class AudioPlayerProvider with ChangeNotifier {
       _isAutoAdvancing = false; // Reset auto-advance flag when starting new audio
       _autoAdvanceFromIndex = null; // Clear stored index
       _autoAdvanceTimer?.cancel(); // Cancel any pending auto-advance timer
+      
+      // IMPORTANT: Update background service metadata BEFORE starting playback
+      // This ensures the notification shows the correct article immediately
+      _updateBackgroundServiceMetadata(article);
+      
       notifyListeners();
 
       if (playTitle) {
@@ -502,6 +521,20 @@ class AudioPlayerProvider with ChangeNotifier {
     // }
 
     return buffer.toString();
+  }
+
+  /// Update background service with article metadata for notification
+  void _updateBackgroundServiceMetadata(NewsArticle article) {
+    try {
+      final handler = AudioBackgroundService.handler;
+      if (handler != null) {
+        handler.setCurrentArticle(article);
+        debugPrint('🎵 Background service metadata updated: ${article.title}');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to update background service metadata: $e');
+      // Don't rethrow - this is not critical
+    }
   }
 
   /// Pause playback

@@ -940,52 +940,60 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       // Listen button at bottom right
                       Align(
                         alignment: Alignment.bottomRight,
-                        child: showListenButton(config, () async {
-                          try {
-                            final newsProvider = context.read<NewsProvider>();
-                            final breakingNews =
-                                newsProvider.breakingNews.isNotEmpty
-                                    ? newsProvider.breakingNews
-                                    : widget.newsList
-                                        .map((e) => _mapToArticle(e))
-                                        .toList();
+                        child: showListenButton(
+                          config,
+                          () async {
+                            try {
+                              final newsProvider = context.read<NewsProvider>();
+                              final breakingNews =
+                                  newsProvider.breakingNews.isNotEmpty
+                                      ? newsProvider.breakingNews
+                                      : widget.newsList
+                                          .map((e) => _mapToArticle(e))
+                                          .toList();
 
-                            // Find the index of current article in the list
-                            final startIndex =
-                                articleIndex ??
-                                breakingNews.indexWhere(
-                                  (a) =>
-                                      (a.articleId ?? a.title) ==
-                                      (article.articleId ?? article.title),
-                                );
-
-                            if (startIndex >= 0 &&
-                                startIndex < breakingNews.length) {
-                              // Set playlist with all breaking news and start from clicked article
-                              await context
-                                  .read<AudioPlayerProvider>()
-                                  .setPlaylistAndPlay(
-                                    breakingNews,
-                                    startIndex,
-                                    playTitle: true,
+                              // Find the index of current article in the list
+                              final startIndex =
+                                  articleIndex ??
+                                  breakingNews.indexWhere(
+                                    (a) =>
+                                        (a.articleId ?? a.title) ==
+                                        (article.articleId ?? article.title),
                                   );
-                            } else {
-                              // Fallback: play single article
-                              await context
-                                  .read<AudioPlayerProvider>()
-                                  .playArticleFromUrl(article, playTitle: true);
+
+                              if (startIndex >= 0 &&
+                                  startIndex < breakingNews.length) {
+                                // Set playlist with all breaking news and start from clicked article
+                                await context
+                                    .read<AudioPlayerProvider>()
+                                    .setPlaylistAndPlay(
+                                      breakingNews,
+                                      startIndex,
+                                      playTitle: true,
+                                    );
+                              } else {
+                                // Fallback: play single article
+                                await context
+                                    .read<AudioPlayerProvider>()
+                                    .playArticleFromUrl(
+                                      article,
+                                      playTitle: true,
+                                    );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error playing audio: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
                             }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error playing audio: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        }, context, article),
+                          },
+                          context,
+                          article,
+                        ),
                       ),
                     ],
                   ),
@@ -1332,16 +1340,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
 showShareModalBottomSheet(context) {
   RemoteConfigModel config = RemoteConfigModel();
+  final theme = Theme.of(context);
   return Stack(
     children: [
-      SizedBox(
-        height: 180,
+      Container(
+        color: theme.scaffoldBackgroundColor,
+        height: 200,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (int i = 0; i < 4; i++)
+              for (int i = 0; i < 3; i++)
                 GestureDetector(
                   onTap: () {
                     Navigator.pop(context);
@@ -1363,11 +1373,7 @@ showShareModalBottomSheet(context) {
                               ),
                             )
                             : Icon(
-                              i == 1
-                                  ? Icons.bookmark_border_outlined
-                                  : i == 2
-                                  ? Icons.block
-                                  : Icons.flag_outlined,
+                              i == 1 ? Icons.block : Icons.flag_outlined,
                               color: config.primaryColorValue,
                             ),
                         giveWidth(12),
@@ -1375,8 +1381,6 @@ showShareModalBottomSheet(context) {
                           i == 0
                               ? "Share"
                               : i == 1
-                              ? "Bookmark"
-                              : i == 2
                               ? "Block relevant News"
                               : "Report",
                           style: TextStyle(color: config.primaryColorValue),
