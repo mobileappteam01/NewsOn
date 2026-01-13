@@ -119,6 +119,14 @@
       "description": "App Name Logo",
       "valueType": "STRING"
     },
+    "dark_theme_app_name_logo":{ 
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fdark_theme.png?alt=media&token=653bbdf7-7b8f-4de0-9854-ab6ed19c2518"
+      },
+      "description": "App Name Logo",
+      "valueType": "STRING"
+      
+    },
     "language_img": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp_Image_2025-11-07_at_3.00.51_PM-removebg-preview.png?alt=media&token=2b3c61f3-eac3-4799-b8d9-f944b1b944a1"

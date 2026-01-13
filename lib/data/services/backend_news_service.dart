@@ -123,10 +123,13 @@ class BackendNewsService {
   }
 
   /// Fetch news by category from backend
-  /// [category] - Category name (e.g., 'business', 'sports')
+  /// [categories] - List of category names (e.g., ['business', 'sports'])
   /// [language] - Language code (e.g., 'en', 'ta', 'hi')
   /// [limit] - Number of items to fetch
   /// [page] - Page number for pagination
+  /// 
+  /// API Format: /getActiveNewsMobile?category=top&category=lifestyle
+  /// Multiple categories are passed as repeated query parameters
   Future<NewsResponse> fetchNewsByCategory({
     required String category,
     String? language,
@@ -140,6 +143,9 @@ class BackendNewsService {
       debugPrint(
         '   Category: $category, Language Code: $language → Language Name: $languageName, Limit: $limit, Page: $page',
       );
+      
+      // Build query parameters
+      // Category can be a single value or comma-separated list
       final queryParameters = <String, String>{
         'category': category,
         if (languageName != null && languageName.isNotEmpty)
@@ -154,11 +160,11 @@ class BackendNewsService {
         bearerToken = _userService.getToken();
       }
 
-      // Call backend API - you may need to add a category endpoint
-      // For now, using breakingNews endpoint with category parameter
+      // Call backend API using newsByCategory endpoint
+      // Falls back to breakingNews if newsByCategory doesn't exist
       final response = await _apiService.get(
         'news',
-        'breakingNews',
+        'newsByCategory', // Use dedicated category endpoint
         queryParameters: queryParameters,
         bearerToken: bearerToken,
       );
@@ -171,6 +177,62 @@ class BackendNewsService {
       }
     } catch (e) {
       debugPrint('❌ Error fetching category news: $e');
+      rethrow;
+    }
+  }
+  
+  /// Fetch news by multiple categories from backend
+  /// [categories] - List of category names (e.g., ['business', 'sports'])
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch
+  /// [page] - Page number for pagination
+  /// 
+  /// API Format: /getActiveNewsMobile?category=top&category=lifestyle
+  Future<NewsResponse> fetchNewsByCategories({
+    required List<String> categories,
+    String? language,
+    int limit = 50,
+    int page = 1,
+  }) async {
+    try {
+      debugPrint('📰 Fetching news by multiple categories from backend...');
+      // Convert language code to full language name for backend API
+      final languageName = _convertLanguageCodeToName(language);
+      debugPrint(
+        '   Categories: ${categories.join(", ")}, Language: $languageName, Limit: $limit, Page: $page',
+      );
+      
+      // Build base query parameters
+      final queryParameters = <String, dynamic>{
+        if (languageName != null && languageName.isNotEmpty)
+          'language': languageName,
+        'limit': limit.toString(),
+        'page': page.toString(),
+      };
+
+      // Get bearer token if user is logged in
+      String? bearerToken;
+      if (_userService.isLoggedIn) {
+        bearerToken = _userService.getToken();
+      }
+
+      // Call backend API using newsByCategory endpoint with multiple category params
+      final response = await _apiService.getWithMultipleParams(
+        'news',
+        'newsByCategory',
+        queryParameters: queryParameters,
+        multiValueParams: {'category': categories},
+        bearerToken: bearerToken,
+      );
+
+      if (response.success && response.data != null) {
+        debugPrint('✅ Multi-category news fetched successfully');
+        return _parseNewsResponse(response.data);
+      } else {
+        throw Exception(response.error ?? 'Failed to fetch category news');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching multi-category news: $e');
       rethrow;
     }
   }

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/l10n/app_localizations.dart';
 import 'package:newson/screens/splash/splash_screen.dart';
@@ -32,10 +33,10 @@ String elevenLabsAPIKey = '';
 String elevenLabsVoiceId = '';
 String baseURL = '';
 String appIconUrl = ''; // Dynamic app icon URL from Firebase Realtime Database
-final detector = LanguageDetector();
+final detector = LanguageDetector(); 
 
 // Global reference to audio player provider for updating API key
-AudioPlayerProvider? _globalAudioPlayerProvider;
+AudioPlayerProvider? _globalAudioPlayerProvider; 
 
 // Global reference to news provider for network refresh
 NewsProvider? _globalNewsProvider;
@@ -106,7 +107,7 @@ void main() async {
   // Optional: Use Realtime Database for real-time API config updates
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
   // await ApiConstants.initializeFromRealtimeDatabase(); 
-
+    MobileAds.instance.initialize();
   // Initialize API Service - Fetch base URL and all endpoints at startup
   try { 
     await ApiService().initialize();

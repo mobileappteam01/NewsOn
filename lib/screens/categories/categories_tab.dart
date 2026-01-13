@@ -243,7 +243,7 @@ class _CategoriesTabState extends State<CategoriesTab>
 
                           // Logo (center)
                           showImage(
-                            config.appNameLogo,
+                            config.getAppNameLogoForTheme(Theme.of(context).brightness),
                             BoxFit.contain,
                             height: 60,
                             width: 80,

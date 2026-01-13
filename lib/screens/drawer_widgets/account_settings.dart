@@ -148,7 +148,7 @@ class _AccountSettingsState extends State<AccountSettings> {
                         child: ListView(
                           children: [
                             // Header
-                            commonappBar(config.appNameLogo, () {
+                            commonappBar(config.getAppNameLogoForTheme(Theme.of(context).brightness), () {
                               Navigator.pop(context);
                             }),
                             giveHeight(12),

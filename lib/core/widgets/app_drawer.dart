@@ -69,7 +69,7 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                     showImage(
-                      config.appNameLogo,
+                      config.getAppNameLogoForTheme(theme.brightness),
                       BoxFit.contain,
                       height: 60,
                       width: 80,

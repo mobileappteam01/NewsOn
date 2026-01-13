@@ -39,7 +39,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header
-                  commonappBar(config.appNameLogo, () {
+                  commonappBar(config.getAppNameLogoForTheme(Theme.of(context).brightness), () {
                     Navigator.pop(context);
                   }),
                   giveHeight(12),

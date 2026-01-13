@@ -88,6 +88,7 @@ dependencies:
   language_detector: ^1.0.0
   carousel_slider: ^5.1.1
   just_audio_background: ^0.0.1-beta.17
+  google_mobile_ads: ^6.0.0
 
 dev_dependencies:
   flutter_test:

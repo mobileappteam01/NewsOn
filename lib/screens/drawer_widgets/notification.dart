@@ -48,7 +48,7 @@ class _NotificationViewState extends State<NotificationView> {
               child: ListView(
                 children: [
                   // Header
-                  commonappBar(config.appNameLogo, () {
+                  commonappBar(config.getAppNameLogoForTheme(theme.brightness), () {
                     Navigator.pop(context);
                   }),
                   giveHeight(12),

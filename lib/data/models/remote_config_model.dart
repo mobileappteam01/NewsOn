@@ -93,6 +93,7 @@ class RemoteConfigModel {
 
   // App Common Images
   final String appNameLogo;
+  final String darkThemeAppNameLogo; // Logo for dark theme
   final String languageImg;
   final String headlineImg;
   final String listenIcon;
@@ -189,6 +190,7 @@ class RemoteConfigModel {
 
     // App Common Images
     this.appNameLogo = '',
+    this.darkThemeAppNameLogo = '',
     this.languageImg = '',
     this.headlineImg = '',
     this.listenIcon = '',
@@ -318,6 +320,7 @@ class RemoteConfigModel {
       'getStartedImg': getStartedImg,
       'splashAnimatedGif': splashAnimatedGif,
       'appNameLogo': appNameLogo,
+      'darkThemeAppNameLogo': darkThemeAppNameLogo,
       'languageImg': languageImg,
       'headlineImg': headlineImg,
       'listenIcon': listenIcon,
@@ -415,11 +418,23 @@ class RemoteConfigModel {
       getStartedImg: json['getStartedImg'] as String?,
       splashAnimatedGif: json['splashAnimatedGif'] as String?,
       appNameLogo: json['appNameLogo'] as String? ?? '',
+      darkThemeAppNameLogo: json['darkThemeAppNameLogo'] as String? ?? '',
       languageImg: json['languageImg'] as String? ?? '',
       headlineImg: json['headlineImg'] as String? ?? '',
       listenIcon: json['listenIcon'] as String? ?? '',
       appIcon: json['appIcon'] as String?,
       drawerMenu: json['drawerMenu'] as List<dynamic>? ?? const [],
     );
+  }
+
+  /// Get the appropriate app name logo based on the current theme brightness
+  /// Returns darkThemeAppNameLogo for dark mode, appNameLogo for light mode
+  /// Falls back to appNameLogo if darkThemeAppNameLogo is empty
+  String getAppNameLogoForTheme(Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      // Use dark theme logo if available, otherwise fall back to light theme logo
+      return darkThemeAppNameLogo.isNotEmpty ? darkThemeAppNameLogo : appNameLogo;
+    }
+    return appNameLogo;
   }
 }

@@ -330,7 +330,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                       ),
                       giveWidth(12),
                       showImage(
-                        config.appNameLogo,
+                        config.getAppNameLogoForTheme(Theme.of(context).brightness),
                         BoxFit.contain,
                         height: 60,
                         width: 80,

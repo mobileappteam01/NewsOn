@@ -18,7 +18,6 @@ import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -50,27 +49,19 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   String _selectedCategory = 'All';
   DateTime _selectedDate = DateTime.now();
 
-  // Get dynamic categories from API config, with 'All' as first option
-  List<String> get categories {
-    final apiCategories = ApiConstants.categories;
-    // Capitalize first letter of each category for display
-    final formattedCategories =
-        apiCategories.map((cat) {
-          if (cat.isEmpty) return cat;
-          return cat[0].toUpperCase() + cat.substring(1);
-        }).toList();
-    return ['All', ...formattedCategories];
-  }
-
   @override
   void initState() {
     super.initState();
-    // Fetch today's news on initialization with limit of 5
+    // Fetch data on initialization
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<NewsProvider>().fetchNewsByDate(_selectedDate, limit: 5);
+        final newsProvider = context.read<NewsProvider>();
+        // Fetch categories from API
+        newsProvider.fetchCategories();
+        // Fetch today's news with limit of 5
+        newsProvider.fetchNewsByDate(_selectedDate, limit: 5);
         // Fetch breaking news with limit of 10
-        context.read<NewsProvider>().fetchBreakingNews(limit: 10);
+        newsProvider.fetchBreakingNews(limit: 10);
       }
     });
   }
@@ -156,7 +147,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   GestureDetector(
                     onTap: _scrollToTop,
                     child: showImage(
-                      remoteConfig.appNameLogo,
+                      remoteConfig.getAppNameLogoForTheme(theme.brightness),
                       BoxFit.contain,
                       height: 60,
                       width: 80,
@@ -266,65 +257,82 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-                    // Category tabs
-                    // SliverToBoxAdapter(
-                    //   child: Padding(
-                    //     padding: const EdgeInsets.symmetric(vertical: 8),
-                    //     child: SizedBox(
-                    //       height: 36,
-                    //       child: ListView.builder(
-                    //         scrollDirection: Axis.horizontal,
-                    //         padding: const EdgeInsets.symmetric(horizontal: 16),
-                    //         itemCount: categories.length,
-                    //         itemBuilder: (context, index) {
-                    //           final category = categories[index];
-                    //           final isSelected = _selectedCategory == category;
-                    //           return GestureDetector(
-                    //             onTap: () {
-                    //               setState(() => _selectedCategory = category);
-                    //               if (category != 'All') {
-                    //                 // Convert display name back to API format (lowercase)
-                    //                 final apiCategory = category.toLowerCase();
-                    //                 context
-                    //                     .read<NewsProvider>()
-                    //                     .fetchNewsByCategory(apiCategory);
-                    //               } else {
-                    //                 // If "All" is selected, fetch breaking news
-                    //                 context
-                    //                     .read<NewsProvider>()
-                    //                     .fetchBreakingNews();
-                    //               }
-                    //             },
-                    //             child: Container(
-                    //               margin: const EdgeInsets.only(right: 8),
-                    //               padding: const EdgeInsets.symmetric(
-                    //                 horizontal: 20,
-                    //                 vertical: 8,
-                    //               ),
-                    //               decoration: BoxDecoration(
-                    //                 color:
-                    //                     isSelected
-                    //                         ? const Color(0xFFE31E24)
-                    //                         : Colors.black,
-                    //                 borderRadius: BorderRadius.circular(20),
-                    //               ),
-                    //               child: Center(
-                    //                 child: Text(
-                    //                   category,
-                    //                   style: const TextStyle(
-                    //                     color: Colors.white,
-                    //                     fontSize: 13,
-                    //                     fontWeight: FontWeight.w600,
-                    //                   ),
-                    //                 ),
-                    //               ),
-                    //             ),
-                    //           );
-                    //         },
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
+                    // Category tabs - Dynamic from API
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          height: 36,
+                          child: Builder(
+                            builder: (context) {
+                              // Build category list: "All" + dynamic categories from API
+                              final apiCategories = newsProvider.categories;
+                              final categoryNames = <String>['All'];
+                              for (final cat in apiCategories) {
+                                // Capitalize first letter for display
+                                final displayName = cat.name.isNotEmpty 
+                                    ? cat.name[0].toUpperCase() + cat.name.substring(1)
+                                    : cat.name;
+                                categoryNames.add(displayName);
+                              }
+                              
+                              return ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: categoryNames.length,
+                                itemBuilder: (context, index) {
+                                  final category = categoryNames[index];
+                                  final isSelected = _selectedCategory == category;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() => _selectedCategory = category);
+                                      if (category != 'All') {
+                                        // Convert display name back to API format (lowercase)
+                                        final apiCategory = category.toLowerCase();
+                                        debugPrint('📂 Category selected: $apiCategory');
+                                        context
+                                            .read<NewsProvider>()
+                                            .fetchCategoryNews(apiCategory, limit: 10);
+                                      } else {
+                                        // If "All" is selected, clear category filter
+                                        debugPrint('📂 All categories selected');
+                                        context
+                                            .read<NewsProvider>()
+                                            .clearCategoryFilter();
+                                      }
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isSelected
+                                                ? const Color(0xFFE31E24)
+                                                : Colors.black,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          category,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
 
                     // Today heading (dynamic based on selected date)
                     SliverToBoxAdapter(

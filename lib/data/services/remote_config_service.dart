@@ -353,6 +353,7 @@ class RemoteConfigService {
 
       // App Common Images
       appNameLogo: _remoteConfig.getString('app_name_logo'),
+      darkThemeAppNameLogo: _remoteConfig.getString('dark_theme_app_name_logo'),
       languageImg: _remoteConfig.getString('language_img'),
       headlineImg: _remoteConfig.getString('headline_img'),
       listenIcon: _remoteConfig.getString('listen_img'),

@@ -71,7 +71,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
             child: Column(
               children: [
                 // App Bar
-                commonappBar(config.appNameLogo, () {
+                commonappBar(config.getAppNameLogoForTheme(theme.brightness), () {
                   Navigator.pop(context);
                 }),
 
