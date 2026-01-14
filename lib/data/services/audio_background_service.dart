@@ -19,25 +19,37 @@ class AudioBackgroundService {
       return _audioHandler!;
     }
 
-    debugPrint('🎵 Initializing AudioBackgroundService...');
-    _audioHandler = await AudioService.init(
-      builder: () => NewsAudioHandler(),
-      config: AudioServiceConfig(
-        androidNotificationChannelId: 'com.app.newson.audio',
-        androidNotificationChannelName: 'News Audio',
-        androidNotificationChannelDescription: 'Playback controls for news articles',
-        androidNotificationOngoing: false, // Allow notification to be dismissed
-        androidStopForegroundOnPause: true, // Stop foreground when paused (allows swipe dismiss)
-        androidShowNotificationBadge: true,
-        notificationColor: const Color(0xFFE31E24), // App primary color
-        androidNotificationIcon: 'drawable/ic_notification', // Custom notification icon
-        fastForwardInterval: const Duration(seconds: 10),
-        rewindInterval: const Duration(seconds: 10),
-      ),
-    );
-    _isInitialized = true;
-    debugPrint('✅ AudioBackgroundService initialized successfully');
-    return _audioHandler!;
+    try {
+      debugPrint('🎵 Initializing AudioBackgroundService...');
+      _audioHandler = await AudioService.init(
+        builder: () => NewsAudioHandler(),
+        config: AudioServiceConfig(
+          androidNotificationChannelId: 'com.app.newson.audio',
+          androidNotificationChannelName: 'News Audio',
+          androidNotificationChannelDescription:
+              'Playback controls for news articles',
+          androidNotificationOngoing:
+              false, // Allow notification to be dismissed
+          androidStopForegroundOnPause:
+              true, // Stop foreground when paused (allows swipe dismiss)
+          androidShowNotificationBadge: true,
+          notificationColor: const Color(0xFFE31E24), // App primary color
+          androidNotificationIcon:
+              'mipmap/launcher_icon', // Use launcher icon (PNG) for notification
+          fastForwardInterval: const Duration(seconds: 10),
+          rewindInterval: const Duration(seconds: 10),
+        ),
+      );
+      _isInitialized = true;
+      debugPrint('✅ AudioBackgroundService initialized successfully');
+      return _audioHandler!;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error initializing AudioBackgroundService: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _isInitialized = false;
+      _audioHandler = null;
+      rethrow; // Re-throw so main.dart can handle it gracefully
+    }
   }
 
   /// Get the audio handler instance
@@ -51,7 +63,7 @@ class AudioBackgroundService {
 /// Implements BaseAudioHandler with SeekHandler for seek functionality
 class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
-  
+
   // Stream subscriptions
   StreamSubscription<PlaybackEvent>? _playbackEventSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
@@ -60,7 +72,7 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // Current article for metadata
   NewsArticle? _currentArticle;
-  
+
   // Callbacks for playlist navigation (set by AudioPlayerProvider)
   Function()? onSkipToNext;
   Function()? onSkipToPrevious;
@@ -101,31 +113,33 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   /// Broadcast current playback state to notification and UI
   void _broadcastState() {
     final playing = _player.playing;
-    
-    playbackState.add(PlaybackState(
-      controls: [
-        MediaControl.skipToPrevious,
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.skipToNext,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-        MediaAction.play,
-        MediaAction.pause,
-        MediaAction.stop,
-        MediaAction.skipToPrevious,
-        MediaAction.skipToNext,
-      },
-      androidCompactActionIndices: const [0, 1, 2],
-      processingState: _mapProcessingState(_player.processingState),
-      playing: playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
-      queueIndex: _player.currentIndex ?? 0,
-    ));
+
+    playbackState.add(
+      PlaybackState(
+        controls: [
+          MediaControl.skipToPrevious,
+          if (playing) MediaControl.pause else MediaControl.play,
+          MediaControl.skipToNext,
+        ],
+        systemActions: const {
+          MediaAction.seek,
+          MediaAction.seekForward,
+          MediaAction.seekBackward,
+          MediaAction.play,
+          MediaAction.pause,
+          MediaAction.stop,
+          MediaAction.skipToPrevious,
+          MediaAction.skipToNext,
+        },
+        androidCompactActionIndices: const [0, 1, 2],
+        processingState: _mapProcessingState(_player.processingState),
+        playing: playing,
+        updatePosition: _player.position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+        queueIndex: _player.currentIndex ?? 0,
+      ),
+    );
   }
 
   /// Map just_audio ProcessingState to audio_service AudioProcessingState
@@ -146,44 +160,52 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
 
   /// Update queue from sequence state
   void _updateQueue(SequenceState state) {
-    final items = state.sequence.map((source) {
-      final tag = source.tag;
-      if (tag is MediaItem) {
-        return tag;
-      }
-      return MediaItem(
-        id: source.hashCode.toString(),
-        title: 'News Article',
-      );
-    }).toList();
-    
+    final items =
+        state.sequence.map((source) {
+          final tag = source.tag;
+          if (tag is MediaItem) {
+            return tag;
+          }
+          return MediaItem(
+            id: source.hashCode.toString(),
+            title: 'News Article',
+          );
+        }).toList();
+
     if (items.isNotEmpty) {
       queue.add(items);
     }
   }
 
   /// Set the current article and update media item
-  Future<void> setCurrentArticle(NewsArticle article, {Duration? duration}) async {
+  Future<void> setCurrentArticle(
+    NewsArticle article, {
+    Duration? duration,
+  }) async {
     _currentArticle = article;
-    
+
     final item = MediaItem(
       id: article.articleId ?? article.title,
       title: article.title,
       artist: article.sourceName ?? 'NewsOn',
-      album: article.category?.isNotEmpty == true ? article.category!.first : 'News',
-      artUri: article.imageUrl != null && article.imageUrl!.isNotEmpty 
-          ? Uri.tryParse(article.imageUrl!) 
-          : null,
+      album:
+          article.category?.isNotEmpty == true
+              ? article.category!.first
+              : 'News',
+      artUri:
+          article.imageUrl != null && article.imageUrl!.isNotEmpty
+              ? Uri.tryParse(article.imageUrl!)
+              : null,
       duration: duration ?? _player.duration,
       extras: {
         'articleId': article.articleId,
         'sourceIcon': article.sourceIcon,
       },
     );
-    
+
     mediaItem.add(item);
     debugPrint('🎵 Media item updated: ${article.title}');
-    
+
     // IMPORTANT: Broadcast state to refresh notification with new media item
     _broadcastState();
   }

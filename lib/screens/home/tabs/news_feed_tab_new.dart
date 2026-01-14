@@ -21,6 +21,8 @@ import '../../../data/models/news_article.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../../core/widgets/banner_ad_widget.dart';
 
 class NewsFeedTabNew extends StatefulWidget {
   final List<String> selectedCategories;
@@ -121,13 +123,27 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     super.build(context);
     final theme = Theme.of(context);
     final remoteConfig = context.read<RemoteConfigProvider>().config;
-    final newsProvider = context.watch<NewsProvider>();
 
-    // Show shimmer while breaking news is loading initially
-    if (newsProvider.isLoading && newsProvider.breakingNews.isEmpty) {
-      return const NewsFeedShimmer();
-    }
+    // Use Consumer to rebuild when NewsProvider changes
+    // The key on NewsFeedTabNew in IndexedStack ensures stable widget identity
+    return Consumer<NewsProvider>(
+      builder: (context, newsProvider, child) {
+        // Show shimmer while breaking news is loading initially
+        if (newsProvider.isLoading && newsProvider.breakingNews.isEmpty) {
+          return const NewsFeedShimmer();
+        }
 
+        return _buildScaffold(context, theme, remoteConfig, newsProvider);
+      },
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    ThemeData theme,
+    dynamic remoteConfig,
+    NewsProvider newsProvider,
+  ) {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       floatingActionButton: _buildRefreshButton(
@@ -135,6 +151,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         newsProvider,
         remoteConfig,
       ),
+      // bottomNavigationBar: const BannerAdContainer(),
       body: SafeArea(
         child: Column(
           children: [
@@ -178,6 +195,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
             // Scrollable content
             Expanded(
               child: RefreshIndicator(
+                key: const ValueKey('news_feed_refresh_indicator'),
                 onRefresh: () async {
                   // Refresh breaking news
                   await newsProvider.fetchBreakingNews();
@@ -185,7 +203,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   await newsProvider.fetchNewsByDate(_selectedDate);
                 },
                 child: CustomScrollView(
+                  key: const PageStorageKey('news_feed_scroll_view'),
                   controller: _scrollController,
+                  physics:
+                      const AlwaysScrollableScrollPhysics(), // Required for RefreshIndicator
                   slivers: [
                     // Section title - Breaking News (Centered)
                     SliverToBoxAdapter(
@@ -270,32 +291,47 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               final categoryNames = <String>['All'];
                               for (final cat in apiCategories) {
                                 // Capitalize first letter for display
-                                final displayName = cat.name.isNotEmpty 
-                                    ? cat.name[0].toUpperCase() + cat.name.substring(1)
-                                    : cat.name;
+                                final displayName =
+                                    cat.name.isNotEmpty
+                                        ? cat.name[0].toUpperCase() +
+                                            cat.name.substring(1)
+                                        : cat.name;
                                 categoryNames.add(displayName);
                               }
-                              
+
                               return ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                                 itemCount: categoryNames.length,
                                 itemBuilder: (context, index) {
                                   final category = categoryNames[index];
-                                  final isSelected = _selectedCategory == category;
+                                  final isSelected =
+                                      _selectedCategory == category;
                                   return GestureDetector(
                                     onTap: () {
-                                      setState(() => _selectedCategory = category);
+                                      setState(
+                                        () => _selectedCategory = category,
+                                      );
                                       if (category != 'All') {
                                         // Convert display name back to API format (lowercase)
-                                        final apiCategory = category.toLowerCase();
-                                        debugPrint('📂 Category selected: $apiCategory');
+                                        final apiCategory =
+                                            category.toLowerCase();
+                                        debugPrint(
+                                          '📂 Category selected: $apiCategory',
+                                        );
                                         context
                                             .read<NewsProvider>()
-                                            .fetchCategoryNews(apiCategory, limit: 10);
+                                            .fetchCategoryNews(
+                                              apiCategory,
+                                              limit: 10,
+                                            );
                                       } else {
                                         // If "All" is selected, clear category filter
-                                        debugPrint('📂 All categories selected');
+                                        debugPrint(
+                                          '📂 All categories selected',
+                                        );
                                         context
                                             .read<NewsProvider>()
                                             .clearCategoryFilter();
@@ -333,8 +369,12 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
                     ),
+                    // Ad 1: Standard Banner (320x50) - After categories
+                    SliverToBoxAdapter(
+                      child: BannerAdContainer(adSize: AdSize.banner),
+                    ),
 
-                    // Today heading (dynamic based on selected date)
+                    // Heading - Category name or Date heading
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -342,28 +382,207 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           vertical: 8,
                         ),
                         child: showHeadingText(
-                          _getDateHeadingText(
-                            newsProvider.selectedDate ?? _selectedDate,
-                          ),
-                          theme,
-                          onViewAll: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => TodayNewsViewAllScreen(
-                                      selectedDate:
-                                          newsProvider.selectedDate ??
-                                          _selectedDate,
-                                    ),
+                          _selectedCategory != 'All'
+                              ? _selectedCategory // Show category name when selected
+                              : _getDateHeadingText(
+                                newsProvider.selectedDate ?? _selectedDate,
                               ),
-                            );
-                          },
+                          theme,
+                          onViewAll:
+                              _selectedCategory != 'All'
+                                  ? null // No view all for categories
+                                  : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => TodayNewsViewAllScreen(
+                                              selectedDate:
+                                                  newsProvider.selectedDate ??
+                                                  _selectedDate,
+                                            ),
+                                      ),
+                                    );
+                                  },
                         ),
                       ),
                     ),
 
-                    // Today list items (from API)
+                    // Category news or Today's news list items
+                    if (_selectedCategory != 'All')
+                      // Show category news when a category is selected
+                      if (newsProvider.isLoadingCategoryNews)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _buildTodayNewsShimmer(theme),
+                                );
+                              },
+                              childCount: 3, // Show 3 shimmer items
+                            ),
+                          ),
+                        )
+                      else if (newsProvider.categoryNews.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Center(
+                              child: Text(
+                                'No news available for ${_selectedCategory}',
+                                style: TextStyle(
+                                  color: theme.colorScheme.secondary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final article =
+                                    newsProvider.categoryNews[index];
+                                return NewsGridView(
+                                  key: ValueKey(
+                                    'category_${article.articleId ?? index}',
+                                  ),
+                                  type: 'listview',
+                                  newsDetails: article,
+                                  onListenTapped: () async {
+                                    try {
+                                      final newsProvider =
+                                          context.read<NewsProvider>();
+                                      final categoryNews =
+                                          newsProvider.categoryNews;
+
+                                      // Find the index of current article in category news
+                                      final startIndex = categoryNews
+                                          .indexWhere(
+                                            (a) =>
+                                                (a.articleId ?? a.title) ==
+                                                (article.articleId ??
+                                                    article.title),
+                                          );
+
+                                      if (startIndex >= 0 &&
+                                          startIndex < categoryNews.length) {
+                                        // Set playlist with all category news and start from clicked article
+                                        await context
+                                            .read<AudioPlayerProvider>()
+                                            .setPlaylistAndPlay(
+                                              categoryNews,
+                                              startIndex,
+                                              playTitle: true,
+                                            );
+                                      } else {
+                                        // Fallback: play single article
+                                        await context
+                                            .read<AudioPlayerProvider>()
+                                            .playArticleFromUrl(
+                                              article,
+                                              playTitle: true,
+                                            );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error playing audio: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  onSaveTapped: () async {
+                                    try {
+                                      final bookmarkProvider =
+                                          context.read<BookmarkProvider>();
+                                      final newStatus = await bookmarkProvider
+                                          .toggleBookmark(article);
+
+                                      // Update article status in NewsProvider lists
+                                      final newsProvider =
+                                          context.read<NewsProvider>();
+                                      newsProvider.updateArticleBookmarkStatus(
+                                        article,
+                                        newStatus,
+                                      );
+
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              newStatus
+                                                  ? 'Added to bookmarks'
+                                                  : 'Removed from bookmarks',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 1,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error: ${e.toString()}',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  onNewsTapped: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => NewsDetailScreen(
+                                              article: article,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  onShareTapped: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      builder: (c) {
+                                        return showShareModalBottomSheet(
+                                          context,
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                              childCount: newsProvider.categoryNews.length
+                                  .clamp(0, 10), // Limit to 10 on home page
+                            ),
+                          ),
+                        )
+                    else
+                    // Show today's news when "All" is selected
                     if (newsProvider.isLoadingToday)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -527,6 +746,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
 
+                    // Ad 2: Large Banner (320x100) - After today's news
+                    SliverToBoxAdapter(
+                      child: BannerAdContainer(adSize: AdSize.largeBanner),
+                    ),
                     // Flash news section title
                     SliverToBoxAdapter(
                       child: Padding(
@@ -678,6 +901,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
                     ),
+                    SliverToBoxAdapter(child: const BannerAdContainer()),
 
                     const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
@@ -828,6 +1052,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           ],
                         ),
                       ),
+                    ),
+                    // Ad 4: Large Banner (320x100) - At the end
+                    SliverToBoxAdapter(
+                      child: BannerAdContainer(adSize: AdSize.largeBanner),
                     ),
                   ],
                 ),

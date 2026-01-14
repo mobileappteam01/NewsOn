@@ -170,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: _currentIndex,
                 children: [
                   NewsFeedTabNew(
+                    key: const ValueKey('news_feed_tab'),
                     selectedCategories: widget.selectedCategories,
                     newsList: newsList,
                   ),

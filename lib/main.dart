@@ -11,20 +11,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/api_constants.dart';
 import 'data/services/storage_service.dart';
-import 'data/services/api_service.dart'; 
+import 'data/services/api_service.dart';
 import 'data/services/user_service.dart';
 import 'data/services/fcm_service.dart';
 import 'providers/news_provider.dart';
 import 'providers/bookmark_provider.dart';
-import 'providers/tts_provider.dart'; 
+import 'providers/tts_provider.dart';
 import 'providers/audio_player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/dynamic_language_provider.dart';
-import 'providers/remote_config_provider.dart'; 
-import 'data/services/dynamic_localization_service.dart'; 
+import 'providers/remote_config_provider.dart';
+import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
+import 'data/services/ad_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
 
@@ -33,10 +34,10 @@ String elevenLabsAPIKey = '';
 String elevenLabsVoiceId = '';
 String baseURL = '';
 String appIconUrl = ''; // Dynamic app icon URL from Firebase Realtime Database
-final detector = LanguageDetector(); 
+final detector = LanguageDetector();
 
 // Global reference to audio player provider for updating API key
-AudioPlayerProvider? _globalAudioPlayerProvider; 
+AudioPlayerProvider? _globalAudioPlayerProvider;
 
 // Global reference to news provider for network refresh
 NewsProvider? _globalNewsProvider;
@@ -106,10 +107,23 @@ void main() async {
 
   // Optional: Use Realtime Database for real-time API config updates
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
-  // await ApiConstants.initializeFromRealtimeDatabase(); 
-    MobileAds.instance.initialize();
+  // await ApiConstants.initializeFromRealtimeDatabase();
+
+  // Initialize Google Mobile Ads SDK
+  await MobileAds.instance.initialize();
+  debugPrint("✅ Google Mobile Ads SDK initialized");
+
+  // Initialize Ad Service - Fetch ad unit IDs from Realtime Database
+  try {
+    await AdService().initialize();
+    debugPrint("✅ Ad Service initialized");
+  } catch (e) {
+    debugPrint("❌ Failed to initialize Ad Service: $e");
+    // Continue app launch - ads will use test IDs
+  }
+
   // Initialize API Service - Fetch base URL and all endpoints at startup
-  try { 
+  try {
     await ApiService().initialize();
     debugPrint("✅ API Service initialized - Base URL and endpoints loaded");
   } catch (e) {
@@ -122,10 +136,12 @@ void main() async {
   try {
     await AudioBackgroundService.init();
     debugPrint("✅ Audio Background Service initialized");
-  } catch (e) {
+  } catch (e, stackTrace) {
     debugPrint("❌ Failed to initialize Audio Background Service: $e");
+    debugPrint("Stack trace: $stackTrace");
     // Continue app launch - audio will still work but without background/notification support
-  }  
+    // This is critical - don't let this crash the app
+  }
 
   // Initialize FCM Service - Request permissions and get token ready
   // Note: This may fail on emulators without Google Play Services
@@ -141,7 +157,7 @@ void main() async {
         "The app will continue without push notifications.",
       );
     }
-  } catch (e) { 
+  } catch (e) {
     debugPrint("❌ Failed to initialize FCM Service: $e");
     debugPrint(
       "ℹ️ App will continue without FCM."
@@ -195,11 +211,13 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         // Dynamic Language Provider - Fetches languages from Firebase
-        ChangeNotifierProvider(create: (_) {
-          final provider = DynamicLanguageProvider();
-          provider.initialize();
-          return provider;
-        }),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = DynamicLanguageProvider();
+            provider.initialize();
+            return provider;
+          },
+        ),
         // NewsProvider depends on LanguageProvider for language-based API calls
         ChangeNotifierProxyProvider<LanguageProvider, NewsProvider>(
           create: (_) {
@@ -249,14 +267,17 @@ class NewsOnApp extends StatelessWidget {
         ) {
           // Get the locale, but fall back to English for AppLocalizations if not supported
           final requestedLocale = languageProvider.locale;
-          
+
           // Check if the locale is supported by AppLocalizations (ARB files)
           // Currently only 'en' and 'ta' have ARB files
           final arbSupportedLocales = ['en', 'ta'];
-          final effectiveLocale = arbSupportedLocales.contains(requestedLocale.languageCode)
-              ? requestedLocale
-              : const Locale('en'); // Fallback to English for AppLocalizations
-          
+          final effectiveLocale =
+              arbSupportedLocales.contains(requestedLocale.languageCode)
+                  ? requestedLocale
+                  : const Locale(
+                    'en',
+                  ); // Fallback to English for AppLocalizations
+
           return MaterialApp(
             title: configProvider.config.appName,
             debugShowCheckedModeBanner: false,
@@ -275,11 +296,8 @@ class NewsOnApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             // Only include locales that have ARB file support
-            supportedLocales: const [
-              Locale('en'),
-              Locale('ta'),
-            ],
-            
+            supportedLocales: const [Locale('en'), Locale('ta')],
+
             // Resolve locale - fall back to English if not supported by ARB
             localeResolutionCallback: (locale, supportedLocales) {
               if (locale != null) {

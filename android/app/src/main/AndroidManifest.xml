@@ -11,6 +11,11 @@
         android:label="News On"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
+        <!-- AdMob App ID - Must be inside <application> tag, not <activity> -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6015484156094454~1454431247"/>
+        
         <!-- Main Activity - Primary launcher for Flutter build system -->
         <activity
             android:name=".MainActivity"
@@ -31,9 +36,6 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-              <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-6015484156094454~1454431247"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

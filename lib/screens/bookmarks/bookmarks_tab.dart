@@ -8,6 +8,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/news_card.dart';
 import '../../core/widgets/audio_mini_player.dart';
+import '../../core/widgets/banner_ad_widget.dart';
 import '../../providers/news_provider.dart';
 import '../../widgets/news_grid_views.dart';
 import '../home/tabs/news_feed_tab_new.dart';
@@ -57,6 +58,7 @@ class _BookmarksTabState extends State<BookmarksTab>
             ),
         ],
       ),
+      bottomNavigationBar: const BannerAdContainer(),
       body: Stack(
         children: [
           Column(
