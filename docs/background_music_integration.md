@@ -9,6 +9,9 @@ This feature adds mild, gentle background music that plays alongside speech audi
 - **Independent Volume Control**: Users can adjust background music volume separately from speech volume
 - **Visual Indicators**: UI shows when background music is playing
 - **Looping**: Background music loops continuously during playback
+- **Firebase Integration**: Background music URL is fetched from Firebase Realtime Database
+- **Fallback Support**: Uses fallback URL if Firebase is unavailable
+- **Retry Logic**: Automatically retries if background music fails to start
 
 ## Implementation Details
 
@@ -29,8 +32,10 @@ This feature adds mild, gentle background music that plays alongside speech audi
 - Singleton service that manages background music playback
 - Uses just_audio for audio playback
 - Default volume: 15% (0.15)
-- Music source: "True Patriot" from chosic.com
+- Music source: Fetched from Firebase Realtime Database (`bgMusicUrl` node)
+- Fallback URL: "True Patriot" from chosic.com
 - Supports play, pause, stop, resume, and volume control
+- Includes retry logic for reliable startup
 
 #### AudioPlayerProvider Integration
 - Automatically starts background music when speech begins
@@ -44,11 +49,24 @@ This feature adds mild, gentle background music that plays alongside speech audi
 - Visual indicator shows when background music is playing
 - Green color scheme for background music controls
 
+### Firebase Setup
+To configure background music URL in Firebase Realtime Database:
+
+1. Go to your Firebase Console
+2. Navigate to Realtime Database
+3. Add a root-level node named `bgMusicUrl`
+4. Set the value to your desired background music URL:
+```json
+{
+  "bgMusicUrl": "https://www.chosic.com/wp-content/uploads/2022/10/True-Patriot(chosic.com).mp3"
+}
+```
+
 ### Usage
 
 #### Automatic Behavior
 ```dart
-// When speech starts - background music automatically starts
+// When speech starts - background music automatically starts with retry logic
 await audioPlayer.playArticle(article);
 
 // When speech pauses - background music automatically pauses  
@@ -71,10 +89,16 @@ final volume = audioPlayer.backgroundMusicVolume;
 
 // Check if background music is playing
 final isPlaying = audioPlayer.isBackgroundMusicPlaying;
+
+// Get current music URL from Firebase
+final url = audioPlayer.getBackgroundMusicUrl();
 ```
 
 ### Audio Source
-- Primary URL: https://www.chosic.com/wp-content/uploads/2022/10/True-Patriot(chosic.com).mp3
+- **Primary**: Fetched dynamically from Firebase Realtime Database
+  - Database path: `bgMusicUrl`
+  - Example value: `"https://www.chosic.com/wp-content/uploads/2022/10/True-Patriot(chosic.com).mp3"`
+- **Fallback**: Built-in URL if Firebase is unavailable
 - The service can be easily configured to use local files or different URLs
 - Music is set to loop continuously during playback
 

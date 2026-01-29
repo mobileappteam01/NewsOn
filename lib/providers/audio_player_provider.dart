@@ -48,14 +48,26 @@ class AudioPlayerProvider with ChangeNotifier {
   AudioPlayerProvider({String? elevenLabsApiKey})
       : _elevenLabsService = ElevenLabsService(apiKey: elevenLabsApiKey) {
     _initializeListeners();
-    // Initialize background music service
-    _backgroundMusicService.initialize();
+    // Initialize background music service asynchronously
+    _initializeBackgroundMusic();
     // Initialize background service callbacks asynchronously
     // Don't await - let it happen in the background to avoid blocking constructor
     _initializeBackgroundService().catchError((e) {
       debugPrint('⚠️ Background service callback setup failed: $e');
       // Non-critical - app can continue without notification callbacks
     });
+  }
+
+  /// Initialize background music service
+  Future<void> _initializeBackgroundMusic() async {
+    try {
+      debugPrint('🎵 Initializing background music service...');
+      await _backgroundMusicService.initialize();
+      debugPrint('✅ Background music service initialized successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to initialize background music service: $e');
+      // Continue without background music if initialization fails
+    }
   }
 
   Future<void> _initializeBackgroundService() async {
@@ -324,8 +336,8 @@ class AudioPlayerProvider with ChangeNotifier {
       debugPrint('▶️ Starting playback...');
       await _audioPlayerService.playFromBytes(audioBytes);
 
-      // Start background music when speech starts
-      await _backgroundMusicService.start();
+      // Start background music with a small delay to ensure speech starts first
+      _startBackgroundMusicWithDelay();
 
       // Update background service with current article metadata
       try {
@@ -542,8 +554,8 @@ class AudioPlayerProvider with ChangeNotifier {
           await _playSequentialUrls(urlsToPlay);
         }
 
-        // Start background music when speech starts
-        await _backgroundMusicService.start();
+        // Start background music with a small delay to ensure speech starts first
+        _startBackgroundMusicWithDelay();
       } else {
         // Detail screen: Play content URL (full article content audio)
         // Fallback to description URL if content URL is not available
@@ -567,8 +579,8 @@ class AudioPlayerProvider with ChangeNotifier {
         // Play the audio URL
         await _audioPlayerService.playFromUrl(audioUrl);
 
-        // Start background music when speech starts
-        await _backgroundMusicService.start();
+        // Start background music with a small delay to ensure speech starts first
+        _startBackgroundMusicWithDelay();
       }
     } catch (e) {
       _error = e.toString();
@@ -989,6 +1001,51 @@ class AudioPlayerProvider with ChangeNotifier {
 
   /// Get background music volume
   double get backgroundMusicVolume => _backgroundMusicService.volume;
+
+  /// Start background music with delay to ensure speech starts first
+  Future<void> _startBackgroundMusicWithDelay() async {
+    try {
+      // Wait a bit to ensure speech audio starts first
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Start background music with retry logic
+      int retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          debugPrint(
+              '🎵 Starting background music (attempt ${retryCount + 1}/$maxRetries)...');
+          await _backgroundMusicService.start();
+
+          // Verify it's actually playing
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (_backgroundMusicService.isPlaying) {
+            debugPrint('✅ Background music started successfully');
+            notifyListeners(); // Update UI to show background music is playing
+            break;
+          } else {
+            throw Exception('Background music failed to start playing');
+          }
+        } catch (e) {
+          retryCount++;
+          debugPrint('❌ Background music start attempt $retryCount failed: $e');
+
+          if (retryCount >= maxRetries) {
+            debugPrint(
+                '❌ Failed to start background music after $maxRetries attempts');
+            // Continue without background music - don't fail the entire playback
+          } else {
+            // Wait before retry
+            await Future.delayed(const Duration(milliseconds: 1000));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error in _startBackgroundMusicWithDelay: $e');
+      // Don't rethrow - continue without background music
+    }
+  }
 
   /// Check if specific article is currently playing
   bool isArticlePlaying(NewsArticle article) {

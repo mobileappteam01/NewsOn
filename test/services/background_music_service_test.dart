@@ -36,9 +36,19 @@ void main() {
       await service.initialize();
 
       expect(service.isPlaying, isFalse);
+      expect(service.currentMusicUrl,
+          isNotNull); // Should have URL from Firebase or fallback
+    });
 
-      // Note: In a real test, you'd mock the AudioPlayer
-      // For now, we just test the state tracking logic
+    test('should handle Firebase URL fetch', () async {
+      await service.initialize();
+
+      // The service should fetch URL from Firebase or use fallback
+      final url = service.currentMusicUrl;
+      expect(url, isNotNull);
+      expect(url, isNotEmpty);
+
+      print('Background music URL: $url');
     });
   });
 }
