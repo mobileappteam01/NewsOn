@@ -59,6 +59,9 @@
   "termsAndConditions": "Términos y Condiciones",
   "language": "Idioma",
   "logout": "Cerrar sesión",
+  "areYouSureYouWantToLogout": "¿Estás seguro de que quieres cerrar sesión?",
+  "yes": "Sí",
+  "no": "No",
   "selectLanguage": "Seleccionar Idioma",
   "english": "Inglés",
   "hindi": "Hindi",
@@ -82,6 +85,12 @@
         "type": "String"
       }
     }
-  }
+  },
+  "newsReadingSettings": "Configuración de lectura de noticias",
+  "playTitleOnly": "Reproducir solo el título",
+  "playDescriptionOnly": "Reproducir solo la descripción",
+  "playFullNews": "Reproducir noticia completa",
+  "selectNewsReadingMode": "Seleccionar modo de lectura de noticias",
+  "settingsSaved": "Configuración guardada"
 }
 

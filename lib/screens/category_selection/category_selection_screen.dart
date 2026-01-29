@@ -51,6 +51,44 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   // Scroll controller for infinite scroll
   final ScrollController _scrollController = ScrollController();
 
+  /// Check if all categories are selected
+  bool get _isAllSelected {
+    if (_categories.isEmpty) return false;
+    return _categories.every((cat) => _selectedCategoryIds.contains(cat.id));
+  }
+
+  /// Check if some (but not all) categories are selected
+  bool get _isSomeSelected {
+    if (_categories.isEmpty) return false;
+    final selectedCount = _categories.where((cat) => _selectedCategoryIds.contains(cat.id)).length;
+    return selectedCount > 0 && selectedCount < _categories.length;
+  }
+
+  /// Select all categories
+  void _selectAll() {
+    setState(() {
+      for (final category in _categories) {
+        _selectedCategoryIds.add(category.id);
+      }
+    });
+  }
+
+  /// Deselect all categories
+  void _deselectAll() {
+    setState(() {
+      _selectedCategoryIds.clear();
+    });
+  }
+
+  /// Toggle select/deselect all
+  void _toggleSelectAll() {
+    if (_isAllSelected) {
+      _deselectAll();
+    } else {
+      _selectAll();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -500,6 +538,73 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                           fontSize: config.displaySmallFontSize,
                         ),
                       ),
+                      // Select All / Deselect All Button
+                      if (!_isLoading && _categories.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Selection count
+                              Text(
+                                '${_selectedCategoryIds.length} of ${_categories.length} selected',
+                                style: GoogleFonts.roboto(
+                                  color: theme.colorScheme.tertiary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              // Select All / Deselect All Button
+                              InkWell(
+                                onTap: _toggleSelectAll,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _isAllSelected
+                                        ? config.primaryColorValue.withOpacity(0.1)
+                                        : config.primaryColorValue,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: config.primaryColorValue,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _isAllSelected
+                                            ? Icons.deselect
+                                            : _isSomeSelected
+                                                ? Icons.indeterminate_check_box_outlined
+                                                : Icons.select_all,
+                                        size: 18,
+                                        color: _isAllSelected
+                                            ? config.primaryColorValue
+                                            : Colors.white,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _isAllSelected ? 'Deselect All' : 'Select All',
+                                        style: GoogleFonts.roboto(
+                                          color: _isAllSelected
+                                              ? config.primaryColorValue
+                                              : Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),

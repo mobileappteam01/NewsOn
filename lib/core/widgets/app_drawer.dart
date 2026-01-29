@@ -62,14 +62,16 @@ class AppDrawer extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                       icon: Icon(
                         Icons.arrow_back_ios,
                         color: theme.colorScheme.secondary,
                       ),
                     ),
                     showImage(
-                      config.appNameLogo,
+                      config.getAppNameLogoForTheme(theme.brightness),
                       BoxFit.contain,
                       height: 60,
                       width: 80,
@@ -177,7 +179,9 @@ class AppDrawer extends StatelessWidget {
                   final languageName = languageProvider.languageNames[index];
 
                   return RadioListTile<String>(
-                    title: Text(languageName), // Display full language name (English, Tamil, Hindi)
+                    title: Text(
+                      languageName,
+                    ), // Display full language name (English, Tamil, Hindi)
                     value: languageName,
                     groupValue: languageProvider.selectedLanguage,
                     activeColor: const Color(0xFFE31E24),

@@ -59,6 +59,9 @@
   "termsAndConditions": "नियम और शर्तें",
   "language": "भाषा",
   "logout": "लॉगआउट",
+  "areYouSureYouWantToLogout": "क्या आप वाकई लॉगआउट करना चाहते हैं?",
+  "yes": "हाँ",
+  "no": "नहीं",
   "selectLanguage": "भाषा चुनें",
   "english": "अंग्रेज़ी",
   "hindi": "हिंदी",
@@ -137,6 +140,12 @@
   "flashNews": "फ्लैश न्यूज़",
   "liveCricketScore": "लाइव क्रिकेट स्कोर",
   "yesterday": "कल",
-  "hotNews": "हॉट न्यूज़"
+  "hotNews": "हॉट न्यूज़",
+  "newsReadingSettings": "समाचार पढ़ने की सेटिंग्स",
+  "playTitleOnly": "केवल शीर्षक चलाएं",
+  "playDescriptionOnly": "केवल विवरण चलाएं",
+  "playFullNews": "पूरी खबर चलाएं",
+  "selectNewsReadingMode": "समाचार पढ़ने का मोड चुनें",
+  "settingsSaved": "सेटिंग्स सहेजी गईं"
 }
 

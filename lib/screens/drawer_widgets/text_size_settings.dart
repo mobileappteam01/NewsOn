@@ -61,7 +61,7 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      commonappBar(config.appNameLogo, () {
+                      commonappBar(config.getAppNameLogoForTheme(Theme.of(context).brightness), () {
                         Navigator.pop(context);
                       }),
                       ElevatedButton(

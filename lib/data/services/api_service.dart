@@ -294,6 +294,74 @@ class ApiService {
     }
   }
 
+  /// Make GET request with support for multiple values per parameter
+  /// Used for APIs that expect: ?category=top&category=lifestyle
+  Future<ApiResponse> getWithMultipleParams(
+    String module,
+    String endpointKey, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, List<String>>? multiValueParams,
+    Map<String, String>? headers,
+    String? bearerToken,
+  }) async {
+    try {
+      final baseUrl = buildUrl(module, endpointKey);
+      
+      // Build query string manually to support multiple values for same key
+      final queryParts = <String>[];
+      
+      // Add single-value parameters
+      if (queryParameters != null) {
+        queryParameters.forEach((key, value) {
+          queryParts.add('$key=${Uri.encodeComponent(value.toString())}');
+        });
+      }
+      
+      // Add multi-value parameters (e.g., category=top&category=lifestyle)
+      if (multiValueParams != null) {
+        multiValueParams.forEach((key, values) {
+          for (final value in values) {
+            queryParts.add('$key=${Uri.encodeComponent(value)}');
+          }
+        });
+      }
+      
+      final url = queryParts.isNotEmpty 
+          ? '$baseUrl?${queryParts.join('&')}'
+          : baseUrl;
+
+      debugPrint('🌐 GET Request (multi-param): $url');
+
+      // Add Bearer token to headers if provided
+      final finalHeaders = <String, String>{};
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+      }
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+        debugPrint('🔐 Bearer token added to request');
+      }
+
+      final response = await _dio.get(
+        url,
+        options: Options(headers: finalHeaders),
+      );
+
+      return _handleDioResponse(response);
+    } on DioException catch (e) {
+      debugPrint('❌ GET Request Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ GET Request Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
   /// Make POST request
   Future<ApiResponse> post(
     String module,

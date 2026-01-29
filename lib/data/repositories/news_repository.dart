@@ -81,6 +81,49 @@ class NewsRepository {
     }
   }
 
+  /// Fetch news by multiple categories
+  /// [categories] - List of category names (e.g., ['business', 'sports'])
+  /// [language] - Language code (e.g., 'en', 'ta', 'hi')
+  /// [limit] - Number of items to fetch (default: 50)
+  /// [page] - Page number for pagination (default: 1)
+  Future<NewsResponse> fetchNewsByCategories(
+    List<String> categories, {
+    String? language,
+    int limit = 50,
+    int page = 1,
+  }) async {
+    try {
+      final response = await _backendService.fetchNewsByCategories(
+        categories: categories,
+        language: language,
+        limit: limit,
+        page: page,
+      );
+
+      // Update bookmark status for fetched articles
+      final updatedResults =
+          response.results.map((article) {
+            final key = article.articleId ?? article.title;
+            final isBookmarked = StorageService.isBookmarked(key);
+            return article.copyWith(isBookmarked: isBookmarked);
+          }).toList();
+
+      // Cache articles for offline use (only first page)
+      if (page == 1) {
+        await StorageService.saveArticlesCache(updatedResults);
+      }
+
+      return NewsResponse(
+        status: response.status,
+        totalResults: response.totalResults,
+        results: updatedResults,
+        nextPage: response.nextPage,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Search news
   /// [query] - Search query
   /// [language] - Language code (e.g., 'en', 'ta', 'hi')

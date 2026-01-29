@@ -71,7 +71,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
             child: Column(
               children: [
                 // App Bar
-                commonappBar(config.appNameLogo, () {
+                commonappBar(config.getAppNameLogoForTheme(theme.brightness), () {
                   Navigator.pop(context);
                 }),
 
@@ -210,16 +210,29 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
             margin: Margins.only(top: 24, bottom: 12),
           ),
           'p': Style(
+            color: isDark ? Colors.white : Colors.black87,
             margin: Margins.only(bottom: 12),
             fontSize: FontSize(16),
             lineHeight: const LineHeight(1.6),
           ),
-          'ul': Style(margin: Margins.only(bottom: 12, left: 20)),
-          'li': Style(margin: Margins.only(bottom: 8)),
-          'div': Style(margin: Margins.zero, padding: HtmlPaddings.zero),
-          'b': Style(fontWeight: FontWeight.bold),
-          'u': Style(textDecoration: TextDecoration.underline),
-          'strong': Style(fontWeight: FontWeight.bold),
+          'ul': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            margin: Margins.only(bottom: 12, left: 20)),
+          'li': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            margin: Margins.only(bottom: 8)),
+          'div': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            margin: Margins.zero, padding: HtmlPaddings.zero),
+          'b': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold),
+          'u': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            textDecoration: TextDecoration.underline),
+          'strong': Style(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold),
         },
       ),
     );

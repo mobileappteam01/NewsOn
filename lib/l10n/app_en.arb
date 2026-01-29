@@ -190,6 +190,18 @@
   "@logout": {
     "description": "Logout menu item"
   },
+  "areYouSureYouWantToLogout": "Are you sure you want to logout?",
+  "@areYouSureYouWantToLogout": {
+    "description": "Logout confirmation message"
+  },
+  "yes": "Yes",
+  "@yes": {
+    "description": "Yes button text"
+  },
+  "no": "No",
+  "@no": {
+    "description": "No button text"
+  },
   "selectLanguage": "Select Language",
   "@selectLanguage": {
     "description": "Language selection dialog title"
@@ -482,6 +494,30 @@
   "hotNews": "Hot News",
   "@hotNews": {
     "description": "Hot news label"
+  },
+  "newsReadingSettings": "News Reading Settings",
+  "@newsReadingSettings": {
+    "description": "News reading settings menu item"
+  },
+  "playTitleOnly": "Play Title Only",
+  "@playTitleOnly": {
+    "description": "Play only article title option"
+  },
+  "playDescriptionOnly": "Play Description Only",
+  "@playDescriptionOnly": {
+    "description": "Play only article description option"
+  },
+  "playFullNews": "Play Full News",
+  "@playFullNews": {
+    "description": "Play full news (title + description) option"
+  },
+  "selectNewsReadingMode": "Select News Reading Mode",
+  "@selectNewsReadingMode": {
+    "description": "News reading mode selection title"
+  },
+  "settingsSaved": "Settings saved",
+  "@settingsSaved": {
+    "description": "Success message when settings are saved"
   }
 }
 

@@ -7,7 +7,6 @@ import 'package:newson/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 
-import '../../data/models/remote_config_model.dart';
 import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
 // Uncomment to use dynamic app icon:
@@ -164,7 +163,27 @@ class _SplashScreenState extends State<SplashScreen>
                   giveHeight(32),
 
                   /// 3️⃣ Bottom Swipe Button
-                  _SwipeCta(config: config, onTap: _goNext),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: SwipeButton.expand(
+                      thumb: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      activeThumbColor: primaryColor,
+                      activeTrackColor: const Color(0xFF4A4A4A),
+                      onSwipe: _goNext,
+                      child: Text(
+                        LocalizationHelper.swipeToGetStarted(context),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: config.splashSwipeFontSize,
+                          fontWeight: config.splashSwipeFontWeightValue,
+                        ),
+                      ),
+                    ),
+                  ),
 
                   giveHeight(32),
                 ],
@@ -183,47 +202,3 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _SwipeCta extends StatelessWidget {
-  final RemoteConfigModel config;
-  final VoidCallback onTap;
-
-  const _SwipeCta({required this.config, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor = config.primaryColorValue;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: SwipeButton(
-        thumb: const Icon(Icons.double_arrow_rounded, color: Colors.white),
-        activeThumbColor: primaryColor,
-        activeTrackColor: const Color(0xFF4A4A4A),
-        onSwipe: onTap,
-        height: config.splashButtonHeight,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  LocalizationHelper.swipeToGetStarted(context),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: config.splashSwipeFontSize,
-                    fontWeight: config.splashSwipeFontWeightValue,
-                  ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

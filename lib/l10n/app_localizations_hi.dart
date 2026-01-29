@@ -148,6 +148,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get logout => 'लॉगआउट';
 
   @override
+  String get areYouSureYouWantToLogout => 'क्या आप वाकई लॉगआउट करना चाहते हैं?';
+
+  @override
+  String get yes => 'हाँ';
+
+  @override
+  String get no => 'नहीं';
+
+  @override
   String get selectLanguage => 'भाषा चुनें';
 
   @override
@@ -352,4 +361,22 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get hotNews => 'हॉट न्यूज़';
+
+  @override
+  String get newsReadingSettings => 'समाचार पढ़ने की सेटिंग्स';
+
+  @override
+  String get playTitleOnly => 'केवल शीर्षक चलाएं';
+
+  @override
+  String get playDescriptionOnly => 'केवल विवरण चलाएं';
+
+  @override
+  String get playFullNews => 'पूरी खबर चलाएं';
+
+  @override
+  String get selectNewsReadingMode => 'समाचार पढ़ने का मोड चुनें';
+
+  @override
+  String get settingsSaved => 'सेटिंग्स सहेजी गईं';
 }

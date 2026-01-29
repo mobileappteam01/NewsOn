@@ -148,6 +148,15 @@ class AppLocalizationsTa extends AppLocalizations {
   String get logout => 'வெளியேற';
 
   @override
+  String get areYouSureYouWantToLogout => 'நீங்கள் உறுதியாக வெளியேற விரும்புகிறீர்களா?';
+
+  @override
+  String get yes => 'ஆம்';
+
+  @override
+  String get no => 'இல்லை';
+
+  @override
   String get selectLanguage => 'மொழியைத் தேர்ந்தெடுக்கவும்';
 
   @override
@@ -352,4 +361,22 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get hotNews => 'ஹாட் நியூஸ்';
+
+  @override
+  String get newsReadingSettings => 'செய்தி வாசிப்பு அமைப்புகள்';
+
+  @override
+  String get playTitleOnly => 'தலைப்பை மட்டும் இயக்க';
+
+  @override
+  String get playDescriptionOnly => 'விளக்கத்தை மட்டும் இயக்க';
+
+  @override
+  String get playFullNews => 'முழு செய்தியை இயக்க';
+
+  @override
+  String get selectNewsReadingMode => 'செய்தி வாசிப்பு முறையைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get settingsSaved => 'அமைப்புகள் சேமிக்கப்பட்டது';
 }

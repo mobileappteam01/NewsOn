@@ -114,10 +114,18 @@
     },
     "app_name_logo": {
       "defaultValue": {
-        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM.jpeg?alt=media&token=1f22daa3-5466-441d-a078-fea3cbba84c0"
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FGroup%201171275635.png?alt=media&token=9ad44daf-b19b-45fc-bbe4-1eb7e780665b"
       },
       "description": "App Name Logo",
       "valueType": "STRING"
+    },
+    "dark_theme_app_name_logo":{ 
+      "defaultValue": {
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fdark_theme.png?alt=media&token=653bbdf7-7b8f-4de0-9854-ab6ed19c2518"
+      },
+      "description": "App Name Logo",
+      "valueType": "STRING"
+      
     },
     "language_img": {
       "defaultValue": {
@@ -128,7 +136,7 @@
     },
     "headline_img": {
       "defaultValue": {
-        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FWhatsApp%20Image%202025-11-07%20at%203.00.50%20PM%20(1).jpeg?alt=media&token=a016fa53-8791-4957-a752-1a0900057fe8"
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FUntitled-3.png?alt=media&token=00b7380b-1d1a-4198-9156-ffac7a87fae5"
       },
       "description": "Headline tab icon",
       "valueType": "STRING"
@@ -167,7 +175,21 @@
       },
       "description": "Dynamic API Configuration - All API endpoints, parameters, and settings. Can be updated without app update.",
       "valueType": "STRING"
+    },
+    "supported_languages": {
+      "defaultValue": {
+        "value": "[{\"code\":\"en\",\"name\":\"English\",\"nativeName\":\"English\",\"isDefault\":true,\"isActive\":true},{\"code\":\"ta\",\"name\":\"Tamil\",\"nativeName\":\"தமிழ்\",\"isDefault\":false,\"isActive\":true},{\"code\":\"ml\",\"name\":\"Malayalam\",\"nativeName\":\"മലയാളം\",\"isDefault\":false,\"isActive\":false},{\"code\":\"kn\",\"name\":\"Kannada\",\"nativeName\":\"ಕನ್ನಡ\",\"isDefault\":false,\"isActive\":false}]"
+      }, 
+      "description": "List of supported languages for dynamic localization. Set isActive=false to hide a language from the selector.",
+      "valueType": "STRING"
+    },
+
+    "language_version": {
+      "defaultValue": { "value": "1.0.2" },
+      "description": "Language version - increment to force app to re-download translations",
+      "valueType": "STRING"
     }
+  
   },
   "version": {
     "versionNumber": "1",

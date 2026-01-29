@@ -371,6 +371,24 @@ abstract class AppLocalizations {
   /// **'Logout'**
   String get logout;
 
+  /// Logout confirmation message
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to logout?'**
+  String get areYouSureYouWantToLogout;
+
+  /// Yes button text
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No button text
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
   /// Language selection dialog title
   ///
   /// In en, this message translates to:
@@ -778,6 +796,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hot News'**
   String get hotNews;
+
+  /// News reading settings menu item
+  ///
+  /// In en, this message translates to:
+  /// **'News Reading Settings'**
+  String get newsReadingSettings;
+
+  /// Play only article title option
+  ///
+  /// In en, this message translates to:
+  /// **'Play Title Only'**
+  String get playTitleOnly;
+
+  /// Play only article description option
+  ///
+  /// In en, this message translates to:
+  /// **'Play Description Only'**
+  String get playDescriptionOnly;
+
+  /// Play full news (title + description) option
+  ///
+  /// In en, this message translates to:
+  /// **'Play Full News'**
+  String get playFullNews;
+
+  /// News reading mode selection title
+  ///
+  /// In en, this message translates to:
+  /// **'Select News Reading Mode'**
+  String get selectNewsReadingMode;
+
+  /// Success message when settings are saved
+  ///
+  /// In en, this message translates to:
+  /// **'Settings saved'**
+  String get settingsSaved;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

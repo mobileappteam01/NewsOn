@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
+import '../data/models/category_model.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/services/storage_service.dart';
+import '../data/services/category_api_service.dart';
 import 'language_provider.dart';
 
 /// Provider for managing news state
@@ -85,22 +87,33 @@ class NewsProvider with ChangeNotifier {
   List<NewsArticle> _articles = [];
   List<NewsArticle> _breakingNews = [];
   List<NewsArticle> _todayNews = []; // News for selected date
+  List<NewsArticle> _categoryNews = []; // News filtered by category
+  List<CategoryModel> _categories = []; // Available categories from API
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _isLoadingToday = false;
+  bool _isLoadingCategories = false;
+  bool _isLoadingCategoryNews = false;
   String? _error;
   String? _nextPage;
   String? _currentCategory;
   String? _currentQuery;
   DateTime? _selectedDate; // Selected date for archive news
+  
+  // Category API service
+  final CategoryApiService _categoryApiService = CategoryApiService();
 
   // Getters
   List<NewsArticle> get articles => _articles;
   List<NewsArticle> get breakingNews => _breakingNews;
   List<NewsArticle> get todayNews => _todayNews;
+  List<NewsArticle> get categoryNews => _categoryNews;
+  List<CategoryModel> get categories => _categories;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   bool get isLoadingToday => _isLoadingToday;
+  bool get isLoadingCategories => _isLoadingCategories;
+  bool get isLoadingCategoryNews => _isLoadingCategoryNews;
   String? get error => _error;
   bool get hasNextPage => _nextPage != null;
   String? get currentCategory => _currentCategory;
@@ -241,6 +254,80 @@ class NewsProvider with ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  /// Fetch available categories from API
+  Future<void> fetchCategories() async {
+    if (_isLoadingCategories) return;
+    
+    try {
+      _isLoadingCategories = true;
+      notifyListeners();
+      
+      debugPrint('📂 Fetching categories from API...');
+      final response = await _categoryApiService.getCategories(limit: 50);
+      
+      if (response.success) {
+        _categories = response.categories;
+        debugPrint('✅ Categories fetched: ${_categories.length} categories');
+        debugPrint('   Categories: ${_categories.map((c) => c.name).join(", ")}');
+      } else {
+        debugPrint('❌ Failed to fetch categories: ${response.message}');
+      }
+      
+      _isLoadingCategories = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error fetching categories: $e');
+      _isLoadingCategories = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetch news filtered by a specific category
+  /// Updates _categoryNews list (separate from _breakingNews)
+  /// [categoryName] - Category name to filter by (e.g., 'lifestyle', 'sports')
+  /// [limit] - Number of items to fetch (default: 10)
+  Future<void> fetchCategoryNews(String categoryName, {int limit = 10}) async {
+    if (_isLoadingCategoryNews) return;
+    
+    try {
+      _isLoadingCategoryNews = true;
+      _currentCategory = categoryName;
+      _error = null;
+      notifyListeners();
+      
+      debugPrint('📰 Fetching news for category: $categoryName');
+      
+      // Update language code from provider if available
+      if (_languageProvider != null) {
+        _currentLanguageCode = _languageProvider!.getApiLanguageCode();
+      }
+      
+      final response = await _repository.fetchNewsByCategory(
+        categoryName,
+        language: _currentLanguageCode,
+        limit: limit,
+      );
+      
+      _categoryNews = response.results;
+      _isLoadingCategoryNews = false;
+      debugPrint('✅ Category news fetched: ${_categoryNews.length} articles for $categoryName');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error fetching category news: $e');
+      _error = e.toString();
+      _isLoadingCategoryNews = false;
+      _categoryNews = [];
+      notifyListeners();
+    }
+  }
+
+  /// Clear category filter and reset to showing all news
+  void clearCategoryFilter() {
+    _currentCategory = null;
+    _categoryNews = [];
+    notifyListeners();
   }
 
   /// Load more news (pagination) - Updated to use page-based pagination

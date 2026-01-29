@@ -1,61 +1,163 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-// import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher_string.dart';
-import 'package:newson/data/models/app_update_model.dart';
-import 'package:newson/core/constants/api_constants.dart';
+import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/app_update_model.dart';
+import 'api_service.dart';
 
-import '../../core/constants/app_constants.dart';
-
+/// Service to check for app updates
 class AppUpdateService {
-  static Future<AppUpdateModel?> checkForUpdate() async {
-    try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/${ApiConstants.appupdate}'),
-      );
-      print("appupdate ${response.body}");
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['message'] == 'success') {
-          final updateInfo = AppUpdateModel.fromJson(jsonData);
-          print("updateInfo $updateInfo");
-          // Check if update is needed by comparing versions
-          // final packageInfo = await PackageInfo.fromPlatform();
-          // final currentVersion = packageInfo.version;
+  static final AppUpdateService _instance = AppUpdateService._internal();
+  factory AppUpdateService() => _instance;
+  AppUpdateService._internal();
 
-          if (_isNewerVersion(updateInfo.newVersion, AppConstants.appVersion)) {
-            return updateInfo;
+  final ApiService _apiService = ApiService();
+  
+  AppUpdateModel? _cachedUpdateInfo;
+  PackageInfo? _packageInfo;
+  bool _hasCheckedUpdate = false;
+
+  /// Get cached update info
+  AppUpdateModel? get cachedUpdateInfo => _cachedUpdateInfo;
+  
+  /// Get current app version
+  String get currentAppVersion => _packageInfo?.version ?? '0.0.0';
+  
+  /// Get current build number
+  String get currentBuildNumber => _packageInfo?.buildNumber ?? '0';
+
+  /// Initialize package info
+  Future<void> _initPackageInfo() async {
+    _packageInfo ??= await PackageInfo.fromPlatform();
+    debugPrint('📱 App Version: ${_packageInfo!.version}');
+    debugPrint('📱 Build Number: ${_packageInfo!.buildNumber}');
+  }
+
+  /// Check for app updates
+  /// Returns AppUpdateModel if update is available, null otherwise
+  Future<AppUpdateModel?> checkForUpdate({bool forceCheck = false}) async {
+    try {
+      // Don't check again if already checked (unless forced)
+      if (_hasCheckedUpdate && !forceCheck && _cachedUpdateInfo != null) {
+        debugPrint('📦 Using cached update info');
+        return _cachedUpdateInfo;
+      }
+
+      debugPrint('🔍 Checking for app updates...');
+
+      // Initialize package info
+      await _initPackageInfo();
+
+      // Fetch update info from API
+      // Module: 'appupdate', Endpoint key: 'appupdate' (based on user's description)
+      final response = await _apiService.get('app', 'appupdate');
+
+      if (response.success && response.data != null) {
+
+        final data = response.data;
+        
+        // Handle response structure: { "message": "success", "data": {...} }
+        Map<String, dynamic>? updateData;
+        if (data is Map<String, dynamic>) {
+          if (data.containsKey('data') && data['data'] is Map<String, dynamic>) {
+            updateData = data['data'] as Map<String, dynamic>;
+          } else {
+            updateData = data;
+          }
+        }
+
+        if (updateData != null) {
+          _cachedUpdateInfo = AppUpdateModel.fromJson(updateData);
+          _hasCheckedUpdate = true;
+
+          debugPrint('✅ Update info fetched: $_cachedUpdateInfo');
+
+          // Check if update is available
+          if (_cachedUpdateInfo!.isUpdateAvailable(currentAppVersion)) {
+            debugPrint('🆕 Update available: ${_cachedUpdateInfo!.newVersion}');
+            return _cachedUpdateInfo;
+          } else {
+            debugPrint('✅ App is up to date (current: $currentAppVersion, server: ${_cachedUpdateInfo!.newVersion})');
+            return null;
           }
         }
       }
+
+      debugPrint('⚠️ No update info available from API');
+      _hasCheckedUpdate = true;
       return null;
     } catch (e) {
-      print('Error checking for update: $e');
+      debugPrint('❌ Error checking for updates: $e');
+      _hasCheckedUpdate = true;
       return null;
     }
   }
 
-  static bool _isNewerVersion(String newVersion, String currentVersion) {
+  /// Check if update should be shown (considering force update)
+  Future<bool> shouldShowUpdateDialog() async {
+    final updateInfo = await checkForUpdate();
+    return updateInfo != null && updateInfo.isActive;
+  }
+
+  /// Get the appropriate store link based on platform
+  String? getStoreLink() {
+    if (_cachedUpdateInfo == null) return null;
+    
+    if (Platform.isAndroid) {
+      return _cachedUpdateInfo!.androidLink;
+    } else if (Platform.isIOS) {
+      return _cachedUpdateInfo!.iosLink;
+    }
+    return null;
+  }
+
+  /// Open store link for update
+  Future<bool> openStoreLink() async {
+    final link = getStoreLink();
+    if (link == null || link.isEmpty) {
+      debugPrint('⚠️ No store link available');
+      return false;
+    }
+
     try {
-      final newParts = newVersion.split('.').map(int.parse).toList();
-      final currentParts = currentVersion.split('.').map(int.parse).toList();
-
-      for (var i = 0; i < newParts.length; i++) {
-        if (i >= currentParts.length) return true;
-        if (newParts[i] > currentParts[i]) return true;
-        if (newParts[i] < currentParts[i]) return false;
+      final uri = Uri.parse(link);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return true;
+      } else {
+        debugPrint('❌ Cannot launch URL: $link');
+        return false;
       }
-      return false;
     } catch (e) {
+      debugPrint('❌ Error opening store link: $e');
       return false;
     }
   }
 
-  static Future<void> launchUpdate(String url) async {
-    if (await canLaunchUrlString(url)) {
-      await launchUrlString(url, mode: LaunchMode.externalApplication);
+  /// Get full image URL for update media
+  String? getMediaUrl() {
+    if (_cachedUpdateInfo?.media == null) return null;
+    
+    final mediaUrl = _cachedUpdateInfo!.media!.url;
+    if (mediaUrl.isEmpty) return null;
+    
+    // If it's already a full URL, return as is
+    if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+      return mediaUrl;
     }
+    
+    // Otherwise, prepend the image base URL
+    final imageBaseUrl = _apiService.getImageBaseUrl();
+    if (imageBaseUrl != null && imageBaseUrl.isNotEmpty) {
+      return '$imageBaseUrl/$mediaUrl';
+    }
+    
+    return mediaUrl;
+  }
+
+  /// Reset update check (for testing or re-checking)
+  void resetUpdateCheck() {
+    _hasCheckedUpdate = false;
+    _cachedUpdateInfo = null;
   }
 }

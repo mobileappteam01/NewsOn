@@ -10,6 +10,7 @@ import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
 import '../providers/bookmark_provider.dart';
+import '../providers/audio_player_provider.dart';
 import '../core/utils/date_formatter.dart';
 
 class NewsGridView extends StatelessWidget {
@@ -76,9 +77,11 @@ class NewsGridView extends StatelessWidget {
     ThemeData theme,
     BuildContext context,
   ) {
-    if (type.toLowerCase() == 'category') {
+    if (type.toLowerCase() == 'category') { 
       return Text(
-        newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
+        newsDetails.category!.isNotEmpty
+            ? newsDetails.category![0]
+            : "",
         style: GoogleFonts.inter(
           color: config.primaryColorValue,
           fontWeight: FontWeight.w500,
@@ -120,60 +123,157 @@ class NewsGridView extends StatelessWidget {
   }
 
   showListenButton(RemoteConfigModel config, BuildContext context) {
-    return GestureDetector(
-      onTap: () => onListenTapped(), // ✅ FIXED
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: config.primaryColorValue,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            showImage(config.listenIcon, BoxFit.contain, height: 15, width: 15),
-            giveWidth(12),
-            Flexible(
-              child: Text(
-                LocalizationHelper.listen(context),
-                style: GoogleFonts.playfair(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w400,
-                  fontSize: 15,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+    return Consumer<AudioPlayerProvider>(
+      builder: (context, audioProvider, child) {
+        // Check if this specific article is currently playing or paused
+        final currentArticle = audioProvider.currentArticle;
+        final isThisArticlePlaying =
+            currentArticle != null &&
+            _isSameArticle(newsDetails, currentArticle);
+
+        final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
+        final isPaused = isThisArticlePlaying && audioProvider.isPaused;
+        final isLoading = isThisArticlePlaying && audioProvider.isLoading;
+
+        return GestureDetector(
+          onTap: () {
+            if (isPlaying) {
+              audioProvider.pause();
+            } else if (isPaused) {
+              audioProvider.resume();
+            } else {
+              onListenTapped();
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: config.primaryColorValue,
             ),
-          ],
-        ),
-      ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                else if (isPlaying)
+                  const Icon(Icons.pause, color: Colors.white, size: 15)
+                else if (isPaused)
+                  const Icon(Icons.play_arrow, color: Colors.white, size: 15)
+                else
+                  showImage(
+                    config.listenIcon,
+                    BoxFit.contain,
+                    height: 15,
+                    width: 15,
+                  ),
+                giveWidth(12),
+                Flexible(
+                  child: Text(
+                    isPlaying
+                        ? 'Playing...'
+                        : isPaused
+                        ? 'Paused'
+                        : LocalizationHelper.listen(context),
+                    style: GoogleFonts.playfair(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 15,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
+  /// Helper function to check if two articles are the same
+  bool _isSameArticle(NewsArticle a, NewsArticle b) {
+    if (a.articleId != null &&
+        b.articleId != null &&
+        a.articleId!.isNotEmpty &&
+        b.articleId!.isNotEmpty) {
+      return a.articleId == b.articleId;
+    }
+    return a.title == b.title;
+  }
+
   showRoundedListenButton(RemoteConfigModel config, BuildContext context) {
-    return GestureDetector(
-      onTap: () => onListenTapped(),
-      child: Center(
-        child: Container(
-          height: 50,
-          width: 50,
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: config.primaryColorValue,
-            shape: BoxShape.circle,
-          ),
+    return Consumer<AudioPlayerProvider>(
+      builder: (context, audioProvider, child) {
+        final currentArticle = audioProvider.currentArticle;
+        final isThisArticlePlaying =
+            currentArticle != null &&
+            _isSameArticle(newsDetails, currentArticle);
+
+        final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
+        final isPaused = isThisArticlePlaying && audioProvider.isPaused;
+        final isLoading = isThisArticlePlaying && audioProvider.isLoading;
+
+        return GestureDetector(
+          onTap: () {
+            if (isPlaying) {
+              audioProvider.pause();
+            } else if (isPaused) {
+              audioProvider.resume();
+            } else {
+              onListenTapped();
+            }
+          },
           child: Center(
-            child: showImage(
-              config.listenIcon,
-              BoxFit.contain,
-              height: 15,
-              width: 15,
+            child: Container(
+              height: 50,
+              width: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: config.primaryColorValue,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child:
+                    isLoading
+                        ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : isPlaying
+                        ? const Icon(Icons.pause, color: Colors.white, size: 20)
+                        : isPaused
+                        ? const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 20,
+                        )
+                        : showImage(
+                          config.listenIcon,
+                          BoxFit.contain,
+                          height: 15,
+                          width: 15,
+                        ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
