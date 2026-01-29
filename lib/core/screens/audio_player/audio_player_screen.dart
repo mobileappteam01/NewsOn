@@ -107,31 +107,20 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         borderRadius: BorderRadius.circular(20),
                         child: AspectRatio(
                           aspectRatio: 1,
-                          child:
-                              article.imageUrl != null
-                                  ? CachedNetworkImage(
-                                    imageUrl: article.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    placeholder:
-                                        (context, url) => Container(
-                                          color: Colors.grey[900],
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                    errorWidget:
-                                        (context, url, error) => Container(
-                                          color: Colors.grey[900],
-                                          child: Icon(
-                                            Icons.article,
-                                            color: Colors.grey[600],
-                                            size: 80,
-                                          ),
-                                        ),
-                                  )
-                                  : Container(
+                          child: article.imageUrl != null
+                              ? CachedNetworkImage(
+                                  imageUrl: article.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.grey[900],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      Container(
                                     color: Colors.grey[900],
                                     child: Icon(
                                       Icons.article,
@@ -139,6 +128,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                       size: 80,
                                     ),
                                   ),
+                                )
+                              : Container(
+                                  color: Colors.grey[900],
+                                  child: Icon(
+                                    Icons.article,
+                                    color: Colors.grey[600],
+                                    size: 80,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -190,29 +188,25 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             ),
                             child: Slider(
                               value: () {
-                                final maxValue =
-                                    duration.inMilliseconds > 0
-                                        ? duration.inMilliseconds.toDouble()
-                                        : 100.0;
-                                final currentValue =
-                                    duration.inMilliseconds > 0
-                                        ? position.inMilliseconds.toDouble()
-                                        : 0.0;
+                                final maxValue = duration.inMilliseconds > 0
+                                    ? duration.inMilliseconds.toDouble()
+                                    : 100.0;
+                                final currentValue = duration.inMilliseconds > 0
+                                    ? position.inMilliseconds.toDouble()
+                                    : 0.0;
                                 // Clamp value to ensure it's within bounds
                                 return currentValue.clamp(0.0, maxValue);
                               }(),
-                              max:
-                                  duration.inMilliseconds > 0
-                                      ? duration.inMilliseconds.toDouble()
-                                      : 100.0,
+                              max: duration.inMilliseconds > 0
+                                  ? duration.inMilliseconds.toDouble()
+                                  : 100.0,
                               min: 0.0,
                               onChanged: (value) {
                                 setState(() {
                                   _isDragging = true;
-                                  final maxMs =
-                                      duration.inMilliseconds > 0
-                                          ? duration.inMilliseconds
-                                          : 100;
+                                  final maxMs = duration.inMilliseconds > 0
+                                      ? duration.inMilliseconds
+                                      : 100;
                                   _dragPosition = Duration(
                                     milliseconds: value.toInt().clamp(0, maxMs),
                                   );
@@ -222,10 +216,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 setState(() {
                                   _isDragging = false;
                                 });
-                                final maxMs =
-                                    duration.inMilliseconds > 0
-                                        ? duration.inMilliseconds
-                                        : 100;
+                                final maxMs = duration.inMilliseconds > 0
+                                    ? duration.inMilliseconds
+                                    : 100;
                                 audioProvider.seek(
                                   Duration(
                                     milliseconds: value.toInt().clamp(0, maxMs),
@@ -329,6 +322,38 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           ),
                           const SizedBox(width: 4),
 
+                          // Background Music Indicator
+                          if (audioProvider.isBackgroundMusicPlaying)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: Colors.green, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.music_note,
+                                    color: Colors.green,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'BG Music',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.green,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
                           // Next (skip forward 10 seconds)
                           IconButton(
                             icon: const Icon(
@@ -359,8 +384,8 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               audioProvider.volume > 0.5
                                   ? Icons.volume_up
                                   : audioProvider.volume > 0
-                                  ? Icons.volume_down
-                                  : Icons.volume_off,
+                                      ? Icons.volume_down
+                                      : Icons.volume_off,
                               color: Colors.white,
                               size: 22,
                             ),
@@ -422,47 +447,45 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Playback Speed',
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Playback Speed',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ...([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map((speed) {
+              final isSelected = provider.playbackSpeed == speed;
+              return ListTile(
+                title: Text(
+                  '${speed}x',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.grey[400],
+                    fontSize: 16,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
-                const SizedBox(height: 24),
-                ...([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map((speed) {
-                  final isSelected = provider.playbackSpeed == speed;
-                  return ListTile(
-                    title: Text(
-                      '${speed}x',
-                      style: GoogleFonts.inter(
-                        color: isSelected ? Colors.white : Colors.grey[400],
-                        fontSize: 16,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                    trailing:
-                        isSelected
-                            ? const Icon(Icons.check, color: Colors.white)
-                            : null,
-                    onTap: () {
-                      provider.setPlaybackSpeed(speed);
-                      Navigator.pop(context);
-                    },
-                  );
-                })),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+                trailing: isSelected
+                    ? const Icon(Icons.check, color: Colors.white)
+                    : null,
+                onTap: () {
+                  provider.setPlaybackSpeed(speed);
+                  Navigator.pop(context);
+                },
+              );
+            })),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -473,47 +496,118 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Volume Controls',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Speech Volume
+            Text(
+              'Speech Volume',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Slider(
+              value: provider.volume,
+              onChanged: (value) {
+                provider.setVolume(value);
+              },
+              activeColor: Colors.white,
+              inactiveColor: Colors.grey[700],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Icon(Icons.volume_mute, color: Colors.grey[400]),
                 Text(
-                  'Volume',
+                  '${(provider.volume * 100).toInt()}%',
                   style: GoogleFonts.inter(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 24),
-                Slider(
-                  value: provider.volume,
-                  onChanged: (value) {
-                    provider.setVolume(value);
-                  },
-                  activeColor: Colors.white,
-                  inactiveColor: Colors.grey[700],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Icon(Icons.volume_mute, color: Colors.grey[400]),
-                    Text(
-                      '${(provider.volume * 100).toInt()}%',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Icon(Icons.volume_up, color: Colors.grey[400]),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                Icon(Icons.volume_up, color: Colors.grey[400]),
               ],
             ),
-          ),
+            const SizedBox(height: 24),
+
+            // Background Music Volume
+            Text(
+              'Background Music',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Slider(
+              value: provider.backgroundMusicVolume,
+              onChanged: (value) {
+                provider.setBackgroundMusicVolume(value);
+              },
+              activeColor: Colors.green,
+              inactiveColor: Colors.grey[700],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(Icons.music_note, color: Colors.grey[400]),
+                Text(
+                  '${(provider.backgroundMusicVolume * 100).toInt()}%',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                ),
+                Icon(Icons.music_note, color: Colors.grey[400]),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Background music status indicator
+            Row(
+              children: [
+                Icon(
+                  provider.isBackgroundMusicPlaying
+                      ? Icons.music_note
+                      : Icons.music_off,
+                  color: provider.isBackgroundMusicPlaying
+                      ? Colors.green
+                      : Colors.grey[400],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  provider.isBackgroundMusicPlaying
+                      ? 'Background music playing'
+                      : 'Background music stopped',
+                  style: GoogleFonts.inter(
+                    color: provider.isBackgroundMusicPlaying
+                        ? Colors.green
+                        : Colors.grey[400],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

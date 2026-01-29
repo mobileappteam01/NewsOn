@@ -5,6 +5,7 @@ import '../data/models/news_article.dart';
 import '../data/services/elevenlabs_service.dart';
 import '../data/services/audio_player_service.dart';
 import '../data/services/audio_background_service.dart';
+import '../data/services/background_music_service.dart';
 import '../data/services/storage_service.dart';
 import '../core/constants/app_constants.dart';
 import '../main.dart';
@@ -13,6 +14,8 @@ import '../main.dart';
 class AudioPlayerProvider with ChangeNotifier {
   final ElevenLabsService _elevenLabsService;
   final AudioPlayerService _audioPlayerService = AudioPlayerService();
+  final BackgroundMusicService _backgroundMusicService =
+      BackgroundMusicService();
 
   // State
   NewsArticle? _currentArticle;
@@ -34,7 +37,7 @@ class AudioPlayerProvider with ChangeNotifier {
   bool _hasCompleted = false; // Track if current audio has completed
   Timer? _autoAdvanceTimer; // Timer for delayed auto-advance (Spotify-like)
   int?
-  _autoAdvanceFromIndex; // Store index when auto-advance timer was set (for validation)
+      _autoAdvanceFromIndex; // Store index when auto-advance timer was set (for validation)
 
   // Stream subscriptions
   StreamSubscription<Duration>? _positionSubscription;
@@ -43,8 +46,10 @@ class AudioPlayerProvider with ChangeNotifier {
   StreamSubscription<PlayerState>? _stateSubscription;
 
   AudioPlayerProvider({String? elevenLabsApiKey})
-    : _elevenLabsService = ElevenLabsService(apiKey: elevenLabsApiKey) {
+      : _elevenLabsService = ElevenLabsService(apiKey: elevenLabsApiKey) {
     _initializeListeners();
+    // Initialize background music service
+    _backgroundMusicService.initialize();
     // Initialize background service callbacks asynchronously
     // Don't await - let it happen in the background to avoid blocking constructor
     _initializeBackgroundService().catchError((e) {
@@ -257,6 +262,7 @@ class AudioPlayerProvider with ChangeNotifier {
   int get playlistLength => _playlist.length;
   bool get playTitleMode =>
       _playTitleMode; // Expose playTitleMode for detail page navigation check
+  bool get isBackgroundMusicPlaying => _backgroundMusicService.isPlaying;
 
   /// Set ElevenLabs API key
   void setApiKey(String apiKey) {
@@ -317,6 +323,9 @@ class AudioPlayerProvider with ChangeNotifier {
       // Play the generated audio
       debugPrint('▶️ Starting playback...');
       await _audioPlayerService.playFromBytes(audioBytes);
+
+      // Start background music when speech starts
+      await _backgroundMusicService.start();
 
       // Update background service with current article metadata
       try {
@@ -532,6 +541,9 @@ class AudioPlayerProvider with ChangeNotifier {
           debugPrint('🎵 Playing ${urlsToPlay.length} URLs sequentially');
           await _playSequentialUrls(urlsToPlay);
         }
+
+        // Start background music when speech starts
+        await _backgroundMusicService.start();
       } else {
         // Detail screen: Play content URL (full article content audio)
         // Fallback to description URL if content URL is not available
@@ -554,6 +566,9 @@ class AudioPlayerProvider with ChangeNotifier {
 
         // Play the audio URL
         await _audioPlayerService.playFromUrl(audioUrl);
+
+        // Start background music when speech starts
+        await _backgroundMusicService.start();
       }
     } catch (e) {
       _error = e.toString();
@@ -614,6 +629,9 @@ class AudioPlayerProvider with ChangeNotifier {
       _autoAdvanceFromIndex = null;
 
       await _audioPlayerService.pause();
+
+      // Pause background music when speech is paused
+      await _backgroundMusicService.pause();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -629,6 +647,9 @@ class AudioPlayerProvider with ChangeNotifier {
         debugPrint('🔄 Resuming after completion - resetting completion flag');
       }
       await _audioPlayerService.play();
+
+      // Resume background music when speech resumes
+      await _backgroundMusicService.resume();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -644,6 +665,10 @@ class AudioPlayerProvider with ChangeNotifier {
       _autoAdvanceFromIndex = null;
 
       await _audioPlayerService.stop();
+
+      // Stop background music when speech stops
+      await _backgroundMusicService.stop();
+
       _isPlaying = false;
       _isPaused = false;
       _hasCompleted = false; // Reset completion flag
@@ -687,12 +712,14 @@ class AudioPlayerProvider with ChangeNotifier {
       '✅ Audio completed - isPlaying=$_isPlaying, playlist=${_playlist.length}, index=$_currentPlaylistIndex',
     );
 
+    // Stop background music when speech completes
+    _backgroundMusicService.stop();
+
     // Notify listeners immediately to update UI (pause icon → play icon)
     notifyListeners();
 
     // Check if we should auto-advance
-    final shouldAutoAdvance =
-        _playlist.isNotEmpty &&
+    final shouldAutoAdvance = _playlist.isNotEmpty &&
         _currentPlaylistIndex >= 0 &&
         _currentPlaylistIndex < _playlist.length - 1 &&
         !_isAutoAdvancing;
@@ -949,6 +976,20 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
+  /// Set background music volume independently
+  Future<void> setBackgroundMusicVolume(double volume) async {
+    try {
+      await _backgroundMusicService.setVolume(volume);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// Get background music volume
+  double get backgroundMusicVolume => _backgroundMusicService.volume;
+
   /// Check if specific article is currently playing
   bool isArticlePlaying(NewsArticle article) {
     if (_currentArticle == null) return false;
@@ -977,11 +1018,10 @@ class AudioPlayerProvider with ChangeNotifier {
       );
 
       // Create AudioSource URIs for each URL
-      final List<AudioSource> audioSources =
-          validUrls.map((url) {
-            debugPrint('🎵 Creating AudioSource for: $url');
-            return AudioSource.uri(Uri.parse(url));
-          }).toList();
+      final List<AudioSource> audioSources = validUrls.map((url) {
+        debugPrint('🎵 Creating AudioSource for: $url');
+        return AudioSource.uri(Uri.parse(url));
+      }).toList();
 
       // Create ConcatenatingAudioSource which will play URLs sequentially
       final concatenatedSource = ConcatenatingAudioSource(
@@ -1042,6 +1082,7 @@ class AudioPlayerProvider with ChangeNotifier {
     _bufferedSubscription?.cancel();
     _stateSubscription?.cancel();
     _audioPlayerService.dispose();
+    _backgroundMusicService.dispose();
     super.dispose();
   }
 }
