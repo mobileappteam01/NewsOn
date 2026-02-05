@@ -45,7 +45,7 @@ class BackgroundMusicService {
     }
   }
 
-  /// Start playing background music
+  /// Start background music
   Future<void> start() async {
     if (!_isInitialized) await initialize();
 
@@ -63,7 +63,7 @@ class BackgroundMusicService {
         await _player.setUrl(_primaryMusicUrl!);
 
         // Wait a bit to ensure the URL is loaded
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 300));
 
         // Start playback
         await _player.play();

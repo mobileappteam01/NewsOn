@@ -80,7 +80,7 @@ class AudioPlayerProvider with ChangeNotifier {
             AudioBackgroundService.handler != null) {
           break;
         }
-        await Future.delayed(const Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 10));
         attempts++;
       }
 
@@ -415,6 +415,7 @@ class AudioPlayerProvider with ChangeNotifier {
               (article.articleId ?? article.title)) {
         if (_isPaused) {
           await resume();
+          _backgroundMusicService.resume();
         }
         return;
       }
@@ -1002,6 +1003,19 @@ class AudioPlayerProvider with ChangeNotifier {
   /// Get background music volume
   double get backgroundMusicVolume => _backgroundMusicService.volume;
 
+  /// Check if background music is initialized
+  bool get isBackgroundMusicInitialized =>
+      _backgroundMusicService.isInitialized;
+
+  /// Dispose background music service separately
+  void disposeBackgroundMusic() {
+    if (_backgroundMusicService.isPlaying) {
+      debugPrint('🗑️ Disposing background music service');
+      _backgroundMusicService.stop();
+      _backgroundMusicService.dispose();
+    }
+  }
+
   /// Start background music with delay to ensure speech starts first
   Future<void> _startBackgroundMusicWithDelay() async {
     try {
@@ -1019,7 +1033,7 @@ class AudioPlayerProvider with ChangeNotifier {
           await _backgroundMusicService.start();
 
           // Verify it's actually playing
-          await Future.delayed(const Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 100));
           if (_backgroundMusicService.isPlaying) {
             debugPrint('✅ Background music started successfully');
             notifyListeners(); // Update UI to show background music is playing

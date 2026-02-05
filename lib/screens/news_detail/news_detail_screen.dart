@@ -496,9 +496,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                       ? null
                       : () async {
                           if (isCurrentArticle) {
+                            print("🎵 [DETAIL] Toggling play/pause for current article");
                             // Toggle play/pause for current article
                             await audioProvider.togglePlayPause();
                           } else {
+                            print("_playArticle");
                             // Play this article (description only for detail screen)
                             await _playArticle(article, audioProvider);
                           }
