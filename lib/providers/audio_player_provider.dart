@@ -39,6 +39,9 @@ class AudioPlayerProvider with ChangeNotifier {
   int?
       _autoAdvanceFromIndex; // Store index when auto-advance timer was set (for validation)
 
+  /// Generation for background music delayed start. Incremented on stop/pause/switch/error
+  /// so any pending _startBackgroundMusicWithDelay callback will no-op.
+
   // Stream subscriptions
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
@@ -58,11 +61,11 @@ class AudioPlayerProvider with ChangeNotifier {
     });
   }
 
-  /// Initialize background music service
+  /// Initialize background music service (waits for pre-init from main if in progress)
   Future<void> _initializeBackgroundMusic() async {
     try {
       debugPrint('🎵 Initializing background music service...');
-      await _backgroundMusicService.initialize();
+      await _backgroundMusicService.ensureInitialized();
       debugPrint('✅ Background music service initialized successfully');
     } catch (e) {
       debugPrint('❌ Failed to initialize background music service: $e');
@@ -188,6 +191,7 @@ class AudioPlayerProvider with ChangeNotifier {
           _isPlaying = false;
           _isPaused = false;
           _hasCompleted = true; // Mark as completed if idle
+          _backgroundMusicService.stop();
           debugPrint(
             '🔄 Audio player idle - resetting state: isPlaying=$_isPlaying, isPaused=$_isPaused',
           );
@@ -213,9 +217,12 @@ class AudioPlayerProvider with ChangeNotifier {
             notifyListeners();
           }
           return; // Don't process this state update further - we're waiting for auto-advance
-        } else if (state.playing && _hasCompleted && !_isAutoAdvancing) {
-          // Only reset completion flag if we're actually starting new playback (not during auto-advance delay)
-          // This handles manual resume after completion (user taps play button)
+        } else if (state.playing &&
+            _hasCompleted &&
+            !_isAutoAdvancing &&
+            state.processingState != ProcessingState.completed) {
+          // Only reset completion flag when user actually resumed (player not in completed state).
+          // Avoid treating spurious "playing" events right after last article completion as resume.
           _hasCompleted = false;
           _isPlaying = true;
           _isPaused = false;
@@ -223,15 +230,17 @@ class AudioPlayerProvider with ChangeNotifier {
           _autoAdvanceTimer?.cancel();
           _isAutoAdvancing = false;
           _autoAdvanceFromIndex = null;
+          _startBackgroundMusicWhenPlaying();
           debugPrint(
             '🔄 Audio manually resumed after completion - resetting completion flag and cancelling auto-advance',
           );
           notifyListeners();
         } else if (_hasCompleted && !state.playing && !_isAutoAdvancing) {
-          // Already completed and no auto-advance - ensure state remains false
+          // Already completed and no auto-advance - ensure state remains false and BG is stopped
           if (_isPlaying || _isPaused) {
             _isPlaying = false;
             _isPaused = false;
+            _backgroundMusicService.stop();
             debugPrint(
               '⚠️ Preventing state reset after completion: isPlaying=$_isPlaying, isPaused=$_isPaused',
             );
@@ -242,6 +251,18 @@ class AudioPlayerProvider with ChangeNotifier {
           _isPlaying = state.playing;
           _isPaused =
               state.processingState == ProcessingState.ready && !state.playing;
+
+          // Mirror BG to news: start BG when news starts playing, pause BG when news is paused.
+          // Do not start BG when player is in completed state (e.g. last article just finished).
+          if (wasPlaying != _isPlaying || wasPaused != _isPaused) {
+            if (_isPlaying &&
+                !wasPlaying &&
+                state.processingState != ProcessingState.completed) {
+              _startBackgroundMusicWhenPlaying();
+            } else if (_isPaused && wasPlaying) {
+              _backgroundMusicService.pause();
+            }
+          }
 
           // Notify listeners on state changes
           if (wasPlaying != _isPlaying || wasPaused != _isPaused) {
@@ -336,8 +357,7 @@ class AudioPlayerProvider with ChangeNotifier {
       debugPrint('▶️ Starting playback...');
       await _audioPlayerService.playFromBytes(audioBytes);
 
-      // Start background music with a small delay to ensure speech starts first
-      _startBackgroundMusicWithDelay();
+      // BG is started when player state transitions to playing (state listener)
 
       // Update background service with current article metadata
       try {
@@ -415,13 +435,13 @@ class AudioPlayerProvider with ChangeNotifier {
               (article.articleId ?? article.title)) {
         if (_isPaused) {
           await resume();
-          _backgroundMusicService.resume();
         }
         return;
       }
 
-      // Stop current playback before starting new audio (important for concatenated sources)
-      // This ensures clean state transition when switching articles
+      // Stop current playback and background music before starting new audio
+      await _backgroundMusicService.stop();
+
       if (_audioPlayerService.isPlaying || _isPaused || _hasCompleted) {
         debugPrint(
           '🛑 Stopping current playback before starting new article...',
@@ -555,8 +575,7 @@ class AudioPlayerProvider with ChangeNotifier {
           await _playSequentialUrls(urlsToPlay);
         }
 
-        // Start background music with a small delay to ensure speech starts first
-        _startBackgroundMusicWithDelay();
+        // BG is started when player state transitions to playing (state listener)
       } else {
         // Detail screen: Play content URL (full article content audio)
         // Fallback to description URL if content URL is not available
@@ -580,8 +599,7 @@ class AudioPlayerProvider with ChangeNotifier {
         // Play the audio URL
         await _audioPlayerService.playFromUrl(audioUrl);
 
-        // Start background music with a small delay to ensure speech starts first
-        _startBackgroundMusicWithDelay();
+        // BG is started when player state transitions to playing (state listener)
       }
     } catch (e) {
       _error = e.toString();
@@ -590,6 +608,7 @@ class AudioPlayerProvider with ChangeNotifier {
       _isPaused = false;
       _hasCompleted = false; // Reset completion flag on error
       _currentArticle = null;
+      await _backgroundMusicService.stop();
       debugPrint('❌ Error playing article from URL: $e');
       notifyListeners();
       rethrow;
@@ -725,7 +744,7 @@ class AudioPlayerProvider with ChangeNotifier {
       '✅ Audio completed - isPlaying=$_isPlaying, playlist=${_playlist.length}, index=$_currentPlaylistIndex',
     );
 
-    // Stop background music when speech completes
+    // Stop background music when news completes (BG mirrors news)
     _backgroundMusicService.stop();
 
     // Notify listeners immediately to update UI (pause icon → play icon)
@@ -771,6 +790,8 @@ class AudioPlayerProvider with ChangeNotifier {
       _autoAdvanceTimer?.cancel();
       _isAutoAdvancing = false;
       _autoAdvanceFromIndex = null;
+      // Last article completed: ensure BG is stopped (no next news)
+      _backgroundMusicService.stop();
     }
   }
 
@@ -1016,49 +1037,21 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
-  /// Start background music with delay to ensure speech starts first
-  Future<void> _startBackgroundMusicWithDelay() async {
-    try {
-      // Wait a bit to ensure speech audio starts first
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // Start background music with retry logic
-      int retryCount = 0;
-      const maxRetries = 3;
-
-      while (retryCount < maxRetries) {
-        try {
-          debugPrint(
-              '🎵 Starting background music (attempt ${retryCount + 1}/$maxRetries)...');
-          await _backgroundMusicService.start();
-
-          // Verify it's actually playing
-          await Future.delayed(const Duration(milliseconds: 100));
-          if (_backgroundMusicService.isPlaying) {
-            debugPrint('✅ Background music started successfully');
-            notifyListeners(); // Update UI to show background music is playing
-            break;
-          } else {
-            throw Exception('Background music failed to start playing');
-          }
-        } catch (e) {
-          retryCount++;
-          debugPrint('❌ Background music start attempt $retryCount failed: $e');
-
-          if (retryCount >= maxRetries) {
-            debugPrint(
-                '❌ Failed to start background music after $maxRetries attempts');
-            // Continue without background music - don't fail the entire playback
-          } else {
-            // Wait before retry
-            await Future.delayed(const Duration(milliseconds: 1000));
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error in _startBackgroundMusicWithDelay: $e');
-      // Don't rethrow - continue without background music
-    }
+  /// Start background music when news is playing. Called from state listener when we transition to playing.
+  /// BG mirrors news: play with news, pause with news, stop with news.
+  void _startBackgroundMusicWhenPlaying() {
+    if (_currentArticle == null || _hasCompleted) return;
+    _backgroundMusicService.ensureInitialized().then((_) {
+      if (_currentArticle == null || _hasCompleted) return;
+      _backgroundMusicService.start().then((_) {
+        debugPrint('✅ Background music started (in parallel with news)');
+        notifyListeners();
+      }).catchError((e) {
+        debugPrint('⚠️ Background music start failed: $e');
+      });
+    }).catchError((e) {
+      debugPrint('⚠️ Background music init failed: $e');
+    });
   }
 
   /// Check if specific article is currently playing

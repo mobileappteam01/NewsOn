@@ -15,6 +15,54 @@
       },
       "oauth_client": [
         {
+          "client_id": "127869269941-6m4ufbajspu4i8if024lnofh3rl82rei.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "d47303a32af60db85778b59606ebac9f4787c7b3"
+          }
+        },
+        {
+          "client_id": "127869269941-897t89umgknv4dl0ca1cke85jsmcn40p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "d576881af1b1b2b0f548e4144f685c822e72eb8b"
+          }
+        },
+        {
+          "client_id": "127869269941-f65vol19stl4b76i336pmgbu6q429i5p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "fc4eef929bb3b8ea1dd365edea1464890f1c73d1"
+          }
+        },
+        {
+          "client_id": "127869269941-niu59npmoheikef1o50o5m2b92ccn26g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "4c1fdd8a15dda031a0c6a4bc40fa674e326c6631"
+          }
+        },
+        {
+          "client_id": "127869269941-oc53lthq3gvp1vtiibkknh3lr09m064t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "ccb192d43413ede1e8dbefe32af8c237fb111f69"
+          }
+        },
+        {
+          "client_id": "127869269941-pn2kugtot54na3niahpbe51qkcgavjcl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.newson",
+            "certificate_hash": "6e144224113678f59da50abccc6da20eaf7510fd"
+          }
+        },
+        {
           "client_id": "127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -40,10 +88,46 @@
               "client_type": 3
             },
             {
-              "client_id": "127869269941-ou3t16b5avnpdgj52hi0gnalgc7de76g.apps.googleusercontent.com",
+              "client_id": "127869269941-5mv02mc42higruabbmjd7mk084hne8l7.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.app.newson"
+                "bundle_id": "com.newson.application"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127869269941:android:7e7e7b6723c31cc9ca4bfc",
+        "android_client_info": {
+          "package_name": "com.newson.application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDje4TYPs2XPUz6RAnkQMkafCycudv69vM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "127869269941-5mv02mc42higruabbmjd7mk084hne8l7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.newson.application"
               }
             }
           ]

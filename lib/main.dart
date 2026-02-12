@@ -25,6 +25,7 @@ import 'providers/remote_config_provider.dart';
 import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
+import 'data/services/background_music_service.dart';
 import 'data/services/ad_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
@@ -109,7 +110,7 @@ void main() async {
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
   // await ApiConstants.initializeFromRealtimeDatabase();
 
-  // Initialize Google Mobile Ads SDK
+  // Initialize Google Mobile Ads SDK 
   await MobileAds.instance.initialize();
   debugPrint("✅ Google Mobile Ads SDK initialized");
 
@@ -142,6 +143,12 @@ void main() async {
     // Continue app launch - audio will still work but without background/notification support
     // This is critical - don't let this crash the app
   }
+
+  // Pre-initialize background music (fetch URL from Firebase) so first article gets BG
+  BackgroundMusicService().ensureInitialized().catchError((e) {
+    debugPrint('⚠️ Background music pre-init failed: $e');
+    return null;
+  });
 
   // Initialize FCM Service - Request permissions and get token ready
   // Note: This may fail on emulators without Google Play Services
@@ -275,8 +282,8 @@ class NewsOnApp extends StatelessWidget {
               arbSupportedLocales.contains(requestedLocale.languageCode)
                   ? requestedLocale
                   : const Locale(
-                    'en',
-                  ); // Fallback to English for AppLocalizations
+                      'en',
+                    ); // Fallback to English for AppLocalizations
 
           return MaterialApp(
             title: configProvider.config.appName,

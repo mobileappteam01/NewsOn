@@ -7,7 +7,7 @@
 	<key>REVERSED_CLIENT_ID</key>
 	<string>com.googleusercontent.apps.127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com</string>
+	<string>127869269941-6m4ufbajspu4i8if024lnofh3rl82rei.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyCZQFDLcfyOXQqEt9M5mDSQkwMOBl643II</string>
 	<key>GCM_SENDER_ID</key>
@@ -31,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:127869269941:ios:b4f754ab7decdd6cca4bfc</string>
+	<string>1:127869269941:ios:9983dbad5b6d848fca4bfc</string>
 	<key>DATABASE_URL</key>
 	<string>https://newson-dea6b-default-rtdb.firebaseio.com</string>
 </dict>

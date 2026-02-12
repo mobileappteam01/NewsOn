@@ -33,6 +33,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   double _contentTextSize = AppConstants.defaultTextSize;
   int _currentPageIndex = 0;
   bool _isAnimating = false; // Prevent duplicate animations
+  AudioPlayerProvider? _audioProvider; // Cached for safe use in dispose
 
   @override
   void initState() {
@@ -157,12 +158,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _audioProvider = context.read<AudioPlayerProvider>();
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Stop audio when leaving screen
-    final audioProvider = context.read<AudioPlayerProvider>();
-    if (audioProvider.hasCurrentArticle) {
-      audioProvider.stop();
+    // Stop audio when leaving screen (use cached ref - never use context in dispose)
+    if (_audioProvider != null && _audioProvider!.hasCurrentArticle) {
+      _audioProvider!.stop();
     }
     _pageController.dispose();
     super.dispose();
