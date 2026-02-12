@@ -14,8 +14,31 @@ class BackgroundMusicService {
   final AudioPlayer _player = AudioPlayer();
   bool _isInitialized = false;
   bool _isPlaying = false;
+  /// True only after start() has successfully run at least once this session.
+  /// Used so resume() does nothing if we never started (avoids play() with no source).
+  bool _wasStartedThisSession = false;
   String? _primaryMusicUrl;
   double _volume = 0.19; // Store volume separately
+  Completer<void>? _initCompleter;
+
+  /// Ensure service is initialized. Safe to call multiple times.
+  /// Returns a Future that completes when initialization is done (for first-time wait).
+  /// If init is already in progress, waits for it instead of starting a second one.
+  Future<void> ensureInitialized() async {
+    if (_isInitialized) return;
+    if (_initCompleter != null) {
+      return _initCompleter!.future;
+    }
+    _initCompleter = Completer<void>();
+    try {
+      await initialize();
+    } finally {
+      if (!_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+    }
+    return _initCompleter!.future;
+  }
 
   /// Initialize the background music service
   Future<void> initialize() async {
@@ -29,6 +52,9 @@ class BackgroundMusicService {
       await _player.setVolume(_volume);
       await _player.setLoopMode(LoopMode.one); // Loop the background music
       _isInitialized = true;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
       debugPrint(
           '🎵 BackgroundMusicService initialized with URL: $_primaryMusicUrl, volume: $_volume');
     } catch (e) {
@@ -42,10 +68,13 @@ class BackgroundMusicService {
       await _player.setVolume(_volume);
       await _player.setLoopMode(LoopMode.one);
       _isInitialized = true;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
     }
   }
 
-  /// Start playing background music
+  /// Start background music. Only plays when news is playing; call stop() when news stops.
   Future<void> start() async {
     if (!_isInitialized) await initialize();
 
@@ -59,21 +88,24 @@ class BackgroundMusicService {
       if (!_isPlaying) {
         debugPrint('🎵 Starting background music with URL: $_primaryMusicUrl');
 
-        // Set the URL and wait for it to load
+        // Set the URL and wait for it to load (important on first run)
         await _player.setUrl(_primaryMusicUrl!);
 
-        // Wait a bit to ensure the URL is loaded
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Brief wait for source to be ready (keep short so BG starts quickly)
+        await Future.delayed(const Duration(milliseconds: 150));
 
         // Start playback
         await _player.play();
         _isPlaying = true;
+        _wasStartedThisSession = true;
         debugPrint('🎵 Background music started successfully');
 
-        // Verify playback started
-        await Future.delayed(const Duration(milliseconds: 200));
+        // Brief verify (if we were stopped during this delay, treat as cancelled, don't throw)
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (!_isPlaying) return; // Stopped by stop() in the meantime - cancelled
         if (!_player.playing) {
           _isPlaying = false;
+          _wasStartedThisSession = false;
           debugPrint('❌ Background music failed to start playing');
           throw Exception('Background music failed to start');
         }
@@ -81,40 +113,48 @@ class BackgroundMusicService {
     } catch (e) {
       debugPrint('❌ Error starting background music: $e');
       _isPlaying = false;
+      _wasStartedThisSession = false;
       rethrow;
     }
   }
 
-  /// Stop background music
+  /// Stop background music. Call whenever news stops (pause, stop, complete, error, switch).
   Future<void> stop() async {
     try {
-      if (_isPlaying) {
+      if (_isPlaying || _player.processingState != ProcessingState.idle) {
         await _player.stop();
         _isPlaying = false;
         debugPrint('🛑 Background music stopped');
       }
     } catch (e) {
       debugPrint('❌ Error stopping background music: $e');
+      _isPlaying = false;
     }
   }
 
-  /// Pause background music
+  /// Pause background music. Pauses whenever the player has a loaded source
+  /// (not idle), so BG pauses even if user paused news before start() finished.
   Future<void> pause() async {
     try {
-      if (_isPlaying) {
+      if (_player.processingState != ProcessingState.idle) {
         await _player.pause();
         _isPlaying = false;
         debugPrint('⏸️ Background music paused');
       }
     } catch (e) {
       debugPrint('❌ Error pausing background music: $e');
+      _isPlaying = false;
     }
   }
 
-  /// Resume background music
+  /// Resume background music. No-op if we never started this session (avoids wrong play).
   Future<void> resume() async {
     try {
-      if (!_isPlaying) {
+      if (!_wasStartedThisSession) {
+        debugPrint('🎵 Background music resume skipped (was not started this session)');
+        return;
+      }
+      if (!_isPlaying && _player.processingState != ProcessingState.idle) {
         await _player.play();
         _isPlaying = true;
         debugPrint('▶️ Background music resumed');
@@ -144,16 +184,22 @@ class BackgroundMusicService {
   /// Check if service is initialized
   bool get isInitialized => _isInitialized;
 
-  /// Dispose the service
+  /// Dispose the service. Always stop first so no music plays after dispose.
   Future<void> dispose() async {
     try {
+      await stop();
       await _player.dispose();
       _isPlaying = false;
+      _wasStartedThisSession = false;
       _isInitialized = false;
       _primaryMusicUrl = null;
+      _initCompleter = null;
       debugPrint('🗑️ BackgroundMusicService disposed');
     } catch (e) {
       debugPrint('❌ Error disposing BackgroundMusicService: $e');
+      _isPlaying = false;
+      _wasStartedThisSession = false;
+      _isInitialized = false;
     }
   }
 

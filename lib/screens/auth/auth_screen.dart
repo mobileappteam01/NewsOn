@@ -6,8 +6,10 @@ import 'package:provider/provider.dart';
 
 import '../../providers/remote_config_provider.dart';
 import '../../data/services/google_auth_service.dart';
+import '../../data/services/apple_auth_service.dart';
 import '../../data/services/user_service.dart';
 import '../../widgets/google_signin_button.dart';
+import '../../widgets/apple_signin_button.dart';
 import '../onboarding/onboarding_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
   final GoogleAuthService _googleAuthService = GoogleAuthService();
+  final AppleAuthService _appleAuthService = AppleAuthService();
   final UserService _userService = UserService();
   bool _isLoading = false;
   late String _loadingMessage;
@@ -127,6 +130,84 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
+  Future<void> _handleAppleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _loadingMessage = 'Connecting to Apple...';
+    });
+
+    try {
+      // Step 1: Apple Sign-In
+      final credential = await _appleAuthService.signInWithApple();
+
+      // Check if user cancelled or if credential is null
+      if (credential == null) {
+        // User cancelled sign-in - this is normal, just dismiss loading
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      // Step 2: Extract user data from Apple credential
+      final appleUserData = _appleAuthService.extractUserData(credential);
+
+      // Step 3: Store Apple account data temporarily (for sign-up later)
+      // Note: Apple only provides email/name on FIRST sign-in
+      // We need to handle the case where email might be null on subsequent logins
+      final accountData = {
+        'displayName': appleUserData['displayName'] ?? 
+                       appleUserData['givenName'] ?? 
+                       'Apple User',
+        'email': appleUserData['email'] ?? 
+                 '${credential.userIdentifier}@privaterelay.appleid.com',
+        'id': credential.userIdentifier,
+        'photoUrl': null, // Apple doesn't provide photo
+        'authProvider': 'apple',
+        'identityToken': appleUserData['identityToken'],
+        'authorizationCode': appleUserData['authorizationCode'],
+      };
+      await _userService.saveTempGoogleAccount(accountData);
+
+      if (mounted) {
+        setState(() => _loadingMessage = LocalizationHelper.welcome(context));
+
+        // Small delay to show "Welcome!" message
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          // Navigate to onboarding screen (sign-up will happen after category selection)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          );
+        }
+      }
+    } catch (e) {
+      // Only show error for actual errors, not cancellations
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        // Check if it's a cancellation error
+        final errorString = e.toString().toLowerCase();
+        if (errorString.contains('cancel') ||
+            errorString.contains('cancelled')) {
+          // User cancelled - don't show error
+          return;
+        }
+
+        // Show error for actual failures
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Apple Sign-In failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<RemoteConfigProvider>(
@@ -197,6 +278,14 @@ class _AuthScreenState extends State<AuthScreen>
                         backgroundColor: config.cardBackgroundColorValue,
                         textColor: Colors.black,
                       ),
+                      // Show Apple Sign In button only on iOS
+                      if (AppleSignInButton.shouldShow) ...[
+                        giveHeight(12),
+                        AppleSignInButton(
+                          onPressed: _handleAppleSignIn,
+                          isLoading: _isLoading,
+                        ),
+                      ],
                       giveHeight(16),
                       Text(
                         'By continuing, you agree to our Terms & Privacy Policy',

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
+import '../../data/services/background_music_service.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../core/utils/localization_helper.dart';
@@ -239,6 +240,7 @@ showListenButton(
 ]) {
   return Builder(
     builder: (ctx) {
+      BackgroundMusicService _backgroundMusicService = BackgroundMusicService();
       final buildContext = context ?? ctx;
       return Consumer<AudioPlayerProvider>(
         builder: (context, audioProvider, child) {
@@ -257,12 +259,15 @@ showListenButton(
               if (isPlaying) {
                 // If this article is playing, pause it
                 audioProvider.pause();
+                // _backgroundMusicService.pause();
               } else if (isPaused) {
                 // If this article is paused, resume it
                 audioProvider.resume();
+                // _backgroundMusicService.resume();
               } else {
                 // Otherwise, start playing this article
                 onListenTapped();
+                // _backgroundMusicService.start();
               }
             },
             child: Container(
