@@ -119,13 +119,12 @@
       "description": "App Name Logo",
       "valueType": "STRING"
     },
-    "dark_theme_app_name_logo":{ 
+    "dark_theme_app_name_logo": {
       "defaultValue": {
         "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fdark_theme.png?alt=media&token=653bbdf7-7b8f-4de0-9854-ab6ed19c2518"
       },
       "description": "App Name Logo",
       "valueType": "STRING"
-      
     },
     "language_img": {
       "defaultValue": {
@@ -179,17 +178,24 @@
     "supported_languages": {
       "defaultValue": {
         "value": "[{\"code\":\"en\",\"name\":\"English\",\"nativeName\":\"English\",\"isDefault\":true,\"isActive\":true},{\"code\":\"ta\",\"name\":\"Tamil\",\"nativeName\":\"தமிழ்\",\"isDefault\":false,\"isActive\":true},{\"code\":\"ml\",\"name\":\"Malayalam\",\"nativeName\":\"മലയാളം\",\"isDefault\":false,\"isActive\":false},{\"code\":\"kn\",\"name\":\"Kannada\",\"nativeName\":\"ಕನ್ನಡ\",\"isDefault\":false,\"isActive\":false}]"
-      }, 
+      },
       "description": "List of supported languages for dynamic localization. Set isActive=false to hide a language from the selector.",
       "valueType": "STRING"
     },
-
+    "enable_voice_search": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Enable voice search in search tab",
+      "valueType": "STRING"
+    },
     "language_version": {
-      "defaultValue": { "value": "1.0.2" },
+      "defaultValue": {
+        "value": "1.0.2"
+      },
       "description": "Language version - increment to force app to re-download translations",
       "valueType": "STRING"
     }
-  
   },
   "version": {
     "versionNumber": "1",

@@ -101,6 +101,10 @@ class RemoteConfigModel {
 
   // Drawer Contents
   final List<dynamic> drawerMenu;
+
+  /// Voice search in search tab. When false, voice search button is hidden (feature not yet released).
+  final bool enableVoiceSearch;
+
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -197,6 +201,7 @@ class RemoteConfigModel {
     this.appIcon, // Dynamic app icon from Firebase Realtime Database
     // Drawer Contents
     this.drawerMenu = const [],
+    this.enableVoiceSearch = false,
   });
 
   // Helper method to convert hex string to Color
@@ -326,6 +331,7 @@ class RemoteConfigModel {
       'listenIcon': listenIcon,
       'appIcon': appIcon,
       'drawerMenu': drawerMenu,
+      'enableVoiceSearch': enableVoiceSearch,
     };
   }
 
@@ -424,6 +430,7 @@ class RemoteConfigModel {
       listenIcon: json['listenIcon'] as String? ?? '',
       appIcon: json['appIcon'] as String?,
       drawerMenu: json['drawerMenu'] as List<dynamic>? ?? const [],
+      enableVoiceSearch: json['enableVoiceSearch'] as bool? ?? false,
     );
   }
 

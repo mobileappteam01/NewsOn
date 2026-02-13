@@ -32,9 +32,10 @@ class _SearchTabState extends State<SearchTab>
   final List<String> _recentSearches = [];
   Timer? _debounceTimer;
 
-  // Voice search
+  // Voice search (controlled by Remote Config: enableVoiceSearch)
   final VoiceSearchService _voiceSearchService = VoiceSearchService();
   bool _isVoiceSearchInitialized = false;
+  bool _isInitializingVoiceSearch = false;
   bool _isListening = false;
   String _voiceSearchText = '';
   String _voiceSearchError = '';
@@ -45,8 +46,10 @@ class _SearchTabState extends State<SearchTab>
     super.initState();
     // Listen to scroll for pagination
     _scrollController.addListener(_onScroll);
-    // Initialize voice search
-    _initializeVoiceSearch();
+    // Initialize voice search only when Remote Config enables it
+    if (context.read<RemoteConfigProvider>().config.enableVoiceSearch) {
+      _initializeVoiceSearch();
+    }
     // Listen for language changes
     context.read<LanguageProvider>().addListener(_onLanguageChanged);
   }
@@ -463,51 +466,7 @@ class _SearchTabState extends State<SearchTab>
                       decoration: InputDecoration(
                         hintText: 'Search news...',
                         prefixIcon: const Icon(Icons.search),
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Voice search button
-                            if (_isVoiceSearchInitialized)
-                              IconButton(
-                                icon: _isListening
-                                    ? Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.stop,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      )
-                                    : Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: remoteConfig.primaryColorValue,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.mic,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                onPressed: _startVoiceSearch,
-                              ),
-                            // Clear button
-                            if (_searchController.text.isNotEmpty)
-                              IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  context.read<NewsProvider>().clearSearch();
-                                  setState(() {});
-                                },
-                              ),
-                          ],
-                        ),
+                        suffixIcon: _buildSearchSuffixIcons(remoteConfig),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(
                             AppConstants.borderRadius,
@@ -532,10 +491,11 @@ class _SearchTabState extends State<SearchTab>
                       },
                     ),
 
-                    // Voice search status with enhanced feedback
-                    if (_isListening ||
-                        _voiceSearchText.isNotEmpty ||
-                        _voiceSearchError.isNotEmpty)
+                    // Voice search status with enhanced feedback (only when feature is enabled)
+                    if (remoteConfig.enableVoiceSearch &&
+                        (_isListening ||
+                            _voiceSearchText.isNotEmpty ||
+                            _voiceSearchError.isNotEmpty))
                       Container(
                         margin: const EdgeInsets.only(top: 8),
                         padding: const EdgeInsets.all(12),
@@ -772,6 +732,65 @@ class _SearchTabState extends State<SearchTab>
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds suffix icons for the search field: voice search (when enabled by Remote Config) and clear.
+  Widget _buildSearchSuffixIcons(RemoteConfigModel remoteConfig) {
+    // Lazy-init voice search when Remote Config enables it after app load (e.g. after config refresh)
+    if (remoteConfig.enableVoiceSearch &&
+        !_isVoiceSearchInitialized &&
+        !_isInitializingVoiceSearch) {
+      _isInitializingVoiceSearch = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeVoiceSearch().then((_) {
+          if (mounted) setState(() {});
+        });
+      });
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (remoteConfig.enableVoiceSearch && _isVoiceSearchInitialized)
+          IconButton(
+            icon: _isListening
+                ? Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.stop,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: remoteConfig.primaryColorValue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mic,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+            onPressed: _startVoiceSearch,
+          ),
+        if (_searchController.text.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: () {
+              _searchController.clear();
+              context.read<NewsProvider>().clearSearch();
+              setState(() {});
+            },
+          ),
+      ],
     );
   }
 

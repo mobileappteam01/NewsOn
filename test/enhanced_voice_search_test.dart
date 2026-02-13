@@ -448,8 +448,9 @@ void main() {
         }
 
         // Check consistency (variations should be within reasonable bounds)
-        final avgDuration =
-            sessionDurations.reduce((a, b) => a + b) / sessionDurations.length;
+        final avgDuration = sessionDurations.reduce((a, b) => a + b)
+            // / sessionDurations.length
+            ;
         final avgResults =
             resultCounts.reduce((a, b) => a + b) / resultCounts.length;
 

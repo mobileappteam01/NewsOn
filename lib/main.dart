@@ -110,7 +110,7 @@ void main() async {
   // Uncomment the line below if you want real-time updates from Firebase Realtime Database
   // await ApiConstants.initializeFromRealtimeDatabase();
 
-  // Initialize Google Mobile Ads SDK 
+  // Initialize Google Mobile Ads SDK
   await MobileAds.instance.initialize();
   debugPrint("✅ Google Mobile Ads SDK initialized");
 

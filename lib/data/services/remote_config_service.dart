@@ -214,6 +214,9 @@ class RemoteConfigService {
         {'code': 'ta', 'name': 'Tamil', 'nativeName': 'தமிழ்', 'isDefault': true, 'isActive': true, 'flagEmoji': '🇮🇳'},
       ]),
       'language_version': '1.0.0',
+
+      // Feature flags
+      'enable_voice_search': false,
     };
   }
 
@@ -360,6 +363,9 @@ class RemoteConfigService {
 
       // Drawer Content - Safe JSON parsing with fallback
       drawerMenu: _safeJsonDecode(_remoteConfig.getString('drawer_menu'), []),
+
+      // Feature flags
+      enableVoiceSearch: _remoteConfig.getBool('enable_voice_search'),
     );
   }
 

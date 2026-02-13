@@ -296,52 +296,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 LocalizationHelper.menu(context),
                 onTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: config.secondaryColorValue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    _buildBottomNavItem(
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        color:
-                            _currentIndex == 0
-                                ? config.primaryColorValue
-                                : theme.colorScheme.secondary,
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: config.secondaryColorValue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildBottomNavItem(
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            color:
+                                _currentIndex == 0
+                                    ? config.primaryColorValue
+                                    : theme.colorScheme.secondary,
+                          ),
+                          LocalizationHelper.today(context),
+                          onTap: () => setState(() => _currentIndex = 0),
+                          isSelected: _currentIndex == 0,
+                        ),
                       ),
-                      LocalizationHelper.today(context),
-                      onTap: () => setState(() => _currentIndex = 0),
-                      isSelected: _currentIndex == 0,
-                    ),
-                    _buildBottomNavItem(
-                      Image.network(
-                        config.headlineImg,
-                        height: 24,
-                        color:
-                            _currentIndex == 1
-                                ? config.primaryColorValue
-                                : theme.colorScheme.secondary,
-                      ),
+                      Expanded(
+                        child: _buildBottomNavItem(
+                          Image.network(
+                            config.headlineImg,
+                            height: 24,
+                            color:
+                                _currentIndex == 1
+                                    ? config.primaryColorValue
+                                    : theme.colorScheme.secondary,
+                          ),
 
-                      LocalizationHelper.headlines(context),
-                      onTap: () => setState(() => _currentIndex = 1),
-                      isSelected: _currentIndex == 1,
-                    ),
-                    _buildBottomNavItem(
-                      Icon(
-                        Icons.bookmark_border,
-                        color:
-                            _currentIndex == 2
-                                ? config.primaryColorValue
-                                : theme.colorScheme.secondary,
+                          LocalizationHelper.headlines(context),
+                          onTap: () => setState(() => _currentIndex = 1),
+                          isSelected: _currentIndex == 1,
+                        ),
                       ),
-                      LocalizationHelper.forLater(context),
-                      onTap: () => setState(() => _currentIndex = 2),
-                      isSelected: _currentIndex == 2,
-                    ),
-                  ],
+                      Expanded(
+                        child: _buildBottomNavItem(
+                          Icon(
+                            Icons.bookmark_border,
+                            color:
+                                _currentIndex == 2
+                                    ? config.primaryColorValue
+                                    : theme.colorScheme.secondary,
+                          ),
+                          LocalizationHelper.forLater(context),
+                          onTap: () => setState(() => _currentIndex = 2),
+                          isSelected: _currentIndex == 2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               _buildBottomNavItem(
@@ -381,6 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 6),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: isSelected ? selectedColor : Colors.grey[600],
                 fontSize: 10,
