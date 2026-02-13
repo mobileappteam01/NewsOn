@@ -127,7 +127,7 @@ class BackendNewsService {
   /// [language] - Language code (e.g., 'en', 'ta', 'hi')
   /// [limit] - Number of items to fetch
   /// [page] - Page number for pagination
-  /// 
+  ///
   /// API Format: /getActiveNewsMobile?category=top&category=lifestyle
   /// Multiple categories are passed as repeated query parameters
   Future<NewsResponse> fetchNewsByCategory({
@@ -143,7 +143,7 @@ class BackendNewsService {
       debugPrint(
         '   Category: $category, Language Code: $language → Language Name: $languageName, Limit: $limit, Page: $page',
       );
-      
+
       // Build query parameters
       // Category can be a single value or comma-separated list
       final queryParameters = <String, String>{
@@ -180,13 +180,13 @@ class BackendNewsService {
       rethrow;
     }
   }
-  
+
   /// Fetch news by multiple categories from backend
   /// [categories] - List of category names (e.g., ['business', 'sports'])
   /// [language] - Language code (e.g., 'en', 'ta', 'hi')
   /// [limit] - Number of items to fetch
   /// [page] - Page number for pagination
-  /// 
+  ///
   /// API Format: /getActiveNewsMobile?category=top&category=lifestyle
   Future<NewsResponse> fetchNewsByCategories({
     required List<String> categories,
@@ -201,7 +201,7 @@ class BackendNewsService {
       debugPrint(
         '   Categories: ${categories.join(", ")}, Language: $languageName, Limit: $limit, Page: $page',
       );
-      
+
       // Build base query parameters
       final queryParameters = <String, dynamic>{
         if (languageName != null && languageName.isNotEmpty)
@@ -337,8 +337,7 @@ class BackendNewsService {
           }
         } else {
           // Fallback: try to get from root level
-          totalResults =
-              data['total'] as int? ??
+          totalResults = data['total'] as int? ??
               data['totalResults'] as int? ??
               data['total_results'] as int? ??
               results.length;
@@ -352,25 +351,23 @@ class BackendNewsService {
         }
 
         // Get status/message
-        final status =
-            data['message'] as String? ??
+        final status = data['message'] as String? ??
             data['status'] as String? ??
             'success';
 
         // Parse articles
-        final articles =
-            results
-                .map((item) {
-                  try {
-                    return NewsArticle.fromJson(item as Map<String, dynamic>);
-                  } catch (e) {
-                    debugPrint('⚠️ Error parsing article: $e');
-                    debugPrint('Article data: $item');
-                    return null;
-                  }
-                })
-                .whereType<NewsArticle>()
-                .toList();
+        final articles = results
+            .map((item) {
+              try {
+                return NewsArticle.fromJson(item as Map<String, dynamic>);
+              } catch (e) {
+                debugPrint('⚠️ Error parsing article: $e');
+                debugPrint('Article data: $item');
+                return null;
+              }
+            })
+            .whereType<NewsArticle>()
+            .toList();
 
         debugPrint('✅ Parsed ${articles.length} articles from backend API');
         debugPrint('   Total: $totalResults, Page: $currentPage/$totalPages');

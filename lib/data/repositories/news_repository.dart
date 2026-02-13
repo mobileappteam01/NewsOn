@@ -10,7 +10,7 @@ class NewsRepository {
   final BackendNewsService _backendService;
 
   NewsRepository({required String apiKey, BackendNewsService? backendService})
-    : _backendService = backendService ?? BackendNewsService();
+      : _backendService = backendService ?? BackendNewsService();
 
   /// Fetch news with optional filters (deprecated - use specific methods)
   /// This method is kept for backward compatibility but should use specific methods
@@ -58,12 +58,11 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults =
-          response.results.map((article) {
-            final key = article.articleId ?? article.title;
-            final isBookmarked = StorageService.isBookmarked(key);
-            return article.copyWith(isBookmarked: isBookmarked);
-          }).toList();
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
 
       // Cache articles for offline use (only first page)
       if (page == 1) {
@@ -101,12 +100,11 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults =
-          response.results.map((article) {
-            final key = article.articleId ?? article.title;
-            final isBookmarked = StorageService.isBookmarked(key);
-            return article.copyWith(isBookmarked: isBookmarked);
-          }).toList();
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
 
       // Cache articles for offline use (only first page)
       if (page == 1) {
@@ -144,12 +142,11 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults =
-          response.results.map((article) {
-            final key = article.articleId ?? article.title;
-            final isBookmarked = StorageService.isBookmarked(key);
-            return article.copyWith(isBookmarked: isBookmarked);
-          }).toList();
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
 
       // Cache search results for offline use (only first page)
       if (page == 1) {
@@ -184,12 +181,11 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults =
-          response.results.map((article) {
-            final key = article.articleId ?? article.title;
-            final isBookmarked = StorageService.isBookmarked(key);
-            return article.copyWith(isBookmarked: isBookmarked);
-          }).toList();
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
 
       // Cache breaking news for offline use (only first page)
       if (page == 1) {
@@ -227,12 +223,11 @@ class NewsRepository {
       );
 
       // Update bookmark status for fetched articles
-      final updatedResults =
-          response.results.map((article) {
-            final key = article.articleId ?? article.title;
-            final isBookmarked = StorageService.isBookmarked(key);
-            return article.copyWith(isBookmarked: isBookmarked);
-          }).toList();
+      final updatedResults = response.results.map((article) {
+        final key = article.articleId ?? article.title;
+        final isBookmarked = StorageService.isBookmarked(key);
+        return article.copyWith(isBookmarked: isBookmarked);
+      }).toList();
 
       // Cache today's news for offline use (only first page)
       if (page == 1) {

@@ -72,29 +72,27 @@ Widget showImage(String? url, BoxFit fit, {double? height, double? width}) {
         width: width ?? MediaQuery.of(context).size.width,
         height: height ?? 250,
         fit: fit,
-        placeholder:
-            (context, url) => Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: Container(
-                width: width ?? MediaQuery.of(context).size.width,
-                height: height ?? 250,
-                color: Colors.grey.shade300,
-              ),
+        placeholder: (context, url) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: width ?? MediaQuery.of(context).size.width,
+            height: height ?? 250,
+            color: Colors.grey.shade300,
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          width: width ?? MediaQuery.of(context).size.width,
+          height: height ?? 250,
+          color: Colors.grey.shade200,
+          child: const Center(
+            child: Icon(
+              Icons.image_not_supported,
+              color: Colors.grey,
+              size: 48,
             ),
-        errorWidget:
-            (context, url, error) => Container(
-              width: width ?? MediaQuery.of(context).size.width,
-              height: height ?? 250,
-              color: Colors.grey.shade200,
-              child: const Center(
-                child: Icon(
-                  Icons.image_not_supported,
-                  color: Colors.grey,
-                  size: 48,
-                ),
-              ),
-            ),
+          ),
+        ),
       );
     },
   );
@@ -214,14 +212,13 @@ showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
     onTap: () => onTapped(),
     child: Icon(
       isSaved ? Icons.bookmark : Icons.bookmark_border,
-      color:
-          isSaved
-              ? (isDark
-                  ? theme.primaryColor
-                  : const Color(0xFFE31E24)) // Red when bookmarked
-              : (isDark
-                  ? Colors.grey[400]
-                  : Colors.grey[600]), // Grey when not bookmarked
+      color: isSaved
+          ? (isDark
+              ? theme.primaryColor
+              : const Color(0xFFE31E24)) // Red when bookmarked
+          : (isDark
+              ? Colors.grey[400]
+              : Colors.grey[600]), // Grey when not bookmarked
       size: 24,
     ),
   );
@@ -232,11 +229,13 @@ showSaveButton(bool isSaved, Function() onTapped, ThemeData theme) {
 /// [onListenTapped] - Callback when button is tapped (play action)
 /// [article] - The article this button is for (used to check if this article is playing)
 /// [context] - Optional BuildContext
+/// [isCompact] - Whether to show compact version for rectangular cards
 showListenButton(
   RemoteConfigModel config,
   Function() onListenTapped, [
   BuildContext? context,
   NewsArticle? article,
+  bool isCompact = false,
 ]) {
   return Builder(
     builder: (ctx) {
@@ -249,11 +248,11 @@ showListenButton(
           final isThisArticlePlaying = article != null &&
               currentArticle != null &&
               _isSameArticle(article, currentArticle);
-          
+
           final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
           final isPaused = isThisArticlePlaying && audioProvider.isPaused;
           final isLoading = isThisArticlePlaying && audioProvider.isLoading;
-          
+
           return GestureDetector(
             onTap: () {
               if (isPlaying) {
@@ -271,11 +270,13 @@ showListenButton(
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: isCompact
+                  ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6)
+                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isPlaying || isPaused 
-                    ? config.primaryColorValue 
+                borderRadius: BorderRadius.circular(isCompact ? 8 : 12),
+                color: isPlaying || isPaused
+                    ? config.primaryColorValue
                     : config.primaryColorValue,
               ),
               child: Row(
@@ -283,50 +284,51 @@ showListenButton(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isLoading)
-                    const SizedBox(
-                      width: 15,
-                      height: 15,
+                    SizedBox(
+                      width: isCompact ? 12 : 15,
+                      height: isCompact ? 12 : 15,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   else if (isPlaying)
-                    const Icon(
+                    Icon(
                       Icons.pause,
                       color: Colors.white,
-                      size: 15,
+                      size: isCompact ? 12 : 15,
                     )
                   else if (isPaused)
-                    const Icon(
+                    Icon(
                       Icons.play_arrow,
                       color: Colors.white,
-                      size: 15,
+                      size: isCompact ? 12 : 15,
                     )
                   else
                     showImage(
                       config.listenIcon,
                       BoxFit.contain,
-                      height: 15,
-                      width: 15,
+                      height: isCompact ? 12 : 15,
+                      width: isCompact ? 12 : 15,
                     ),
-                  giveWidth(12),
-                  Flexible(
-                    child: Text(
-                      isPlaying 
-                          ? 'Playing...' 
-                          : isPaused 
-                              ? 'Paused' 
-                              : LocalizationHelper.listen(buildContext),
-                      style: GoogleFonts.playfair(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 15,
+                  if (!isCompact) giveWidth(12),
+                  if (!isCompact)
+                    Flexible(
+                      child: Text(
+                        isPlaying
+                            ? 'Playing...'
+                            : isPaused
+                                ? 'Paused'
+                                : LocalizationHelper.listen(buildContext),
+                        style: GoogleFonts.playfair(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                          fontSize: isCompact ? 12 : 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
                     ),
-                  ),
                 ],
               ),
             ),
@@ -340,7 +342,10 @@ showListenButton(
 /// Helper function to check if two articles are the same
 bool _isSameArticle(NewsArticle a, NewsArticle b) {
   // First try to match by articleId
-  if (a.articleId != null && b.articleId != null && a.articleId!.isNotEmpty && b.articleId!.isNotEmpty) {
+  if (a.articleId != null &&
+      b.articleId != null &&
+      a.articleId!.isNotEmpty &&
+      b.articleId!.isNotEmpty) {
     return a.articleId == b.articleId;
   }
   // Fallback to title comparison

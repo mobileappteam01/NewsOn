@@ -111,26 +111,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         children: [
                           Text(
                             LocalizationHelper.welcomeTitleText(context),
-                            style: GoogleFonts.playfair(
+                            style: GoogleFonts.roboto(
                               fontSize: config.displayLargeFontSize,
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.secondary,
                             ),
                           ),
-
                           Text(
                             _name.toUpperCase(),
-                            style: GoogleFonts.playfair(
+                            style: GoogleFonts.roboto(
                               color: config.primaryColorValue,
                               fontSize: 50,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-
                           Text(
                             LocalizationHelper.welcomeDescText(context),
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.playfair(
+                            style: GoogleFonts.roboto(
                               fontSize: config.displaySmallFontSize,
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.tertiary,
@@ -175,4 +173,3 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
-

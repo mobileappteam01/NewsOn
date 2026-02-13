@@ -17,6 +17,23 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _isDragging = false;
   Duration _dragPosition = Duration.zero;
 
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            FullScreenImageView(
+          imageUrl: imageUrl,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use Consumer to listen to AudioPlayerProvider changes
@@ -88,62 +105,159 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   ),
                 ),
 
-                // Album Art / Article Image
+                // Album Art / Article Image - Improved Responsive Rendering
                 Expanded(
-                  child: Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 40),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 30,
-                            spreadRadius: 10,
+                  child: Padding(
+                    padding: const EdgeInsets.all(0.0),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          decoration: BoxDecoration(
+                            // color: Colors.grey[900],
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: article.imageUrl != null
-                              ? CachedNetworkImage(
-                                  imageUrl: article.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: Colors.grey[900],
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                      Container(
-                                    color: Colors.grey[900],
-                                    child: Icon(
-                                      Icons.article,
-                                      color: Colors.grey[600],
-                                      size: 80,
-                                    ),
-                                  ),
-                                )
-                              : Container(
-                                  color: Colors.grey[900],
-                                  child: Icon(
-                                    Icons.article,
-                                    color: Colors.grey[600],
-                                    size: 80,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              children: [
+                                // Main image with improved rendering
+                                GestureDetector(
+                                  onTap: () {
+                                    if (article.imageUrl != null) {
+                                      _showFullScreenImage(
+                                          context, article.imageUrl!);
+                                    }
+                                  },
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    child: article.imageUrl != null
+                                        ? CachedNetworkImage(
+                                            imageUrl: article.imageUrl!,
+                                            fit: BoxFit
+                                                .contain, // Preserve aspect ratio, show full image
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            placeholder: (context, url) =>
+                                                Container(
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              color: Colors.grey[900],
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    Text(
+                                                      'Loading image...',
+                                                      style: GoogleFonts.inter(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    Container(
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              color: Colors.grey[900],
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey[600],
+                                                      size: 64,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    Text(
+                                                      'Image not available',
+                                                      style: GoogleFonts.inter(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            color: Colors.grey[900],
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.article,
+                                                    color: Colors.grey[600],
+                                                    size: 64,
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    'No image available',
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.grey[600],
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                 ),
-                        ),
-                      ),
+                                // Visual indicator for full screen viewing
+                                // if (article.imageUrl != null)
+                                  // Positioned(
+                                  //   top: 12,
+                                  //   right: 12,
+                                  //   child: Container(
+                                  //     padding: const EdgeInsets.all(8),
+                                  //     decoration: BoxDecoration(
+                                  //       color: Colors.black.withOpacity(0.5),
+                                  //       borderRadius: BorderRadius.circular(20),
+                                  //     ),
+                                  //     child: Icon(
+                                  //       Icons.fullscreen,
+                                  //       color: Colors.white,
+                                  //       size: 20,
+                                  //     ),
+                                  //   ),
+                                  // ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
 
-                // Article Info
+                // Article Information
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
@@ -604,6 +718,138 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full Screen Image Viewer Widget
+class FullScreenImageView extends StatelessWidget {
+  final String imageUrl;
+
+  const FullScreenImageView({
+    super.key,
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Full screen image
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 3.0,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (context, url) => Container(
+                    color: Colors.black,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading image...',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.black,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image,
+                            color: Colors.grey[600],
+                            size: 64,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Image not available',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Close button
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+            // Image info hint
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.zoom_in,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pinch to zoom • Tap to close',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

@@ -135,24 +135,25 @@ class _SplashScreenState extends State<SplashScreen>
                         children: [
                           Text(
                             LocalizationHelper.welcomeTo(context),
-                            style: GoogleFonts.playfair(
+                            style: GoogleFonts.roboto(
                               fontSize: config.splashWelcomeFontSize,
                               fontWeight: config.splashWelcomeFontWeightValue,
                               color: theme.colorScheme.secondary,
-
-                              letterSpacing: config.splashWelcomeLetterSpacing,
-                            ),
+                            ).copyWith(
+                                letterSpacing:
+                                    config.splashWelcomeLetterSpacing),
                             textAlign: TextAlign.center,
                           ),
                           giveHeight(6),
                           Text(
                             LocalizationHelper.appName(context),
-                            style: GoogleFonts.playfair(
+                            style: GoogleFonts.roboto(
                               fontSize: config.splashAppNameFontSize,
                               fontWeight: config.splashAppNameFontWeightValue,
                               color: primaryColor,
-                              letterSpacing: config.splashAppNameLetterSpacing,
-                            ),
+                            ).copyWith(
+                                letterSpacing:
+                                    config.splashAppNameLetterSpacing),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -178,7 +179,7 @@ class _SplashScreenState extends State<SplashScreen>
                         LocalizationHelper.swipeToGetStarted(context),
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: config.splashSwipeFontSize,
+                          fontSize: 14,
                           fontWeight: config.splashSwipeFontWeightValue,
                         ),
                       ),
@@ -201,4 +202,3 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 }
-

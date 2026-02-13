@@ -1,9 +1,9 @@
 // ignore_for_file: must_be_immutable, deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/core/utils/localization_helper.dart';
+import 'package:newson/core/services/font_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../data/models/news_article.dart';
@@ -42,14 +42,15 @@ class NewsGridView extends StatelessWidget {
         return type.toLowerCase() == 'listview'
             ? showListView(config, newsDetails, context, theme)
             : type.toLowerCase() == 'cardview'
-            ? showCardView(config, newsDetails, context, theme)
-            : type.toLowerCase() == 'thumbnail'
-            ? showThumbNailView(config, newsDetails, context, theme)
-            : type.toLowerCase() == 'detailedview'
-            ? showDetailedView(config, newsDetails, context, theme)
-            : type.toLowerCase() == 'bannerview'
-            ? showBannerView(config, newsDetails, context, theme)
-            : showListView(config, newsDetails, context, theme);
+                ? showCardView(config, newsDetails, context, theme)
+                : type.toLowerCase() == 'thumbnail'
+                    ? showThumbNailView(config, newsDetails, context, theme)
+                    : type.toLowerCase() == 'detailedview'
+                        ? showDetailedView(config, newsDetails, context, theme)
+                        : type.toLowerCase() == 'bannerview'
+                            ? showBannerView(
+                                config, newsDetails, context, theme)
+                            : showListView(config, newsDetails, context, theme);
       },
     );
   }
@@ -77,21 +78,19 @@ class NewsGridView extends StatelessWidget {
     ThemeData theme,
     BuildContext context,
   ) {
-    if (type.toLowerCase() == 'category') { 
+    if (type.toLowerCase() == 'category') {
       return Text(
-        newsDetails.category!.isNotEmpty
-            ? newsDetails.category![0]
-            : "",
-        style: GoogleFonts.inter(
+        newsDetails.category!.isNotEmpty ? newsDetails.category![0] : "",
+        style: FontManager.newsCategory.copyWith(
           color: config.primaryColorValue,
-          fontWeight: FontWeight.w500,
           fontSize: 11,
         ),
       );
     } else if (type.toLowerCase() == 'postedtime') {
       return Text(
         _getTimeAgo(newsDetails),
-        style: GoogleFonts.inter(color: config.primaryColorValue),
+        style:
+            FontManager.newsTimestamp.copyWith(color: config.primaryColorValue),
       );
     } else if (type.toLowerCase() == 'save') {
       // Bookmark icon - synced with BookmarkProvider
@@ -104,14 +103,13 @@ class NewsGridView extends StatelessWidget {
             onTap: () => onSaveTapped(),
             child: Icon(
               isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              color:
-                  isBookmarked
-                      ? (isDark
-                          ? theme.primaryColor
-                          : const Color(0xFFE31E24)) // Red when bookmarked
-                      : (isDark
-                          ? Colors.grey[400]
-                          : Colors.grey[600]), // Grey when not bookmarked
+              color: isBookmarked
+                  ? (isDark
+                      ? theme.primaryColor
+                      : const Color(0xFFE31E24)) // Red when bookmarked
+                  : (isDark
+                      ? Colors.grey[400]
+                      : Colors.grey[600]), // Grey when not bookmarked
               size: 24,
             ),
           );
@@ -127,8 +125,7 @@ class NewsGridView extends StatelessWidget {
       builder: (context, audioProvider, child) {
         // Check if this specific article is currently playing or paused
         final currentArticle = audioProvider.currentArticle;
-        final isThisArticlePlaying =
-            currentArticle != null &&
+        final isThisArticlePlaying = currentArticle != null &&
             _isSameArticle(newsDetails, currentArticle);
 
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
@@ -181,11 +178,10 @@ class NewsGridView extends StatelessWidget {
                     isPlaying
                         ? 'Playing...'
                         : isPaused
-                        ? 'Paused'
-                        : LocalizationHelper.listen(context),
-                    style: GoogleFonts.playfair(
+                            ? 'Paused'
+                            : LocalizationHelper.listen(context),
+                    style: FontManager.button.copyWith(
                       color: Colors.white,
-                      fontWeight: FontWeight.w400,
                       fontSize: 15,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -215,8 +211,7 @@ class NewsGridView extends StatelessWidget {
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
         final currentArticle = audioProvider.currentArticle;
-        final isThisArticlePlaying =
-            currentArticle != null &&
+        final isThisArticlePlaying = currentArticle != null &&
             _isSameArticle(newsDetails, currentArticle);
 
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
@@ -243,32 +238,31 @@ class NewsGridView extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child:
-                    isLoading
-                        ? const SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
-                        )
-                        : isPlaying
+                        ),
+                      )
+                    : isPlaying
                         ? const Icon(Icons.pause, color: Colors.white, size: 20)
                         : isPaused
-                        ? const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
-                          size: 20,
-                        )
-                        : showImage(
-                          config.listenIcon,
-                          BoxFit.contain,
-                          height: 15,
-                          width: 15,
-                        ),
+                            ? const Icon(
+                                Icons.play_arrow,
+                                color: Colors.white,
+                                size: 20,
+                              )
+                            : showImage(
+                                config.listenIcon,
+                                BoxFit.contain,
+                                height: 15,
+                                width: 15,
+                              ),
               ),
             ),
           ),
@@ -298,72 +292,82 @@ class NewsGridView extends StatelessWidget {
     BuildContext context,
     ThemeData theme,
   ) {
-    return GestureDetector(
-      onTap: () => onNewsTapped(),
-      child: Container(
-        margin: const EdgeInsets.only(top: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            showImage(
-              newsDetails.imageUrl ?? newsDetails.sourceIcon ?? '',
-              BoxFit.contain,
-              height: 200,
-              width: MediaQuery.of(context).size.width / 2.5,
-            ),
-            SizedBox(
-              width: MediaQuery.of(context).size.width / 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  showCommonWidget(
-                    config,
-                    'category',
-                    newsDetails,
-                    theme,
-                    context,
-                  ),
-                  giveHeight(3),
-                  SizedBox(
-                    child: Text(
-                      newsDetails.title,
-                      style: GoogleFonts.inriaSerif(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                      overflow: TextOverflow.visible,
-                    ),
-                  ),
-                  giveHeight(3),
-                  showCommonWidget(
-                    config,
-                    'postedtime',
-                    newsDetails,
-                    theme,
-                    context,
-                  ),
-                  giveHeight(3),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => onNewsTapped(),
+          child: Container(
+            margin: const EdgeInsets.only(top: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                showImage(
+                  newsDetails.imageUrl ?? newsDetails.sourceIcon ?? '',
+                  BoxFit.contain,
+                  height: MediaQuery.of(context).size.height / 5.5,
+                  width: MediaQuery.of(context).size.width / 2.5,
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      showListenButton(config, context),
                       showCommonWidget(
                         config,
-                        'save',
+                        'category',
                         newsDetails,
                         theme,
                         context,
                       ),
-                      showShareButton(theme),
+                      giveHeight(3),
+                      SizedBox(
+                        child: Text(
+                          newsDetails.title,
+                          style: FontManager.newsSubtitle.copyWith(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                      giveHeight(3),
+                      showCommonWidget(
+                        config,
+                        'postedtime',
+                        newsDetails,
+                        theme,
+                        context,
+                      ),
+                      giveHeight(3),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          showListenButton(config, context),
+                          showCommonWidget(
+                            config,
+                            'save',
+                            newsDetails,
+                            theme,
+                            context,
+                          ),
+                          showShareButton(theme),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        Divider(
+          color: Colors.grey.withOpacity(0.3),
+          thickness: 1.6,
+          endIndent: 5,
+          indent: 5,
+        ),
+      ],
     );
   }
 
@@ -379,7 +383,6 @@ class NewsGridView extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),
@@ -422,20 +425,17 @@ class NewsGridView extends StatelessWidget {
                       newsDetails.category!.isNotEmpty
                           ? newsDetails.category![0]
                           : "",
-                      style: GoogleFonts.inter(
+                      style: FontManager.newsCategory.copyWith(
                         color: const Color(0xFFE31E24),
-                        fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       newsDetails.title,
-                      style: GoogleFonts.playfairDisplay(
+                      style: FontManager.newsTitle.copyWith(
                         fontSize: 20,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -481,7 +481,6 @@ class NewsGridView extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),
@@ -524,11 +523,9 @@ class NewsGridView extends StatelessWidget {
                     const SizedBox(height: 14),
                     Text(
                       newsDetails.title,
-                      style: GoogleFonts.playfairDisplay(
+                      style: FontManager.newsTitle.copyWith(
                         fontSize: 16,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,

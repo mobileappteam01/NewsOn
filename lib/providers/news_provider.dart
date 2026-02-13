@@ -14,8 +14,8 @@ class NewsProvider with ChangeNotifier {
   String _currentLanguageCode = 'ta'; // Default to Tamil
 
   NewsProvider({NewsRepository? repository, LanguageProvider? languageProvider})
-    : _repository = repository ?? NewsRepository(apiKey: ""),
-      _languageProvider = languageProvider {
+      : _repository = repository ?? NewsRepository(apiKey: ""),
+        _languageProvider = languageProvider {
     // Listen to language changes if provider is available
     _languageProvider?.addListener(_onLanguageChanged);
     if (_languageProvider != null) {
@@ -99,7 +99,7 @@ class NewsProvider with ChangeNotifier {
   String? _currentCategory;
   String? _currentQuery;
   DateTime? _selectedDate; // Selected date for archive news
-  
+
   // Category API service
   final CategoryApiService _categoryApiService = CategoryApiService();
 
@@ -259,22 +259,23 @@ class NewsProvider with ChangeNotifier {
   /// Fetch available categories from API
   Future<void> fetchCategories() async {
     if (_isLoadingCategories) return;
-    
+
     try {
       _isLoadingCategories = true;
       notifyListeners();
-      
+
       debugPrint('📂 Fetching categories from API...');
       final response = await _categoryApiService.getCategories(limit: 50);
-      
+
       if (response.success) {
         _categories = response.categories;
         debugPrint('✅ Categories fetched: ${_categories.length} categories');
-        debugPrint('   Categories: ${_categories.map((c) => c.name).join(", ")}');
+        debugPrint(
+            '   Categories: ${_categories.map((c) => c.name).join(", ")}');
       } else {
         debugPrint('❌ Failed to fetch categories: ${response.message}');
       }
-      
+
       _isLoadingCategories = false;
       notifyListeners();
     } catch (e) {
@@ -290,29 +291,30 @@ class NewsProvider with ChangeNotifier {
   /// [limit] - Number of items to fetch (default: 10)
   Future<void> fetchCategoryNews(String categoryName, {int limit = 10}) async {
     if (_isLoadingCategoryNews) return;
-    
+
     try {
       _isLoadingCategoryNews = true;
       _currentCategory = categoryName;
       _error = null;
       notifyListeners();
-      
+
       debugPrint('📰 Fetching news for category: $categoryName');
-      
+
       // Update language code from provider if available
       if (_languageProvider != null) {
         _currentLanguageCode = _languageProvider!.getApiLanguageCode();
       }
-      
+
       final response = await _repository.fetchNewsByCategory(
         categoryName,
         language: _currentLanguageCode,
         limit: limit,
       );
-      
+
       _categoryNews = response.results;
       _isLoadingCategoryNews = false;
-      debugPrint('✅ Category news fetched: ${_categoryNews.length} articles for $categoryName');
+      debugPrint(
+          '✅ Category news fetched: ${_categoryNews.length} articles for $categoryName');
       notifyListeners();
     } catch (e) {
       debugPrint('❌ Error fetching category news: $e');
@@ -575,7 +577,7 @@ class NewsProvider with ChangeNotifier {
 
       notifyListeners();
 
-      // Format date as YYYY-MM-DD
+      // Format date as YYYY-MM-DD  
       final dateString = _formatDate(_selectedDate!);
 
       // Update language code from provider if available
