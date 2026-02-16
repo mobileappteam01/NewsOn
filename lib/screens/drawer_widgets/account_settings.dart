@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../providers/language_provider.dart';
 import '../../data/services/profile_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/location_service.dart';
 import '../../screens/auth/auth_screen.dart';
 
 class AccountSettings extends StatefulWidget {
@@ -30,16 +33,91 @@ class _AccountSettingsState extends State<AccountSettings> {
 
   String? selectedCity;
   String? selectedCountry;
+  DateTime? selectedDateOfBirth;
   bool _isLoading = false;
   bool _isLoadingProfile = true;
 
-  final List<String> cities = ['Chennai', 'Coimbatore', 'Madurai', 'Salem'];
-  final List<String> countries = ['India', 'USA', 'UK', 'Canada'];
+  // Dynamic location data
+  List<City> _cities = [];
+  List<Country> _countries = [];
+  bool _isLoadingCities = false;
+  bool _isLoadingCountries = false;
+  bool _citiesError = false;
+  bool _countriesError = false;
+
+  final LocationService _locationService = LocationService.instance;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _loadLocationData();
+  }
+
+  /// Load cities and countries dynamically
+  Future<void> _loadLocationData() async {
+    await Future.wait([
+      _loadCities(),
+      _loadCountries(),
+    ]);
+  }
+
+  /// Load cities from API
+  Future<void> _loadCities() async {
+    setState(() {
+      _isLoadingCities = true;
+      _citiesError = false;
+    });
+
+    try {
+      final cities = await _locationService.getCities();
+      if (mounted) {
+        setState(() {
+          _cities = cities;
+          _isLoadingCities = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingCities = false;
+          _citiesError = true;
+        });
+      }
+      debugPrint('❌ Error loading cities: $e');
+    }
+  }
+
+  /// Load countries from API
+  Future<void> _loadCountries() async {
+    setState(() {
+      _isLoadingCountries = true;
+      _countriesError = false;
+    });
+
+    try {
+      final countries = await _locationService.getCountries();
+      if (mounted) {
+        setState(() {
+          _countries = countries;
+          _isLoadingCountries = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingCountries = false;
+          _countriesError = true;
+        });
+      }
+      debugPrint('❌ Error loading countries: $e');
+    }
+  }
+
+  /// Refresh location data
+  Future<void> _refreshLocationData() async {
+    _locationService.clearCache();
+    await _loadLocationData();
   }
 
   @override
@@ -121,6 +199,17 @@ class _AccountSettingsState extends State<AccountSettings> {
       pincodeController.text = userData['pincode']?.toString() ?? '';
       selectedCity = userData['city']?.toString();
       selectedCountry = userData['country']?.toString();
+
+      // Parse date of birth if available
+      final dobString = userData['dateOfBirth']?.toString();
+      if (dobString != null && dobString.isNotEmpty) {
+        try {
+          selectedDateOfBirth = DateTime.parse(dobString);
+        } catch (e) {
+          debugPrint('⚠️ Error parsing date of birth: $e');
+          selectedDateOfBirth = null;
+        }
+      }
     });
   }
 
@@ -134,222 +223,196 @@ class _AccountSettingsState extends State<AccountSettings> {
 
         return Scaffold(
           body: SafeArea(
-            child:
-                _isLoadingProfile
-                    ? Center(
-                      child: CircularProgressIndicator(
-                        color: config.primaryColorValue,
-                      ),
-                    )
-                    : Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Form(
-                        key: _formKey,
-                        child: ListView(
-                          children: [
-                            // Header
-                            commonappBar(config.getAppNameLogoForTheme(Theme.of(context).brightness), () {
-                              Navigator.pop(context);
-                            }),
-                            giveHeight(12),
+            child: _isLoadingProfile
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: config.primaryColorValue,
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        children: [
+                          // Header
+                          commonappBar(
+                              config.getAppNameLogoForTheme(
+                                  Theme.of(context).brightness), () {
+                            Navigator.pop(context);
+                          }),
+                          giveHeight(12),
 
-                            // Title
-                            Text(
-                              LocalizationHelper.accountSettings(context),
-                              style: GoogleFonts.playfairDisplay(
-                                color: config.primaryColorValue,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          // Title
+                          Text(
+                            LocalizationHelper.accountSettings(context),
+                            style: GoogleFonts.playfairDisplay(
+                              color: config.primaryColorValue,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
-                            giveHeight(20),
+                          ),
+                          giveHeight(20),
 
-                            // 🔹 User name section
-                            _buildSectionTitle(
-                              LocalizationHelper.userName(context),
-                              theme,
+                          // 🔹 User name section
+                          _buildSectionTitle(
+                            LocalizationHelper.userName(context),
+                            theme,
+                          ),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: 'Nickname *',
+                            icon: Icons.person_outline,
+                            controller: nickNameController,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Nickname is required';
+                              }
+                              return null;
+                            },
+                          ),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: LocalizationHelper.enterYourFirstName(
+                              context,
                             ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: 'Nickname *',
-                              icon: Icons.person_outline,
-                              controller: nickNameController,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Nickname is required';
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: LocalizationHelper.enterYourFirstName(
-                                context,
-                              ),
-                              icon: Icons.person_outline,
-                              controller: firstNameController,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return LocalizationHelper.firstNameRequired(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: LocalizationHelper.enterYourSecondName(
-                                context,
-                              ),
-                              icon: Icons.person_outline,
-                              controller: lastNameController,
-                            ),
-                            giveHeight(16),
-                            _buildButtonRow(context, config),
-                            _divider(),
-
-                            // 🔹 Email section
-                            _buildSectionTitle(
-                              LocalizationHelper.emailId(context),
-                              theme,
-                            ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: LocalizationHelper.enterYourEmailId(
-                                context,
-                              ),
-                              icon: Icons.email_outlined,
-                              controller: emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return LocalizationHelper.emailRequired(
-                                    context,
-                                  );
-                                }
-                                final emailRegex = RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                            icon: Icons.person_outline,
+                            controller: firstNameController,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return LocalizationHelper.firstNameRequired(
+                                  context,
                                 );
-                                if (!emailRegex.hasMatch(value)) {
-                                  return LocalizationHelper.enterValidEmail(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
+                              }
+                              return null;
+                            },
+                          ),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: LocalizationHelper.enterYourSecondName(
+                              context,
                             ),
-                            giveHeight(16),
-                            _buildButtonRow(context, config),
-                            _divider(),
+                            icon: Icons.person_outline,
+                            controller: lastNameController,
+                          ),
+                          giveHeight(10),
+                          _buildDateOfBirthField(theme),
+                          giveHeight(16),
+                          _buildButtonRow(context, config),
+                          _divider(),
 
-                            // 🔹 Personal details
-                            _buildSectionTitle(
-                              LocalizationHelper.personalDetails(context),
-                              theme,
+                          // 🔹 Email section
+                          _buildSectionTitle(
+                            LocalizationHelper.emailId(context),
+                            theme,
+                          ),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: LocalizationHelper.enterYourEmailId(
+                              context,
                             ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: LocalizationHelper.enterMobileNumber(
-                                context,
-                              ),
-                              icon: Icons.phone_outlined,
-                              prefixText: "+91",
-                              controller: mobileController,
-                              keyboardType: TextInputType.phone,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return LocalizationHelper.mobileNumberRequired(
-                                    context,
-                                  );
-                                }
-                                if (value.length < 10) {
-                                  return LocalizationHelper.enterValidMobileNumber(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(10),
-                            _buildDropdownField(
-                              hint: LocalizationHelper.selectCity(context),
-                              value: selectedCity,
-                              items: cities,
-                              onChanged:
-                                  (value) =>
-                                      setState(() => selectedCity = value),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return LocalizationHelper.pleaseSelectCity(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(10),
-                            _buildInputField(
-                              theme: theme,
-                              label: LocalizationHelper.enterPincode(context),
-                              controller: pincodeController,
-                              icon: Icons.location_on_outlined,
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return LocalizationHelper.pincodeRequired(
-                                    context,
-                                  );
-                                }
-                                if (value.length != 6) {
-                                  return LocalizationHelper.enterValidPincode(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(10),
-                            _buildDropdownField(
-                              hint: LocalizationHelper.selectCountry(context),
-                              value: selectedCountry,
-                              items: countries,
-                              onChanged:
-                                  (value) =>
-                                      setState(() => selectedCountry = value),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return LocalizationHelper.pleaseSelectCountry(
-                                    context,
-                                  );
-                                }
-                                return null;
-                              },
-                            ),
-                            giveHeight(16),
-                            _buildButtonRow(context, config),
-                            _divider(),
+                            icon: Icons.email_outlined,
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return LocalizationHelper.emailRequired(
+                                  context,
+                                );
+                              }
+                              final emailRegex = RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                              );
+                              if (!emailRegex.hasMatch(value)) {
+                                return LocalizationHelper.enterValidEmail(
+                                  context,
+                                );
+                              }
+                              return null;
+                            },
+                          ),
+                          giveHeight(16),
+                          _buildButtonRow(context, config),
+                          _divider(),
 
-                            // 🔹 Social Account
-                            _buildSectionTitle(
-                              LocalizationHelper.socialAccount(context),
-                              theme,
+                          // 🔹 Personal details
+                          _buildSectionTitle(
+                            LocalizationHelper.personalDetails(context),
+                            theme,
+                          ),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: LocalizationHelper.enterMobileNumber(
+                              context,
                             ),
-                            giveHeight(10),
-                            _buildGoogleLoginButton(),
-                            _divider(),
+                            icon: Icons.phone_outlined,
+                            prefixText: "+91",
+                            controller: mobileController,
+                            keyboardType: TextInputType.phone,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return LocalizationHelper.mobileNumberRequired(
+                                  context,
+                                );
+                              }
+                              if (value.length < 10) {
+                                return LocalizationHelper
+                                    .enterValidMobileNumber(
+                                  context,
+                                );
+                              }
+                              return null;
+                            },
+                          ),
+                          giveHeight(10),
+                          _buildDynamicCityDropdown(),
+                          giveHeight(10),
+                          _buildInputField(
+                            theme: theme,
+                            label: LocalizationHelper.enterPincode(context),
+                            controller: pincodeController,
+                            icon: Icons.location_on_outlined,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return LocalizationHelper.pincodeRequired(
+                                  context,
+                                );
+                              }
+                              if (value.length != 6) {
+                                return LocalizationHelper.enterValidPincode(
+                                  context,
+                                );
+                              }
+                              return null;
+                            },
+                          ),
+                          giveHeight(10),
+                          _buildDynamicCountryDropdown(),
+                          giveHeight(16),
+                          _buildButtonRow(context, config),
+                          _divider(),
 
-                            // 🔹 Logout button
-                            _buildLogoutButton(config),
-                          ],
-                        ),
+                          // 🔹 Social Account
+                          _buildSectionTitle(
+                            LocalizationHelper.socialAccount(context),
+                            theme,
+                          ),
+                          giveHeight(10),
+                          _buildGoogleLoginButton(),
+                          _divider(),
+
+                          // 🔹 Logout button
+                          _buildLogoutButton(config),
+                        ],
                       ),
                     ),
+                  ),
           ),
         );
       },
@@ -389,20 +452,19 @@ class _AccountSettingsState extends State<AccountSettings> {
           fontSize: 13,
           color: theme.colorScheme.secondary,
         ),
-        prefixIcon:
-            prefixText != null
-                ? Padding(
-                  padding: const EdgeInsets.only(left: 10, right: 6),
-                  child: Text(
-                    prefixText,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: theme.colorScheme.secondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+        prefixIcon: prefixText != null
+            ? Padding(
+                padding: const EdgeInsets.only(left: 10, right: 6),
+                child: Text(
+                  prefixText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
                   ),
-                )
-                : null,
+                ),
+              )
+            : null,
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: icon != null ? Icon(icon, color: Colors.red) : null,
         contentPadding: const EdgeInsets.symmetric(
@@ -452,6 +514,342 @@ class _AccountSettingsState extends State<AccountSettings> {
     );
   }
 
+  /// Build dynamic city dropdown with loading states
+  Widget _buildDynamicCityDropdown() {
+    if (_isLoadingCities) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black87, width: 1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Loading cities...',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_citiesError) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.red, width: 1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Failed to load cities',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _loadCities,
+              child: Text(
+                'Retry',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      value: selectedCity,
+      icon: const Icon(Icons.arrow_drop_down),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return LocalizationHelper.pleaseSelectCity(context);
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 10,
+          horizontal: 12,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Colors.black87, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+      ),
+      hint: Text(
+        LocalizationHelper.selectCity(context),
+        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+      ),
+      onChanged: (value) {
+        setState(() {
+          selectedCity = value;
+        });
+      },
+      items: _cities.map((city) {
+        return DropdownMenuItem<String>(
+          value: city.name,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                city.name,
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+              // if (city.state != null)
+              //   Text(
+              //     '${city.state}, ${city.country ?? ''}',
+              //     style: GoogleFonts.poppins(
+              //       fontSize: 11,
+              //       color: Colors.grey[600],
+              //     ),
+              //   ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// Build dynamic country dropdown with loading states
+  Widget _buildDynamicCountryDropdown() {
+    if (_isLoadingCountries) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black87, width: 1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Loading countries...',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_countriesError) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.red, width: 1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Failed to load countries',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _loadCountries,
+              child: Text(
+                'Retry',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      value: selectedCountry,
+      icon: const Icon(Icons.arrow_drop_down),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return LocalizationHelper.pleaseSelectCountry(context);
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Colors.black87, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+      ),
+      hint: Text(
+        LocalizationHelper.selectCountry(context),
+        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+      ),
+      onChanged: (value) {
+        setState(() {
+          selectedCountry = value;
+        });
+      },
+      items: _countries.map((country) {
+        return DropdownMenuItem<String>(
+          value: country.name,
+          child: Row(
+            children: [
+              Text(
+                country.name,
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+              // if (country.code != null || country.dialCode != null) ...[
+              //   const SizedBox(width: 8),
+              //   Text(
+              //     '${country.code ?? ''} ${country.dialCode ?? ''}',
+              //     style: GoogleFonts.poppins(
+              //       fontSize: 11,
+              //       color: Colors.grey[600],
+              //     ),
+              //   ),
+              // ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDateOfBirthField(ThemeData theme) {
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        final locale = languageProvider.locale;
+
+        return GestureDetector(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: selectedDateOfBirth ??
+                  DateTime.now().subtract(const Duration(days: 365 * 18)),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now().subtract(
+                  const Duration(days: 365 * 13)), // Minimum 13 years old
+              initialDatePickerMode: DatePickerMode.day,
+              // Use locale-aware strings
+              helpText: LocalizationHelper.selectDate(context),
+              cancelText: LocalizationHelper.cancel(context),
+              confirmText: LocalizationHelper.select(context),
+              fieldLabelText: LocalizationHelper.dateOfBirth(context),
+              fieldHintText: LocalizationHelper.selectDateHint(context),
+              // Set locale for the date picker
+              locale: locale,
+            );
+
+            if (picked != null) {
+              setState(() {
+                selectedDateOfBirth = picked;
+              });
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 12,
+            ),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black87, width: 1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    selectedDateOfBirth != null
+                        ? // Use locale-aware date formatting
+                        DateFormat.yMd(locale.languageCode)
+                            .format(selectedDateOfBirth!)
+                        : 'Select Date of Birth',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: selectedDateOfBirth != null
+                          ? theme.colorScheme.secondary
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildButtonRow(BuildContext context, dynamic config) {
     return Row(
       children: [
@@ -464,20 +862,19 @@ class _AccountSettingsState extends State<AccountSettings> {
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
-            child:
-                _isLoading
-                    ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                    : Text(
-                      LocalizationHelper.save(context),
-                      style: const TextStyle(color: Colors.white),
+            child: _isLoading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
+                  )
+                : Text(
+                    LocalizationHelper.save(context),
+                    style: const TextStyle(color: Colors.white),
+                  ),
           ),
         ),
         const SizedBox(width: 12),
@@ -501,9 +898,9 @@ class _AccountSettingsState extends State<AccountSettings> {
   }
 
   Widget _divider() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    child: Divider(color: Colors.grey[300], thickness: 1),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Divider(color: Colors.grey[300], thickness: 1),
+      );
 
   Widget _buildGoogleLoginButton() {
     return Container(
@@ -518,9 +915,8 @@ class _AccountSettingsState extends State<AccountSettings> {
             'assets/images/google_logo.png',
             height: 24,
             width: 24,
-            errorBuilder:
-                (context, error, stackTrace) =>
-                    const Icon(Icons.g_mobiledata, size: 24),
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.g_mobiledata, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -597,12 +993,21 @@ class _AccountSettingsState extends State<AccountSettings> {
       final category = userData?['category'];
 
       // Call update profile API
+      final personalDetails = <String, dynamic>{
+        "nickName": firstNameController.text.trim(),
+      };
+
+      // Add date of birth to personal details if available
+      if (selectedDateOfBirth != null) {
+        personalDetails["dateOfBirth"] = selectedDateOfBirth!.toIso8601String();
+      }
+
       final response = await _profileService.updateProfile(
         nickName: nickNameController.text.trim(),
         email: emailController.text.trim(),
         firstName: firstNameController.text.trim(),
         secondName: lastNameController.text.trim(),
-        personalDetails: {"nickName": firstNameController.text.trim()},
+        personalDetails: personalDetails,
         mobileNumber: mobileController.text.trim(),
         city: selectedCity,
         pincode: pincodeController.text.trim(),
@@ -657,6 +1062,7 @@ class _AccountSettingsState extends State<AccountSettings> {
     setState(() {
       selectedCity = null;
       selectedCountry = null;
+      selectedDateOfBirth = null;
     });
     // Reload profile data to restore original values
     _loadUserProfile();

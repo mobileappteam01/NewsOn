@@ -33,7 +33,7 @@ class LocalizationHelper {
         }
       }
     }
-    
+
     // Fall back to ARB-based translations
     final l10n = of(context);
     if (l10n != null) {
@@ -46,7 +46,7 @@ class LocalizationHelper {
     }
     return fallback;
   }
-  
+
   /// Get translation directly from dynamic service
   static String _getDynamic(String key, String fallback) {
     final dynamicService = DynamicLocalizationService();
@@ -61,12 +61,14 @@ class LocalizationHelper {
 
   /// Get localized string for app name
   static String appName(BuildContext context) {
-    return _getString(context, (l10n) => l10n.appName, 'NewsOn', key: 'appName');
+    return _getString(context, (l10n) => l10n.appName, 'NewsOn',
+        key: 'appName');
   }
 
   /// Get localized string for welcome text
   static String welcomeTo(BuildContext context) {
-    return _getString(context, (l10n) => l10n.welcomeTo, 'WELCOME TO', key: 'welcomeTo');
+    return _getString(context, (l10n) => l10n.welcomeTo, 'WELCOME TO',
+        key: 'welcomeTo');
   }
 
   /// Get localized string for swipe to get started
@@ -96,7 +98,8 @@ class LocalizationHelper {
 
   /// Get localized string for connecting
   static String connecting(BuildContext context) {
-    return _getString(context, (l10n) => l10n.connecting, 'Connecting...', key: 'connecting');
+    return _getString(context, (l10n) => l10n.connecting, 'Connecting...',
+        key: 'connecting');
   }
 
   /// Get localized string for connecting to Google
@@ -111,7 +114,8 @@ class LocalizationHelper {
 
   /// Get localized string for welcome
   static String welcome(BuildContext context) {
-    return _getString(context, (l10n) => l10n.welcome, 'Welcome!', key: 'welcome');
+    return _getString(context, (l10n) => l10n.welcome, 'Welcome!',
+        key: 'welcome');
   }
 
   /// Get localized string for sign in cancelled
@@ -144,12 +148,14 @@ class LocalizationHelper {
 
   /// Get localized string for continue
   static String continueText(BuildContext context) {
-    return _getString(context, (l10n) => l10n.continueText, 'Continue', key: 'continueText');
+    return _getString(context, (l10n) => l10n.continueText, 'Continue',
+        key: 'continueText');
   }
 
   /// Get localized string for enter your name
   static String enterYourName(BuildContext context) {
-    return _getString(context, (l10n) => l10n.enterYourName, 'Enter your name', key: 'enterYourName');
+    return _getString(context, (l10n) => l10n.enterYourName, 'Enter your name',
+        key: 'enterYourName');
   }
 
   /// Get localized string for select categories
@@ -174,12 +180,14 @@ class LocalizationHelper {
 
   /// Get localized string for categories
   static String categories(BuildContext context) {
-    return _getString(context, (l10n) => l10n.categories, 'Categories', key: 'categories');
+    return _getString(context, (l10n) => l10n.categories, 'Categories',
+        key: 'categories');
   }
 
   /// Get localized string for bookmarks
   static String bookmarks(BuildContext context) {
-    return _getString(context, (l10n) => l10n.bookmarks, 'Bookmarks', key: 'bookmarks');
+    return _getString(context, (l10n) => l10n.bookmarks, 'Bookmarks',
+        key: 'bookmarks');
   }
 
   /// Get localized string for search
@@ -189,12 +197,14 @@ class LocalizationHelper {
 
   /// Get localized string for headlines
   static String headlines(BuildContext context) {
-    return _getString(context, (l10n) => l10n.headlines, 'Headlines', key: 'headlines');
+    return _getString(context, (l10n) => l10n.headlines, 'Headlines',
+        key: 'headlines');
   }
 
   /// Get localized string for news feed
   static String newsFeed(BuildContext context) {
-    return _getString(context, (l10n) => l10n.newsFeed, 'News Feed', key: 'newsFeed');
+    return _getString(context, (l10n) => l10n.newsFeed, 'News Feed',
+        key: 'newsFeed');
   }
 
   /// Get localized string for retry
@@ -327,7 +337,8 @@ class LocalizationHelper {
 
   /// Get localized string for text size saved
   static String textSizeSaved(BuildContext context) {
-    return _getString(context, (l10n) => l10n.textSizeSaved, 'Text size saved', key: 'textSizeSaved');
+    return _getString(context, (l10n) => l10n.textSizeSaved, 'Text size saved',
+        key: 'textSizeSaved');
   }
 
   /// Get localized string for form submitted successfully
@@ -362,7 +373,8 @@ class LocalizationHelper {
 
   /// Get localized string for appearance settings
   static String appearanceSettings(BuildContext context) {
-    return _getString(context, (l10n) => l10n.appearanceSettings, 'Appearance', key: 'appearanceSettings');
+    return _getString(context, (l10n) => l10n.appearanceSettings, 'Appearance',
+        key: 'appearanceSettings');
   }
 
   /// Get localized string for application settings
@@ -377,12 +389,14 @@ class LocalizationHelper {
 
   /// Get localized string for notifications
   static String notifications(BuildContext context) {
-    return _getString(context, (l10n) => l10n.notifications, 'Notifications', key: 'notifications');
+    return _getString(context, (l10n) => l10n.notifications, 'Notifications',
+        key: 'notifications');
   }
 
   /// Get localized string for privacy policy
   static String privacyPolicy(BuildContext context) {
-    return _getString(context, (l10n) => l10n.privacyPolicy, 'Privacy Policy', key: 'privacyPolicy');
+    return _getString(context, (l10n) => l10n.privacyPolicy, 'Privacy Policy',
+        key: 'privacyPolicy');
   }
 
   /// Get localized string for terms and conditions
@@ -397,7 +411,8 @@ class LocalizationHelper {
 
   /// Get localized string for language
   static String language(BuildContext context) {
-    return _getString(context, (l10n) => l10n.language, 'Language', key: 'language');
+    return _getString(context, (l10n) => l10n.language, 'Language',
+        key: 'language');
   }
 
   /// Get localized string for logout
@@ -437,7 +452,8 @@ class LocalizationHelper {
 
   /// Get localized string for loading
   static String loading(BuildContext context) {
-    return _getString(context, (l10n) => l10n.loading, 'Loading...', key: 'loading');
+    return _getString(context, (l10n) => l10n.loading, 'Loading...',
+        key: 'loading');
   }
 
   /// Get localized string for something went wrong
@@ -452,7 +468,8 @@ class LocalizationHelper {
 
   /// Get localized string for try again
   static String tryAgain(BuildContext context) {
-    return _getString(context, (l10n) => l10n.tryAgain, 'Try Again', key: 'tryAgain');
+    return _getString(context, (l10n) => l10n.tryAgain, 'Try Again',
+        key: 'tryAgain');
   }
 
   /// Get localized string for no news for date
@@ -490,7 +507,8 @@ class LocalizationHelper {
 
   /// Get localized string for welcome title text
   static String welcomeTitleText(BuildContext context) {
-    return _getString(context, (l10n) => l10n.welcomeTitleText, 'Welcome', key: 'welcomeTitleText');
+    return _getString(context, (l10n) => l10n.welcomeTitleText, 'Welcome',
+        key: 'welcomeTitleText');
   }
 
   /// Get localized string for welcome description text
@@ -535,7 +553,8 @@ class LocalizationHelper {
 
   /// Get localized string for for later
   static String forLater(BuildContext context) {
-    return _getString(context, (l10n) => l10n.forLater, 'For Later', key: 'forLater');
+    return _getString(context, (l10n) => l10n.forLater, 'For Later',
+        key: 'forLater');
   }
 
   /// Get localized string for notification inbox
@@ -550,12 +569,14 @@ class LocalizationHelper {
 
   /// Get localized string for bookmark
   static String bookmark(BuildContext context) {
-    return _getString(context, (l10n) => l10n.bookmark, 'Bookmark', key: 'bookmark');
+    return _getString(context, (l10n) => l10n.bookmark, 'Bookmark',
+        key: 'bookmark');
   }
 
   /// Get localized string for terms of use
   static String termsOfUse(BuildContext context) {
-    return _getString(context, (l10n) => l10n.termsOfUse, 'Terms of Use', key: 'termsOfUse');
+    return _getString(context, (l10n) => l10n.termsOfUse, 'Terms of Use',
+        key: 'termsOfUse');
   }
 
   /// Get localized string for news categories
@@ -597,7 +618,8 @@ class LocalizationHelper {
 
   /// Get localized string for user name
   static String userName(BuildContext context) {
-    return _getString(context, (l10n) => l10n.userName, 'User name', key: 'userName');
+    return _getString(context, (l10n) => l10n.userName, 'User name',
+        key: 'userName');
   }
 
   /// Get localized string for enter your first name
@@ -632,7 +654,8 @@ class LocalizationHelper {
 
   /// Get localized string for email id
   static String emailId(BuildContext context) {
-    return _getString(context, (l10n) => l10n.emailId, 'Email-ID', key: 'emailId');
+    return _getString(context, (l10n) => l10n.emailId, 'Email-ID',
+        key: 'emailId');
   }
 
   /// Get localized string for enter your email id
@@ -707,7 +730,8 @@ class LocalizationHelper {
 
   /// Get localized string for select city
   static String selectCity(BuildContext context) {
-    return _getString(context, (l10n) => l10n.selectCity, 'Select City', key: 'selectCity');
+    return _getString(context, (l10n) => l10n.selectCity, 'Select City',
+        key: 'selectCity');
   }
 
   /// Get localized string for please select city
@@ -722,7 +746,8 @@ class LocalizationHelper {
 
   /// Get localized string for enter pincode
   static String enterPincode(BuildContext context) {
-    return _getString(context, (l10n) => l10n.enterPincode, 'Enter Pincode', key: 'enterPincode');
+    return _getString(context, (l10n) => l10n.enterPincode, 'Enter Pincode',
+        key: 'enterPincode');
   }
 
   /// Get localized string for pincode required
@@ -747,7 +772,8 @@ class LocalizationHelper {
 
   /// Get localized string for select country
   static String selectCountry(BuildContext context) {
-    return _getString(context, (l10n) => l10n.selectCountry, 'Select Country', key: 'selectCountry');
+    return _getString(context, (l10n) => l10n.selectCountry, 'Select Country',
+        key: 'selectCountry');
   }
 
   /// Get localized string for please select country
@@ -762,7 +788,8 @@ class LocalizationHelper {
 
   /// Get localized string for social account
   static String socialAccount(BuildContext context) {
-    return _getString(context, (l10n) => l10n.socialAccount, 'Social account', key: 'socialAccount');
+    return _getString(context, (l10n) => l10n.socialAccount, 'Social account',
+        key: 'socialAccount');
   }
 
   /// Get localized string for login with google
@@ -777,17 +804,20 @@ class LocalizationHelper {
 
   /// Get localized string for connected
   static String connected(BuildContext context) {
-    return _getString(context, (l10n) => l10n.connected, 'Connected', key: 'connected');
+    return _getString(context, (l10n) => l10n.connected, 'Connected',
+        key: 'connected');
   }
 
   /// Get localized string for appearance
   static String appearance(BuildContext context) {
-    return _getString(context, (l10n) => l10n.appearance, 'Appearance', key: 'appearance');
+    return _getString(context, (l10n) => l10n.appearance, 'Appearance',
+        key: 'appearance');
   }
 
   /// Get localized string for text size
   static String textSize(BuildContext context) {
-    return _getString(context, (l10n) => l10n.textSize, 'Text size', key: 'textSize');
+    return _getString(context, (l10n) => l10n.textSize, 'Text size',
+        key: 'textSize');
   }
 
   /// Get localized string for save
@@ -797,27 +827,32 @@ class LocalizationHelper {
 
   /// Get localized string for light mode
   static String lightMode(BuildContext context) {
-    return _getString(context, (l10n) => l10n.lightMode, 'Light mode', key: 'lightMode');
+    return _getString(context, (l10n) => l10n.lightMode, 'Light mode',
+        key: 'lightMode');
   }
 
   /// Get localized string for dark mode
   static String darkMode(BuildContext context) {
-    return _getString(context, (l10n) => l10n.darkMode, 'Dark mode', key: 'darkMode');
+    return _getString(context, (l10n) => l10n.darkMode, 'Dark mode',
+        key: 'darkMode');
   }
 
   /// Get localized string for system default
   static String systemDefault(BuildContext context) {
-    return _getString(context, (l10n) => l10n.systemDefault, 'System default', key: 'systemDefault');
+    return _getString(context, (l10n) => l10n.systemDefault, 'System default',
+        key: 'systemDefault');
   }
 
   /// Get localized string for unknown source
   static String unknownSource(BuildContext context) {
-    return _getString(context, (l10n) => l10n.unknownSource, 'Unknown Source', key: 'unknownSource');
+    return _getString(context, (l10n) => l10n.unknownSource, 'Unknown Source',
+        key: 'unknownSource');
   }
 
   /// Get localized string for version
   static String version(BuildContext context) {
-    return _getString(context, (l10n) => l10n.version, 'Version', key: 'version');
+    return _getString(context, (l10n) => l10n.version, 'Version',
+        key: 'version');
   }
 
   /// Get localized string for your personalized news application
@@ -837,17 +872,20 @@ class LocalizationHelper {
 
   /// Get localized string for breaking news
   static String breakingNews(BuildContext context) {
-    return _getString(context, (l10n) => l10n.breakingNews, 'Breaking News', key: 'breakingNews');
+    return _getString(context, (l10n) => l10n.breakingNews, 'Breaking News',
+        key: 'breakingNews');
   }
 
   /// Get localized string for view all
   static String viewAll(BuildContext context) {
-    return _getString(context, (l10n) => l10n.viewAll, 'View All', key: 'viewAll');
+    return _getString(context, (l10n) => l10n.viewAll, 'View All',
+        key: 'viewAll');
   }
 
   /// Get localized string for flash news
   static String flashNews(BuildContext context) {
-    return _getString(context, (l10n) => l10n.flashNews, 'Flash News', key: 'flashNews');
+    return _getString(context, (l10n) => l10n.flashNews, 'Flash News',
+        key: 'flashNews');
   }
 
   /// Get localized string for live cricket score
@@ -862,12 +900,42 @@ class LocalizationHelper {
 
   /// Get localized string for yesterday
   static String yesterday(BuildContext context) {
-    return _getString(context, (l10n) => l10n.yesterday, 'Yesterday', key: 'yesterday');
+    return _getString(context, (l10n) => l10n.yesterday, 'Yesterday',
+        key: 'yesterday');
+  }
+
+  /// Get localized string for select date
+  static String selectDate(BuildContext context) {
+    return _getString(context, (l10n) => 'Select Date', 'Select Date',
+        key: 'selectDate');
+  }
+
+  /// Get localized string for select (button)
+  static String select(BuildContext context) {
+    return _getString(context, (l10n) => 'Select', 'Select', key: 'select');
+  }
+
+  /// Get localized string for date (field label)
+  static String date(BuildContext context) {
+    return _getString(context, (l10n) => 'Date', 'Date', key: 'date');
+  }
+
+  /// Get localized string for select date hint
+  static String selectDateHint(BuildContext context) {
+    return _getString(context, (l10n) => 'Month/Day/Year', 'Month/Day/Year',
+        key: 'selectDateHint');
+  }
+
+  /// Get localized string for date of birth
+  static String dateOfBirth(BuildContext context) {
+    return _getString(context, (l10n) => 'Date of Birth', 'Date of Birth',
+        key: 'dateOfBirth');
   }
 
   /// Get localized string for hot news
   static String hotNews(BuildContext context) {
-    return _getString(context, (l10n) => l10n.hotNews, 'Hot News', key: 'hotNews');
+    return _getString(context, (l10n) => l10n.hotNews, 'Hot News',
+        key: 'hotNews');
   }
 
   /// Get localized string for news reading settings
@@ -882,7 +950,8 @@ class LocalizationHelper {
 
   /// Get localized string for play title only
   static String playTitleOnly(BuildContext context) {
-    return _getString(context, (l10n) => l10n.playTitleOnly, 'Play Title Only', key: 'playTitleOnly');
+    return _getString(context, (l10n) => l10n.playTitleOnly, 'Play Title Only',
+        key: 'playTitleOnly');
   }
 
   /// Get localized string for play description only
@@ -897,7 +966,8 @@ class LocalizationHelper {
 
   /// Get localized string for play full news
   static String playFullNews(BuildContext context) {
-    return _getString(context, (l10n) => l10n.playFullNews, 'Play Full News', key: 'playFullNews');
+    return _getString(context, (l10n) => l10n.playFullNews, 'Play Full News',
+        key: 'playFullNews');
   }
 
   /// Get localized string for select news reading mode
@@ -912,6 +982,7 @@ class LocalizationHelper {
 
   /// Get localized string for settings saved
   static String settingsSaved(BuildContext context) {
-    return _getString(context, (l10n) => l10n.settingsSaved, 'Settings saved', key: 'settingsSaved');
+    return _getString(context, (l10n) => l10n.settingsSaved, 'Settings saved',
+        key: 'settingsSaved');
   }
 }

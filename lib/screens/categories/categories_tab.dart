@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,7 +29,8 @@ class _CategoriesTabState extends State<CategoriesTab>
   int _currentPageIndex = 0;
   NewsArticle? _lastPlayedArticle;
   bool _isSwiping = false;
-  bool _isAutoAdvanceAnimating = false; // Flag to prevent stopping audio during auto-advance
+  bool _isAutoAdvanceAnimating =
+      false; // Flag to prevent stopping audio during auto-advance
   DateTime _selectedDate = DateTime.now();
   bool _hasInitialized = false;
 
@@ -59,14 +59,27 @@ class _CategoriesTabState extends State<CategoriesTab>
       _hasInitialized = true;
     });
 
-    // Update articles list from existing breaking news first (might be cached)
-    if (newsProvider.breakingNews.isNotEmpty) {
+    // Update articles list based on whether a date is selected
+    List<NewsArticle> sourceArticles;
+    if (newsProvider.selectedDate != null) {
+      // If a date is selected, use todayNews (which contains date-filtered news)
+      sourceArticles = newsProvider.todayNews;
+      debugPrint(
+          '📰 Categories tab: Using date-filtered news (${sourceArticles.length} articles)');
+    } else {
+      // Otherwise, use breaking news
+      sourceArticles = newsProvider.breakingNews;
+      debugPrint(
+          '📰 Categories tab: Using breaking news (${sourceArticles.length} articles)');
+    }
+
+    if (sourceArticles.isNotEmpty) {
       setState(() {
-        _articlesList = newsProvider.breakingNews;
+        _articlesList = sourceArticles;
         _currentPageIndex = 0;
         _lastPlayedArticle = null;
         debugPrint(
-          '📰 Categories tab: Initialized with ${_articlesList.length} cached breaking news articles',
+          '📰 Categories tab: Initialized with ${_articlesList.length} articles',
         );
       });
 
@@ -78,12 +91,19 @@ class _CategoriesTabState extends State<CategoriesTab>
       });
     }
 
-    // Always fetch breaking news when tab opens (will update via provider listener)
+    // Always fetch appropriate news when tab opens
     if (!newsProvider.isLoading) {
-      newsProvider.fetchBreakingNews(limit: 10);
-      debugPrint('📰 Categories tab: Fetching breaking news...');
+      if (newsProvider.selectedDate != null) {
+        // Fetch news for selected date
+        newsProvider.fetchNewsByDate(newsProvider.selectedDate!, limit: 10);
+        debugPrint('📰 Categories tab: Fetching news for selected date...');
+      } else {
+        // Fetch breaking news
+        newsProvider.fetchBreakingNews(limit: 10);
+        debugPrint('📰 Categories tab: Fetching breaking news...');
+      }
     } else {
-      debugPrint('📰 Categories tab: Breaking news is already loading...');
+      debugPrint('📰 Categories tab: News is already loading...');
     }
   }
 
@@ -110,7 +130,8 @@ class _CategoriesTabState extends State<CategoriesTab>
     // If auto-advance animation is in progress, just update the page index
     // Don't stop audio - it's already playing the next article
     if (_isAutoAdvanceAnimating) {
-      debugPrint('🔄 [AUTO-ADVANCE] Page animation completed in categories: $newIndex');
+      debugPrint(
+          '🔄 [AUTO-ADVANCE] Page animation completed in categories: $newIndex');
       setState(() {
         _currentPageIndex = newIndex;
       });
@@ -142,17 +163,26 @@ class _CategoriesTabState extends State<CategoriesTab>
     final theme = Theme.of(context);
     final newsProvider = Provider.of<NewsProvider>(context);
 
-    // Update articles list from breaking news when it's loaded (listen to provider changes)
+    // Update articles list from appropriate source when it's loaded (listen to provider changes)
     if (_hasInitialized) {
-      // Update when breaking news is available
-      if (newsProvider.breakingNews.isNotEmpty) {
-        if (_articlesList != newsProvider.breakingNews ||
-            _articlesList.isEmpty) {
+      // Determine which source to use based on date selection
+      List<NewsArticle> sourceArticles;
+      if (newsProvider.selectedDate != null) {
+        // If a date is selected, use todayNews (date-filtered news)
+        sourceArticles = newsProvider.todayNews;
+      } else {
+        // Otherwise, use breaking news
+        sourceArticles = newsProvider.breakingNews;
+      }
+
+      // Update when source articles are available
+      if (sourceArticles.isNotEmpty) {
+        if (_articlesList != sourceArticles || _articlesList.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() {
                 final previousLength = _articlesList.length;
-                _articlesList = newsProvider.breakingNews;
+                _articlesList = sourceArticles;
                 // Ensure current page index is valid
                 if (_currentPageIndex >= _articlesList.length) {
                   _currentPageIndex = 0;
@@ -170,14 +200,14 @@ class _CategoriesTabState extends State<CategoriesTab>
                   }
                 }
                 debugPrint(
-                  '📰 Categories tab: Updated with ${_articlesList.length} breaking news articles',
+                  '📰 Categories tab: Updated with ${_articlesList.length} articles',
                 );
               });
             }
           });
         }
       } else if (!newsProvider.isLoading && _articlesList.isNotEmpty) {
-        // Breaking news was cleared while we have articles, clear our list
+        // Source articles were cleared while we have articles, clear our list
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() {
@@ -185,7 +215,7 @@ class _CategoriesTabState extends State<CategoriesTab>
               _currentPageIndex = 0;
               _lastPlayedArticle = null;
               debugPrint(
-                '📰 Categories tab: Breaking news cleared, resetting articles list',
+                '📰 Categories tab: Source articles cleared, resetting articles list',
               );
             });
           }
@@ -194,7 +224,7 @@ class _CategoriesTabState extends State<CategoriesTab>
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      // backgroundColor: Colors.black,
       body: Consumer<RemoteConfigProvider>(
         builder: (context, configProvider, child) {
           final config = configProvider.config;
@@ -243,21 +273,22 @@ class _CategoriesTabState extends State<CategoriesTab>
 
                           // Logo (center)
                           showImage(
-                            config.getAppNameLogoForTheme(Theme.of(context).brightness),
+                            config.getAppNameLogoForTheme(
+                                Theme.of(context).brightness),
                             BoxFit.contain,
                             height: 60,
                             width: 80,
                           ),
 
                           // Date selector (right) - shows current article's date or current date
-                          _articlesList.isNotEmpty &&
-                                  _currentPageIndex < _articlesList.length
-                              ? _buildDateSelector(
-                                context,
-                                config,
-                                _articlesList[_currentPageIndex],
-                              )
-                              : _buildDateSelector(context, config, null),
+                          // _articlesList.isNotEmpty &&
+                          //         _currentPageIndex < _articlesList.length
+                          //     ? _buildDateSelector(
+                          //         context,
+                          //         config,
+                          //         _articlesList[_currentPageIndex],
+                          //       )
+                          //     : _buildDateSelector(context, config, null),
                         ],
                       ),
                     ),
@@ -284,15 +315,8 @@ class _CategoriesTabState extends State<CategoriesTab>
 
                   /// 🔹 CAROUSEL: PageView with swipeable cards (showing partial adjacent cards)
                   Expanded(
-                    child:
-                        newsProvider.isLoading &&
-                                newsProvider.breakingNews.isEmpty
-                            ? _buildLoadingState(theme, config)
-                            : newsProvider.breakingNews.isEmpty
-                            ? _buildNoNewsState(theme)
-                            : _articlesList.isEmpty
-                            ? _buildNoNewsState(theme)
-                            : _buildCarousel(config, theme, newsProvider),
+                    child: _buildLoadingOrContentState(
+                        theme, config, newsProvider),
                   ),
 
                   /// 🔹 PAGE INDICATOR: Dots showing current position (exact design)
@@ -309,10 +333,9 @@ class _CategoriesTabState extends State<CategoriesTab>
                             width: index == _currentPageIndex ? 18 : 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color:
-                                  index == _currentPageIndex
-                                      ? config.primaryColorValue
-                                      : Colors.grey.shade300,
+                              color: index == _currentPageIndex
+                                  ? config.primaryColorValue
+                                  : Colors.grey.shade300,
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -328,17 +351,16 @@ class _CategoriesTabState extends State<CategoriesTab>
                       // Determine which article to show:
                       // 1. If audio provider has a current article (playing, paused, or completed), show that
                       // 2. Otherwise, show the current page article
-                      final hasArticles =
-                          _articlesList.isNotEmpty &&
+                      final hasArticles = _articlesList.isNotEmpty &&
                           _currentPageIndex < _articlesList.length;
 
                       // Check if audio is active (has current article, is playing/paused, or has playlist)
                       // This ensures player stays visible during auto-advance delay
                       final hasActiveAudio =
                           audioProvider.currentArticle != null ||
-                          audioProvider.isPlaying ||
-                          audioProvider.isPaused ||
-                          audioProvider.playlist.isNotEmpty;
+                              audioProvider.isPlaying ||
+                              audioProvider.isPaused ||
+                              audioProvider.playlist.isNotEmpty;
 
                       // Always prefer the current article from audio provider if available
                       // This ensures the player shows the correct article during auto-advance transitions
@@ -391,7 +413,7 @@ class _CategoriesTabState extends State<CategoriesTab>
     dynamic config,
     NewsArticle? article,
   ) {
-    // Use article's date if available, otherwise use current date
+    // Use article's date if available, otherwise use selected date
     DateTime displayDate = _selectedDate;
     if (article != null &&
         article.pubDate != null &&
@@ -402,29 +424,69 @@ class _CategoriesTabState extends State<CategoriesTab>
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color:
-            Colors.grey[800]?.withOpacity(0.8) ?? Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            DateFormat(
-              'dd MMM, yyyy',
-            ).format(displayDate), // Format: "16 Sep, 2025"
-            style: GoogleFonts.poppins(
+    return GestureDetector(
+      onTap: () async {
+        // Show date picker when tapped
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _selectedDate,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          initialDatePickerMode: DatePickerMode.day,
+          helpText: 'Select Date',
+          cancelText: 'Cancel',
+          confirmText: 'Select',
+          fieldLabelText: 'Date',
+          fieldHintText: 'Month/Day/Year',
+        );
+
+        if (picked != null && picked != _selectedDate) {
+          // Normalize the date to remove time components
+          final normalizedDate =
+              DateTime(picked.year, picked.month, picked.day);
+          setState(() => _selectedDate = normalizedDate);
+
+          // Fetch news for the selected date (this will populate todayNews which we can use for headlines)
+          if (mounted) {
+            debugPrint(
+                '📰 Categories tab: Fetching news for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+            await context
+                .read<NewsProvider>()
+                .fetchNewsByDate(normalizedDate, limit: 10);
+          }
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[800]?.withOpacity(0.8) ??
+              Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_month_outlined,
               color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              size: 16,
             ),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
-        ],
+            const SizedBox(width: 6),
+            Text(
+              DateFormat(
+                'dd MMM, yyyy',
+              ).format(displayDate), // Format: "16 Sep, 2025"
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.keyboard_arrow_down,
+                color: Colors.white, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -444,6 +506,38 @@ class _CategoriesTabState extends State<CategoriesTab>
         style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
       ),
     );
+  }
+
+  /// Build loading or content state based on date selection
+  Widget _buildLoadingOrContentState(
+      ThemeData theme, dynamic config, NewsProvider newsProvider) {
+    // Determine which source to check based on date selection
+    List<NewsArticle> sourceArticles;
+    if (newsProvider.selectedDate != null) {
+      // If a date is selected, check todayNews
+      sourceArticles = newsProvider.todayNews;
+    } else {
+      // Otherwise, check breaking news
+      sourceArticles = newsProvider.breakingNews;
+    }
+
+    // Show loading if provider is loading and source is empty
+    if (newsProvider.isLoading && sourceArticles.isEmpty) {
+      return _buildLoadingState(theme, config);
+    }
+
+    // Show no news if source is empty and not loading
+    if (sourceArticles.isEmpty) {
+      return _buildNoNewsState(theme);
+    }
+
+    // Show no news if our articles list is empty
+    if (_articlesList.isEmpty) {
+      return _buildNoNewsState(theme);
+    }
+
+    // Show carousel
+    return _buildCarousel(config, theme, newsProvider);
   }
 
   /// Build carousel with PageView (exact design match)
@@ -488,8 +582,7 @@ class _CategoriesTabState extends State<CategoriesTab>
             articleIndex >= 0 && articleIndex == _currentPageIndex;
         final articleKey = article.articleId ?? article.title;
         final currentlyPlayingArticle = audioProvider.currentArticle;
-        final currentlyPlayingKey =
-            currentlyPlayingArticle?.articleId ??
+        final currentlyPlayingKey = currentlyPlayingArticle?.articleId ??
             currentlyPlayingArticle?.title;
 
         // Auto-advance navigation logic
@@ -546,23 +639,24 @@ class _CategoriesTabState extends State<CategoriesTab>
                 _isSwiping = true;
                 _pageController
                     .animateToPage(
-                      targetIndex,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    )
+                  targetIndex,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                )
                     .then((_) {
-                      if (mounted) {
-                        setState(() {
-                          _currentPageIndex = targetIndex;
-                          _isSwiping = false;
-                          _isAutoAdvanceAnimating = false;
-                        });
-                        debugPrint('✅ [AUTO-ADVANCE] Categories page synced to article ${targetIndex + 1}/${_articlesList.length}');
-                      }
-                    }).catchError((e) {
-                      _isAutoAdvanceAnimating = false;
+                  if (mounted) {
+                    setState(() {
+                      _currentPageIndex = targetIndex;
                       _isSwiping = false;
+                      _isAutoAdvanceAnimating = false;
                     });
+                    debugPrint(
+                        '✅ [AUTO-ADVANCE] Categories page synced to article ${targetIndex + 1}/${_articlesList.length}');
+                  }
+                }).catchError((e) {
+                  _isAutoAdvanceAnimating = false;
+                  _isSwiping = false;
+                });
               }
             });
           }
@@ -592,15 +686,14 @@ class _CategoriesTabState extends State<CategoriesTab>
                   CachedNetworkImage(
                     imageUrl: article.imageUrl ?? article.sourceIcon ?? '',
                     fit: BoxFit.cover,
-                    errorWidget:
-                        (context, url, error) => Container(
-                          color: Colors.grey[900],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.white54,
-                            size: 48,
-                          ),
-                        ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[900],
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
+                    ),
                   ),
 
                   // Gradient overlay (darker at bottom for text readability)
@@ -684,8 +777,7 @@ class _CategoriesTabState extends State<CategoriesTab>
     ThemeData theme,
     AudioPlayerProvider audioProvider,
   ) {
-    final isCurrentArticle =
-        audioProvider.currentArticle != null &&
+    final isCurrentArticle = audioProvider.currentArticle != null &&
         (audioProvider.currentArticle!.articleId ??
                 audioProvider.currentArticle!.title) ==
             (article.articleId ?? article.title);
@@ -696,10 +788,9 @@ class _CategoriesTabState extends State<CategoriesTab>
     // Calculate progress
     final duration = audioProvider.duration;
     final position = audioProvider.position;
-    final progress =
-        duration.inMilliseconds > 0
-            ? position.inMilliseconds / duration.inMilliseconds
-            : 0.0;
+    final progress = duration.inMilliseconds > 0
+        ? position.inMilliseconds / duration.inMilliseconds
+        : 0.0;
 
     // Format time as MM:SS
     final positionText = audioProvider.formatDuration(position);
@@ -725,35 +816,33 @@ class _CategoriesTabState extends State<CategoriesTab>
           children: [
             // Play/Pause button (left) - EXACT DESIGN
             GestureDetector(
-              onTap:
-                  isLoading
-                      ? null
-                      : () async {
-                        if (isCurrentArticle) {
-                          await audioProvider.togglePlayPause();
-                        } else {
-                          await _playArticle(article, audioProvider);
-                        }
-                      },
+              onTap: isLoading
+                  ? null
+                  : () async {
+                      if (isCurrentArticle) {
+                        await audioProvider.togglePlayPause();
+                      } else {
+                        await _playArticle(article, audioProvider);
+                      }
+                    },
               child: Container(
                 padding: const EdgeInsets.all(6),
-                child:
-                    isLoading
-                        ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
-                        )
-                        : Icon(
-                          isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 28,
                         ),
+                      )
+                    : Icon(
+                        isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 28,
+                      ),
               ),
             ),
 
@@ -790,16 +879,15 @@ class _CategoriesTabState extends State<CategoriesTab>
                 ),
                 child: Slider(
                   value: progress.clamp(0.0, 1.0),
-                  onChanged:
-                      duration.inMilliseconds > 0
-                          ? (value) async {
-                            final newPosition = Duration(
-                              milliseconds:
-                                  (value * duration.inMilliseconds).round(),
-                            );
-                            await audioProvider.seek(newPosition);
-                          }
-                          : null,
+                  onChanged: duration.inMilliseconds > 0
+                      ? (value) async {
+                          final newPosition = Duration(
+                            milliseconds:
+                                (value * duration.inMilliseconds).round(),
+                          );
+                          await audioProvider.seek(newPosition);
+                        }
+                      : null,
                   activeColor: Colors.white,
                   inactiveColor: Colors.white.withOpacity(0.3),
                 ),
