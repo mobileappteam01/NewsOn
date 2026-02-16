@@ -5,9 +5,20 @@ import '../../providers/dynamic_language_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../utils/shared_functions.dart';
 
-/// Language selector dialog with submit button
+/// Whether the dialog is selecting app language (UI) or news language (content only).
+enum LanguageSelectorType {
+  /// App language: menus, labels, entire app UI.
+  app,
+  /// News language: language of news articles only.
+  news,
+}
+
+/// Language selector dialog with submit button.
+/// [type] = app: changes app UI language. [type] = news: changes only news content language.
 class LanguageSelectorDialog extends StatefulWidget {
-  const LanguageSelectorDialog({super.key});
+  const LanguageSelectorDialog({super.key, this.type = LanguageSelectorType.app});
+
+  final LanguageSelectorType type;
 
   @override
   State<LanguageSelectorDialog> createState() => _LanguageSelectorDialogState();
@@ -16,10 +27,11 @@ class LanguageSelectorDialog extends StatefulWidget {
 class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
   String? _selectedLanguage;
 
+  bool get _isNews => widget.type == LanguageSelectorType.news;
+
   @override
   void initState() {
     super.initState();
-    // Initialize with current language
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final dynamicProvider = Provider.of<DynamicLanguageProvider>(
         context,
@@ -30,10 +42,13 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
         listen: false,
       );
       setState(() {
-        // Use dynamic provider if initialized, otherwise fall back to static provider
-        _selectedLanguage = dynamicProvider.isInitialized 
-            ? dynamicProvider.selectedLanguage 
-            : languageProvider.selectedLanguage;
+        if (_isNews) {
+          _selectedLanguage = languageProvider.newsLanguageName;
+        } else {
+          _selectedLanguage = dynamicProvider.isInitialized
+              ? dynamicProvider.selectedLanguage
+              : languageProvider.selectedLanguage;
+        }
       });
     });
   }
@@ -52,9 +67,13 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
             : languageProvider.languageNames;
 
         if (_selectedLanguage == null) {
-          _selectedLanguage = dynamicProvider.isInitialized 
-              ? dynamicProvider.selectedLanguage 
-              : languageProvider.selectedLanguage;
+          if (_isNews) {
+            _selectedLanguage = languageProvider.newsLanguageName;
+          } else {
+            _selectedLanguage = dynamicProvider.isInitialized
+                ? dynamicProvider.selectedLanguage
+                : languageProvider.selectedLanguage;
+          }
         }
 
         return Dialog(
@@ -86,9 +105,9 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                         width: 30,
                       ),
 
-                      const Text(
-                        'Select Language',
-                        style: TextStyle(
+                      Text(
+                        _isNews ? 'Select News Language' : 'Select App Language',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -213,23 +232,37 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                       ElevatedButton(
                         onPressed: () async {
                           if (_selectedLanguage != null) {
-                            // Update both providers for compatibility
-                            if (dynamicProvider.isInitialized) {
-                              await dynamicProvider.setLanguage(_selectedLanguage!);
-                            }
-                            await languageProvider.setLanguage(_selectedLanguage!);
-                            
-                            if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Language changed to $_selectedLanguage',
+                            if (_isNews) {
+                              await languageProvider.setNewsLanguage(_selectedLanguage!);
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'News language changed to $_selectedLanguage',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: config.primaryColorValue,
                                   ),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: config.primaryColorValue,
-                                ),
-                              );
+                                );
+                              }
+                            } else {
+                              if (dynamicProvider.isInitialized) {
+                                await dynamicProvider.setLanguage(_selectedLanguage!);
+                              }
+                              await languageProvider.setLanguage(_selectedLanguage!);
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'App language changed to $_selectedLanguage',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: config.primaryColorValue,
+                                  ),
+                                );
+                              }
                             }
                           }
                         },
@@ -264,10 +297,32 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
   }
 }
 
-/// Helper function to show language selector dialog
+/// Shows dialog to select news content language only (used on news feed header).
+void showNewsLanguageSelectorDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => const LanguageSelectorDialog(
+      type: LanguageSelectorType.news,
+    ),
+  );
+}
+
+/// Shows dialog to select app UI language (used in Application Settings).
+void showAppLanguageSelectorDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => const LanguageSelectorDialog(
+      type: LanguageSelectorType.app,
+    ),
+  );
+}
+
+/// Legacy: defaults to app language. Prefer [showAppLanguageSelectorDialog] or [showNewsLanguageSelectorDialog].
 void showLanguageSelectorDialog(BuildContext context) {
   showDialog(
     context: context,
-    builder: (context) => const LanguageSelectorDialog(),
+    builder: (context) => const LanguageSelectorDialog(
+      type: LanguageSelectorType.app,
+    ),
   );
 }

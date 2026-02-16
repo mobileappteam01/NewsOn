@@ -16,6 +16,7 @@ class AppConstants {
   static const String bookmarkListCacheKey = 'bookmark_list_cache';
   static const String themeKey = 'theme_mode';
   static const String languageKey = 'language';
+  static const String newsLanguageKey = 'news_language';
   static const String countryKey = 'country';
   static const String userNameKey = 'user_name';
   static const String textSizeKey = 'news_text_size';

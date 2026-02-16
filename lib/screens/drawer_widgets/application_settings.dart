@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
+import '../../core/widgets/language_selector_dialog.dart';
 import '../../providers/remote_config_provider.dart';
 import 'text_size_settings.dart';
 import 'appearance_settings.dart';
@@ -48,6 +49,12 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                   giveHeight(24),
 
                   // 🔹 Settings Options
+                  _buildSettingItem(
+                    title: LocalizationHelper.language(context),
+                    theme: theme,
+                    onTap: () => showAppLanguageSelectorDialog(context),
+                  ),
+                  _divider(),
                   _buildSettingItem(
                     title: LocalizationHelper.textSize(context),
                     theme: theme,

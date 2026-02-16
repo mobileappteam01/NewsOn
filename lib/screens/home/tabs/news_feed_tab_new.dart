@@ -176,13 +176,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       const SizedBox(width: 12),
                       Consumer<LanguageProvider>(
                         builder: (context, languageProvider, _) {
-                          return GestureDetector(
-                            onTap: () => showLanguageSelectorDialog(context),
-                            child: showImage(
-                              remoteConfig.languageImg,
-                              BoxFit.contain,
-                              height: 20,
-                              width: 30,
+                          return Tooltip(
+                            message: 'News language: ${languageProvider.newsLanguageName}',
+                            child: GestureDetector(
+                              onTap: () =>
+                                  showNewsLanguageSelectorDialog(context),
+                              child: showImage(
+                                remoteConfig.languageImg,
+                                BoxFit.contain,
+                                height: 20,
+                                width: 30,
+                              ),
                             ),
                           );
                         },

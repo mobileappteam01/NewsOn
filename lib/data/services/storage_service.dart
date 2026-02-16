@@ -100,10 +100,22 @@ class StorageService {
     await _settingsBox!.put(AppConstants.languageKey, language);
   }
 
-  /// Get language preference
+  /// Get language preference (app UI language)
   static String getLanguage() {
     if (_settingsBox == null) return 'ta';
     return _settingsBox!.get(AppConstants.languageKey, defaultValue: 'ta');
+  }
+
+  /// Save news language preference (language of news content only)
+  static Future<void> saveNewsLanguage(String languageCode) async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.put(AppConstants.newsLanguageKey, languageCode);
+  }
+
+  /// Get news language preference (language of news content only)
+  static String getNewsLanguage() {
+    if (_settingsBox == null) return '';
+    return _settingsBox!.get(AppConstants.newsLanguageKey, defaultValue: '');
   }
 
   /// Save country preference
