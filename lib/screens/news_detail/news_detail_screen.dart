@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -35,12 +36,25 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   bool _isAnimating = false; // Prevent duplicate animations
   AudioPlayerProvider? _audioProvider; // Cached for safe use in dispose
 
+  // Periodic timer for state synchronization
+  Timer? _stateSyncTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadTextSize();
     _initializePageView();
+    _startStateSyncTimer();
+  }
+
+  /// Start periodic timer for state synchronization
+  void _startStateSyncTimer() {
+    _stateSyncTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (mounted && _audioProvider != null) {
+        _checkAndSyncAutoAdvance(_audioProvider!);
+      }
+    });
   }
 
   /// Initialize PageView with article list based on source
@@ -181,6 +195,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Cancel state sync timer
+    _stateSyncTimer?.cancel();
     // Stop audio when leaving screen (use cached ref - never use context in dispose)
     if (_audioProvider != null && _audioProvider!.hasCurrentArticle) {
       _audioProvider!.stop();
@@ -191,9 +207,69 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadTextSize();
+    super.didChangeAppLifecycleState(state);
+
+    final audioProvider = _audioProvider;
+    if (audioProvider == null) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        debugPrint('📱 App resumed - syncing audio state');
+        _loadTextSize();
+        _syncAudioStateOnResume(audioProvider);
+        break;
+
+      case AppLifecycleState.paused:
+        debugPrint('📱 App paused - keeping audio state');
+        // Audio should continue playing in background
+        break;
+
+      case AppLifecycleState.inactive:
+        debugPrint('📱 App inactive - preparing for potential pause');
+        break;
+
+      case AppLifecycleState.detached:
+        debugPrint('📱 App detached - cleaning up resources');
+        break;
+
+      case AppLifecycleState.hidden:
+        debugPrint('📱 App hidden - audio should continue in background');
+        break;
     }
+  }
+
+  /// Sync audio state when app resumes to ensure UI consistency
+  void _syncAudioStateOnResume(AudioPlayerProvider audioProvider) {
+    if (!mounted) return;
+
+    // Force refresh the audio provider state to ensure UI sync
+    audioProvider.refreshState();
+
+    // If we have a current article, ensure the UI reflects the correct state
+    if (audioProvider.hasCurrentArticle) {
+      final currentArticle = audioProvider.currentArticle;
+      final currentArticleId =
+          currentArticle?.articleId ?? currentArticle?.title;
+      final pageArticle = _currentPageIndex < _articlesList.length
+          ? _articlesList[_currentPageIndex]
+          : null;
+      final pageArticleId = pageArticle?.articleId ?? pageArticle?.title;
+
+      debugPrint(
+          '🔄 Sync check - Current: $currentArticleId, Page: $pageArticleId');
+      debugPrint(
+          '🔄 Audio state - Playing: ${audioProvider.isPlaying}, Paused: ${audioProvider.isPaused}');
+
+      // If the same article is playing, ensure UI is synchronized
+      if (currentArticleId == pageArticleId) {
+        debugPrint('✅ Same article detected - UI should be in sync');
+      } else {
+        debugPrint('⚠️ Different article detected - may need UI update');
+      }
+    }
+
+    // Trigger UI update to ensure consistency
+    setState(() {});
   }
 
   void _loadTextSize() {

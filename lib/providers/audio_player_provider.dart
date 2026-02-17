@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_service/audio_service.dart';
 import '../data/models/news_article.dart';
 import '../data/services/elevenlabs_service.dart';
 import '../data/services/audio_player_service.dart';
@@ -98,6 +99,32 @@ class AudioPlayerProvider with ChangeNotifier {
           debugPrint('⏮️ [Notification] Skip to previous triggered');
           skipToPrevious();
         };
+
+        // Listen to playback state changes from notification controls
+        handler.playbackState.listen((state) {
+          final isPlayingFromNotification = state.playing;
+          final isPausedFromNotification = !state.playing &&
+              state.processingState != AudioProcessingState.completed;
+
+          // Sync UI state with notification state changes
+          if (isPlayingFromNotification && !_isPlaying) {
+            debugPrint('▶️ [Notification] Play detected - syncing UI state');
+            if (_currentArticle != null) {
+              _isPlaying = true;
+              _isPaused = false;
+              _hasCompleted = false;
+              _startBackgroundMusicWhenPlaying();
+              notifyListeners();
+            }
+          } else if (isPausedFromNotification && _isPlaying) {
+            debugPrint('⏸️ [Notification] Pause detected - syncing UI state');
+            _isPlaying = false;
+            _isPaused = true;
+            _backgroundMusicService.pause();
+            notifyListeners();
+          }
+        });
+
         debugPrint('✅ Background service callbacks registered');
       } else {
         debugPrint(
@@ -1133,6 +1160,40 @@ class AudioPlayerProvider with ChangeNotifier {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
+  }
+
+  /// Refresh state to ensure UI synchronization after lifecycle changes
+  void refreshState() {
+    // Force notify listeners to update UI with current state
+    notifyListeners();
+
+    // Log current state for debugging
+    debugPrint(
+        '🔄 Audio state refreshed - Playing: $_isPlaying, Paused: $_isPaused, Position: ${_position.inSeconds}s, Duration: ${_duration.inSeconds}s');
+
+    // Ensure background service metadata is up to date
+    _updateBackgroundMetadata();
+  }
+
+  /// Update background service metadata to ensure notification consistency
+  void _updateBackgroundMetadata() {
+    final handler = AudioBackgroundService.handler;
+    if (handler != null && _currentArticle != null) {
+      // Update media item with current state
+      final mediaItem = MediaItem(
+        id: _currentArticle!.articleId ?? _currentArticle!.title ?? 'unknown',
+        title: _currentArticle!.title ?? 'Unknown Article',
+        artist: 'NewsOn',
+        album: 'News Audio',
+        duration: _duration,
+        artUri: _currentArticle!.imageUrl?.isNotEmpty == true
+            ? Uri.parse(_currentArticle!.imageUrl!)
+            : null,
+      );
+
+      handler.mediaItem.add(mediaItem);
+      debugPrint('🔄 Background metadata updated');
+    }
   }
 
   @override
