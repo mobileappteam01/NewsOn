@@ -1037,10 +1037,12 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
-  /// Set background music volume independently
+  /// Set background music volume (0.0–1.0) and persist to settings
   Future<void> setBackgroundMusicVolume(double volume) async {
     try {
-      await _backgroundMusicService.setVolume(volume);
+      final clamped = volume.clamp(0.0, 1.0);
+      await _backgroundMusicService.setVolume(clamped);
+      await StorageService.saveBackgroundMusicVolume(clamped);
       notifyListeners();
     } catch (e) {
       _error = e.toString();
@@ -1064,12 +1066,15 @@ class AudioPlayerProvider with ChangeNotifier {
     }
   }
 
-  /// Start background music when news is playing. Called from state listener when we transition to playing.
+  /// Start background music when news is playing. Only starts if user has enabled BG in settings.
   /// BG mirrors news: play with news, pause with news, stop with news.
   void _startBackgroundMusicWhenPlaying() {
     if (_currentArticle == null || _hasCompleted) return;
+    if (!StorageService.getBackgroundMusicEnabled()) return;
+    final volume = StorageService.getBackgroundMusicVolume();
     _backgroundMusicService.ensureInitialized().then((_) {
       if (_currentArticle == null || _hasCompleted) return;
+      _backgroundMusicService.setVolume(volume);
       _backgroundMusicService.start().then((_) {
         debugPrint('✅ Background music started (in parallel with news)');
         notifyListeners();

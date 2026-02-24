@@ -832,6 +832,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings saved'**
   String get settingsSaved;
+
+  /// No description provided for @backgroundMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Music'**
+  String get backgroundMusic;
+
+  /// No description provided for @backgroundMusicSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Music'**
+  String get backgroundMusicSettings;
+
+  /// No description provided for @backgroundMusicSettingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play background music while listening to news. You can turn it off or adjust the volume below.'**
+  String get backgroundMusicSettingsDescription;
+
+  /// No description provided for @enableBackgroundMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable background music'**
+  String get enableBackgroundMusic;
+
+  /// No description provided for @backgroundMusicVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Background music volume'**
+  String get backgroundMusicVolume;
+
+  /// No description provided for @backgroundMusicEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Background music enabled'**
+  String get backgroundMusicEnabled;
+
+  /// No description provided for @backgroundMusicDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Background music disabled'**
+  String get backgroundMusicDisabled;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

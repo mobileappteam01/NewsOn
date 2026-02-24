@@ -24,6 +24,8 @@ class AppConstants {
   static const String userDataKey = 'user_data';
   static const String tempGoogleAccountKey = 'temp_google_account';
   static const String newsReadingModeKey = 'news_reading_mode';
+  static const String backgroundMusicEnabledKey = 'background_music_enabled';
+  static const String backgroundMusicVolumeKey = 'background_music_volume';
 
   // Text Size Settings
   static const double defaultTextSize = 16.0;
@@ -33,6 +35,9 @@ class AppConstants {
   // Pagination
   static const int newsPerPage = 10;
   static const int maxCachedPages = 5;
+
+  // Background music (when playing news)
+  static const double defaultBackgroundMusicVolume = 0.19;
 
   // TTS Settings
   static const double defaultTtsRate = 0.5;

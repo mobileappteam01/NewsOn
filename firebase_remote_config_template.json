@@ -195,6 +195,20 @@
       },
       "description": "Language version - increment to force app to re-download translations",
       "valueType": "STRING"
+    },
+    "default_background_music_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Default for background music on/off (user can override in Settings). App uses local storage; this is for reference/future use.",
+      "valueType": "STRING"
+    },
+    "default_background_music_volume": {
+      "defaultValue": {
+        "value": "0.19"
+      },
+      "description": "Default background music volume 0.0-1.0 (user can override in Settings). App uses local storage; this is for reference/future use.",
+      "valueType": "STRING"
     }
   },
   "version": {

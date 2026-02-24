@@ -91,6 +91,13 @@
   "playDescriptionOnly": "Lire uniquement la description",
   "playFullNews": "Lire l'actualité complète",
   "selectNewsReadingMode": "Sélectionner le mode de lecture des actualités",
-  "settingsSaved": "Paramètres enregistrés"
+  "settingsSaved": "Paramètres enregistrés",
+  "backgroundMusic": "Musique de fond",
+  "backgroundMusicSettings": "Musique de fond",
+  "backgroundMusicSettingsDescription": "Jouer de la musique de fond lors de l'écoute des actualités. Vous pouvez la désactiver ou ajuster le volume ci-dessous.",
+  "enableBackgroundMusic": "Activer la musique de fond",
+  "backgroundMusicVolume": "Volume de la musique de fond",
+  "backgroundMusicEnabled": "Musique de fond activée",
+  "backgroundMusicDisabled": "Musique de fond désactivée"
 }
 

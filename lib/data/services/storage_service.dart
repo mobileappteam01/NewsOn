@@ -118,6 +118,45 @@ class StorageService {
     return _settingsBox!.get(AppConstants.newsLanguageKey, defaultValue: '');
   }
 
+  /// Save background music enabled preference (play BG music while news plays)
+  static Future<void> saveBackgroundMusicEnabled(bool enabled) async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.put(AppConstants.backgroundMusicEnabledKey, enabled);
+  }
+
+  /// Get background music enabled preference (default true for backward compatibility)
+  static bool getBackgroundMusicEnabled() {
+    if (_settingsBox == null) return true;
+    final v = _settingsBox!.get(
+      AppConstants.backgroundMusicEnabledKey,
+      defaultValue: true,
+    );
+    if (v is bool) return v;
+    if (v is int) return v != 0;
+    return true;
+  }
+
+  /// Save background music volume (0.0 to 1.0)
+  static Future<void> saveBackgroundMusicVolume(double volume) async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.put(
+      AppConstants.backgroundMusicVolumeKey,
+      volume.clamp(0.0, 1.0),
+    );
+  }
+
+  /// Get background music volume (default from AppConstants)
+  static double getBackgroundMusicVolume() {
+    if (_settingsBox == null) return AppConstants.defaultBackgroundMusicVolume;
+    final v = _settingsBox!.get(
+      AppConstants.backgroundMusicVolumeKey,
+      defaultValue: AppConstants.defaultBackgroundMusicVolume,
+    );
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return AppConstants.defaultBackgroundMusicVolume;
+  }
+
   /// Save country preference
   static Future<void> saveCountry(String country) async {
     if (_settingsBox == null) await initialize();

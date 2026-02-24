@@ -985,4 +985,41 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.settingsSaved, 'Settings saved',
         key: 'settingsSaved');
   }
+
+  static String backgroundMusic(BuildContext context) {
+    return _getString(context, (l10n) => l10n.backgroundMusic,
+        'Background Music', key: 'backgroundMusic');
+  }
+
+  static String backgroundMusicSettings(BuildContext context) {
+    return _getString(context, (l10n) => l10n.backgroundMusicSettings,
+        'Background Music', key: 'backgroundMusicSettings');
+  }
+
+  static String backgroundMusicSettingsDescription(BuildContext context) {
+    return _getString(context,
+        (l10n) => l10n.backgroundMusicSettingsDescription,
+        'Play background music while listening to news. You can turn it off or adjust the volume below.',
+        key: 'backgroundMusicSettingsDescription');
+  }
+
+  static String enableBackgroundMusic(BuildContext context) {
+    return _getString(context, (l10n) => l10n.enableBackgroundMusic,
+        'Enable background music', key: 'enableBackgroundMusic');
+  }
+
+  static String backgroundMusicVolume(BuildContext context) {
+    return _getString(context, (l10n) => l10n.backgroundMusicVolume,
+        'Background music volume', key: 'backgroundMusicVolume');
+  }
+
+  static String backgroundMusicEnabled(BuildContext context) {
+    return _getString(context, (l10n) => l10n.backgroundMusicEnabled,
+        'Background music enabled', key: 'backgroundMusicEnabled');
+  }
+
+  static String backgroundMusicDisabled(BuildContext context) {
+    return _getString(context, (l10n) => l10n.backgroundMusicDisabled,
+        'Background music disabled', key: 'backgroundMusicDisabled');
+  }
 }

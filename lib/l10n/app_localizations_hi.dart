@@ -379,4 +379,25 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsSaved => 'सेटिंग्स सहेजी गईं';
+
+  @override
+  String get backgroundMusic => 'पृष्ठभूमि संगीत';
+
+  @override
+  String get backgroundMusicSettings => 'पृष्ठभूमि संगीत';
+
+  @override
+  String get backgroundMusicSettingsDescription => 'खबर सुनते समय पृष्ठभूमि संगीत बजाएं। नीचे बंद या वॉल्यूम समायोजित कर सकते हैं।';
+
+  @override
+  String get enableBackgroundMusic => 'पृष्ठभूमि संगीत चालू करें';
+
+  @override
+  String get backgroundMusicVolume => 'पृष्ठभूमि संगीत वॉल्यूम';
+
+  @override
+  String get backgroundMusicEnabled => 'पृष्ठभूमि संगीत चालू';
+
+  @override
+  String get backgroundMusicDisabled => 'पृष्ठभूमि संगीत बंद';
 }

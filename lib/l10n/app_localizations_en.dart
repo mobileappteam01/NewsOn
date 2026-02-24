@@ -379,4 +379,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSaved => 'Settings saved';
+
+  @override
+  String get backgroundMusic => 'Background Music';
+
+  @override
+  String get backgroundMusicSettings => 'Background Music';
+
+  @override
+  String get backgroundMusicSettingsDescription => 'Play background music while listening to news. You can turn it off or adjust the volume below.';
+
+  @override
+  String get enableBackgroundMusic => 'Enable background music';
+
+  @override
+  String get backgroundMusicVolume => 'Background music volume';
+
+  @override
+  String get backgroundMusicEnabled => 'Background music enabled';
+
+  @override
+  String get backgroundMusicDisabled => 'Background music disabled';
 }

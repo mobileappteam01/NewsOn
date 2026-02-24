@@ -518,6 +518,13 @@
   "settingsSaved": "Settings saved",
   "@settingsSaved": {
     "description": "Success message when settings are saved"
-  }
+  },
+  "backgroundMusic": "Background Music",
+  "backgroundMusicSettings": "Background Music",
+  "backgroundMusicSettingsDescription": "Play background music while listening to news. You can turn it off or adjust the volume below.",
+  "enableBackgroundMusic": "Enable background music",
+  "backgroundMusicVolume": "Background music volume",
+  "backgroundMusicEnabled": "Background music enabled",
+  "backgroundMusicDisabled": "Background music disabled"
 }
 

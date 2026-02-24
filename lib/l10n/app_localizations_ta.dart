@@ -379,4 +379,25 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get settingsSaved => 'அமைப்புகள் சேமிக்கப்பட்டது';
+
+  @override
+  String get backgroundMusic => 'பின்னணி இசை';
+
+  @override
+  String get backgroundMusicSettings => 'பின்னணி இசை';
+
+  @override
+  String get backgroundMusicSettingsDescription => 'செய்திகளைக் கேட்கும்போது பின்னணி இசையை இயக்கவும். கீழே அணைக்கலாம் அல்லது வலிமையை சரிசெய்யலாம்.';
+
+  @override
+  String get enableBackgroundMusic => 'பின்னணி இசையை இயக்கு';
+
+  @override
+  String get backgroundMusicVolume => 'பின்னணி இசை வலிமை';
+
+  @override
+  String get backgroundMusicEnabled => 'பின்னணி இசை இயக்கப்பட்டது';
+
+  @override
+  String get backgroundMusicDisabled => 'பின்னணி இசை அணைக்கப்பட்டது';
 }

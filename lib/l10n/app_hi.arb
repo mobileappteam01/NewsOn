@@ -146,6 +146,13 @@
   "playDescriptionOnly": "केवल विवरण चलाएं",
   "playFullNews": "पूरी खबर चलाएं",
   "selectNewsReadingMode": "समाचार पढ़ने का मोड चुनें",
-  "settingsSaved": "सेटिंग्स सहेजी गईं"
+  "settingsSaved": "सेटिंग्स सहेजी गईं",
+  "backgroundMusic": "पृष्ठभूमि संगीत",
+  "backgroundMusicSettings": "पृष्ठभूमि संगीत",
+  "backgroundMusicSettingsDescription": "खबर सुनते समय पृष्ठभूमि संगीत बजाएं। नीचे बंद या वॉल्यूम समायोजित कर सकते हैं।",
+  "enableBackgroundMusic": "पृष्ठभूमि संगीत चालू करें",
+  "backgroundMusicVolume": "पृष्ठभूमि संगीत वॉल्यूम",
+  "backgroundMusicEnabled": "पृष्ठभूमि संगीत चालू",
+  "backgroundMusicDisabled": "पृष्ठभूमि संगीत बंद"
 }
 

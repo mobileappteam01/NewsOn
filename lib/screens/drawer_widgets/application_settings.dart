@@ -8,6 +8,7 @@ import '../../providers/remote_config_provider.dart';
 import 'text_size_settings.dart';
 import 'appearance_settings.dart';
 import 'news_reading_settings.dart';
+import 'background_music_settings.dart';
 
 class ApplicationSettings extends StatefulWidget {
   const ApplicationSettings({super.key});
@@ -32,7 +33,9 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 🔹 App Header
-                  commonappBar(config.getAppNameLogoForTheme(Theme.of(context).brightness), () {
+                  commonappBar(
+                      config.getAppNameLogoForTheme(
+                          Theme.of(context).brightness), () {
                     Navigator.pop(context);
                   }),
                   giveHeight(12),
@@ -58,37 +61,45 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                   _buildSettingItem(
                     title: LocalizationHelper.textSize(context),
                     theme: theme,
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TextSizeSettings(),
-                          ),
-                        ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TextSizeSettings(),
+                      ),
+                    ),
                   ),
                   _divider(),
                   _buildSettingItem(
                     title: LocalizationHelper.appearance(context),
                     theme: theme,
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AppearanceSettings(),
-                          ),
-                        ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AppearanceSettings(),
+                      ),
+                    ),
                   ),
                   _divider(),
                   _buildSettingItem(
                     title: LocalizationHelper.newsReadingSettings(context),
                     theme: theme,
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NewsReadingSettings(),
-                          ),
-                        ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NewsReadingSettings(),
+                      ),
+                    ),
+                  ),
+                  _divider(),
+                  _buildSettingItem(
+                    title: LocalizationHelper.backgroundMusic(context),
+                    theme: theme,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackgroundMusicSettings(),
+                      ),
+                    ),
                   ),
                 ],
               ),

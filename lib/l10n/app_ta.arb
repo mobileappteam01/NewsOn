@@ -146,6 +146,13 @@
   "playDescriptionOnly": "விளக்கத்தை மட்டும் இயக்க",
   "playFullNews": "முழு செய்தியை இயக்க",
   "selectNewsReadingMode": "செய்தி வாசிப்பு முறையைத் தேர்ந்தெடுக்கவும்",
-  "settingsSaved": "அமைப்புகள் சேமிக்கப்பட்டது"
+  "settingsSaved": "அமைப்புகள் சேமிக்கப்பட்டது",
+  "backgroundMusic": "பின்னணி இசை",
+  "backgroundMusicSettings": "பின்னணி இசை",
+  "backgroundMusicSettingsDescription": "செய்திகளைக் கேட்கும்போது பின்னணி இசையை இயக்கவும். கீழே அணைக்கலாம் அல்லது வலிமையை சரிசெய்யலாம்.",
+  "enableBackgroundMusic": "பின்னணி இசையை இயக்கு",
+  "backgroundMusicVolume": "பின்னணி இசை வலிமை",
+  "backgroundMusicEnabled": "பின்னணி இசை இயக்கப்பட்டது",
+  "backgroundMusicDisabled": "பின்னணி இசை அணைக்கப்பட்டது"
 }
 

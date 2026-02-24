@@ -16,7 +16,7 @@ void main() {
     test('should initialize correctly', () async {
       await service.initialize();
       expect(service.isInitialized, isTrue);
-      expect(service.volume, equals(0.15)); // Default background volume
+      expect(service.volume, equals(0.19)); // Default background volume
     });
 
     test('should set volume within bounds', () async {

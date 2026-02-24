@@ -232,22 +232,22 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 ),
                                 // Visual indicator for full screen viewing
                                 // if (article.imageUrl != null)
-                                  // Positioned(
-                                  //   top: 12,
-                                  //   right: 12,
-                                  //   child: Container(
-                                  //     padding: const EdgeInsets.all(8),
-                                  //     decoration: BoxDecoration(
-                                  //       color: Colors.black.withOpacity(0.5),
-                                  //       borderRadius: BorderRadius.circular(20),
-                                  //     ),
-                                  //     child: Icon(
-                                  //       Icons.fullscreen,
-                                  //       color: Colors.white,
-                                  //       size: 20,
-                                  //     ),
-                                  //   ),
-                                  // ),
+                                // Positioned(
+                                //   top: 12,
+                                //   right: 12,
+                                //   child: Container(
+                                //     padding: const EdgeInsets.all(8),
+                                //     decoration: BoxDecoration(
+                                //       color: Colors.black.withOpacity(0.5),
+                                //       borderRadius: BorderRadius.circular(20),
+                                //     ),
+                                //     child: Icon(
+                                //       Icons.fullscreen,
+                                //       color: Colors.white,
+                                //       size: 20,
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),
@@ -493,22 +493,22 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           const SizedBox(width: 8),
 
                           // Volume control
-                          IconButton(
-                            icon: Icon(
-                              audioProvider.volume > 0.5
-                                  ? Icons.volume_up
-                                  : audioProvider.volume > 0
-                                      ? Icons.volume_down
-                                      : Icons.volume_off,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              _showVolumeDialog(context, audioProvider);
-                            },
-                          ),
+                          // IconButton(
+                          //   icon: Icon(
+                          //     audioProvider.volume > 0.5
+                          //         ? Icons.volume_up
+                          //         : audioProvider.volume > 0
+                          //             ? Icons.volume_down
+                          //             : Icons.volume_off,
+                          //     color: Colors.white,
+                          //     size: 22,
+                          //   ),
+                          //   padding: EdgeInsets.zero,
+                          //   constraints: const BoxConstraints(),
+                          //   onPressed: () {
+                          //     _showVolumeDialog(context, audioProvider);
+                          //   },
+                          // ),
                         ],
                       ),
 
@@ -561,43 +561,45 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Playback Speed',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ...([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map((speed) {
-              final isSelected = provider.playbackSpeed == speed;
-              return ListTile(
-                title: Text(
-                  '${speed}x',
-                  style: GoogleFonts.inter(
-                    color: isSelected ? Colors.white : Colors.grey[400],
-                    fontSize: 16,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
+      builder: (context) => SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Playback Speed',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
                 ),
-                trailing: isSelected
-                    ? const Icon(Icons.check, color: Colors.white)
-                    : null,
-                onTap: () {
-                  provider.setPlaybackSpeed(speed);
-                  Navigator.pop(context);
-                },
-              );
-            })),
-            const SizedBox(height: 16),
-          ],
+              ),
+              const SizedBox(height: 24),
+              ...([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map((speed) {
+                final isSelected = provider.playbackSpeed == speed;
+                return ListTile(
+                  title: Text(
+                    '${speed}x',
+                    style: GoogleFonts.inter(
+                      color: isSelected ? Colors.white : Colors.grey[400],
+                      fontSize: 16,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: Colors.white)
+                      : null,
+                  onTap: () {
+                    provider.setPlaybackSpeed(speed);
+                    Navigator.pop(context);
+                  },
+                );
+              })),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -610,116 +612,118 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Volume Controls',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+      builder: (context) => SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Volume Controls',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Speech Volume
-            Text(
-              'Speech Volume',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+              // Speech Volume
+              Text(
+                'Speech Volume',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Slider(
-              value: provider.volume,
-              onChanged: (value) {
-                provider.setVolume(value);
-              },
-              activeColor: Colors.white,
-              inactiveColor: Colors.grey[700],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(Icons.volume_mute, color: Colors.grey[400]),
-                Text(
-                  '${(provider.volume * 100).toInt()}%',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 16,
+              const SizedBox(height: 12),
+              Slider(
+                value: provider.volume,
+                onChanged: (value) {
+                  provider.setVolume(value);
+                },
+                activeColor: Colors.white,
+                inactiveColor: Colors.grey[700],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(Icons.volume_mute, color: Colors.grey[400]),
+                  Text(
+                    '${(provider.volume * 100).toInt()}%',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-                Icon(Icons.volume_up, color: Colors.grey[400]),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Background Music Volume
-            Text(
-              'Background Music',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+                  Icon(Icons.volume_up, color: Colors.grey[400]),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Slider(
-              value: provider.backgroundMusicVolume,
-              onChanged: (value) {
-                provider.setBackgroundMusicVolume(value);
-              },
-              activeColor: Colors.green,
-              inactiveColor: Colors.grey[700],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(Icons.music_note, color: Colors.grey[400]),
-                Text(
-                  '${(provider.backgroundMusicVolume * 100).toInt()}%',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-                Icon(Icons.music_note, color: Colors.grey[400]),
-              ],
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // Background music status indicator
-            Row(
-              children: [
-                Icon(
-                  provider.isBackgroundMusicPlaying
-                      ? Icons.music_note
-                      : Icons.music_off,
-                  color: provider.isBackgroundMusicPlaying
-                      ? Colors.green
-                      : Colors.grey[400],
-                  size: 16,
+              // Background Music Volume
+              Text(
+                'Background Music',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  provider.isBackgroundMusicPlaying
-                      ? 'Background music playing'
-                      : 'Background music stopped',
-                  style: GoogleFonts.inter(
+              ),
+              const SizedBox(height: 12),
+              Slider(
+                value: provider.backgroundMusicVolume,
+                onChanged: (value) {
+                  provider.setBackgroundMusicVolume(value);
+                },
+                activeColor: Colors.green,
+                inactiveColor: Colors.grey[700],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(Icons.music_note, color: Colors.grey[400]),
+                  Text(
+                    '${(provider.backgroundMusicVolume * 100).toInt()}%',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Icon(Icons.music_note, color: Colors.grey[400]),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Background music status indicator
+              Row(
+                children: [
+                  Icon(
+                    provider.isBackgroundMusicPlaying
+                        ? Icons.music_note
+                        : Icons.music_off,
                     color: provider.isBackgroundMusicPlaying
                         ? Colors.green
                         : Colors.grey[400],
-                    fontSize: 14,
+                    size: 16,
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  Text(
+                    provider.isBackgroundMusicPlaying
+                        ? 'Background music playing'
+                        : 'Background music stopped',
+                    style: GoogleFonts.inter(
+                      color: provider.isBackgroundMusicPlaying
+                          ? Colors.green
+                          : Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
