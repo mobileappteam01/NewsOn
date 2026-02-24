@@ -57,7 +57,7 @@ class _AccountSettingsState extends State<AccountSettings> {
   /// Load cities and countries dynamically
   Future<void> _loadLocationData() async {
     await Future.wait([
-      _loadCities(),
+      // _loadCities(),
       _loadCountries(),
     ]);
   }
@@ -103,6 +103,7 @@ class _AccountSettingsState extends State<AccountSettings> {
           _isLoadingCountries = false;
         });
       }
+      print("✅ Loaded countries: ${countries.length}");
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -514,7 +515,7 @@ class _AccountSettingsState extends State<AccountSettings> {
     );
   }
 
-  /// Build dynamic city dropdown with loading states
+  /// Build dynamic city textfield with loading states
   Widget _buildDynamicCityDropdown() {
     if (_isLoadingCities) {
       return Container(
@@ -588,18 +589,11 @@ class _AccountSettingsState extends State<AccountSettings> {
       );
     }
 
-    return DropdownButtonFormField<String>(
-      value: selectedCity,
-      icon: const Icon(Icons.arrow_drop_down),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return LocalizationHelper.pleaseSelectCity(context);
-        }
-        return null;
-      },
+    return TextFormField(
+      initialValue: selectedCity,
       decoration: InputDecoration(
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 10,
+          vertical: 16,
           horizontal: 12,
         ),
         enabledBorder: OutlineInputBorder(
@@ -610,39 +604,23 @@ class _AccountSettingsState extends State<AccountSettings> {
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
+        hintText: LocalizationHelper.selectCity(context),
+        hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+        // Add suffix icon to indicate it's a text field
+        suffixIcon: const Icon(Icons.location_city, color: Colors.grey),
       ),
-      hint: Text(
-        LocalizationHelper.selectCity(context),
-        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
-      ),
+      style: GoogleFonts.poppins(fontSize: 14),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return LocalizationHelper.pleaseSelectCity(context);
+        }
+        return null;
+      },
       onChanged: (value) {
         setState(() {
           selectedCity = value;
         });
       },
-      items: _cities.map((city) {
-        return DropdownMenuItem<String>(
-          value: city.name,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                city.name,
-                style: GoogleFonts.poppins(fontSize: 14),
-              ),
-              // if (city.state != null)
-              //   Text(
-              //     '${city.state}, ${city.country ?? ''}',
-              //     style: GoogleFonts.poppins(
-              //       fontSize: 11,
-              //       color: Colors.grey[600],
-              //     ),
-              //   ),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -762,7 +740,7 @@ class _AccountSettingsState extends State<AccountSettings> {
                 style: GoogleFonts.poppins(fontSize: 14),
               ),
               // if (country.code != null || country.dialCode != null) ...[
-              //   const SizedBox(width: 8),    
+              //   const SizedBox(width: 8),
               //   Text(
               //     '${country.code ?? ''} ${country.dialCode ?? ''}',
               //     style: GoogleFonts.poppins(

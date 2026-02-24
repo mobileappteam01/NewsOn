@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:newson/data/services/user_service.dart' show UserService;
 import '../../data/services/api_service.dart';
 
 /// Model class for city data
@@ -47,18 +48,27 @@ class Country {
   final String name;
   final String? code;
   final String? dialCode;
+  final String? countryId;
+  final bool? isActive;
+  final bool? isDeleted;
 
   Country({
     required this.name,
     this.code,
     this.dialCode,
+    this.countryId,
+    this.isActive,
+    this.isDeleted,
   });
 
   factory Country.fromJson(Map<String, dynamic> json) {
     return Country(
-      name: json['name'] as String? ?? '',
+      name: json['country_name'] as String? ?? json['name'] as String? ?? '',
       code: json['code'] as String?,
       dialCode: json['dialCode'] as String?,
+      countryId: json['country_id'] as String?,
+      isActive: json['isActive'] as bool?,
+      isDeleted: json['isDeleted'] as bool?,
     );
   }
 
@@ -67,6 +77,9 @@ class Country {
       'name': name,
       'code': code,
       'dialCode': dialCode,
+      'country_id': countryId,
+      'isActive': isActive,
+      'isDeleted': isDeleted,
     };
   }
 
@@ -78,7 +91,7 @@ class Country {
       identical(this, other) ||
       other is Country &&
           runtimeType == other.runtimeType &&
-          name == other.name;
+          (name == other.name || countryId == other.countryId);
 
   @override
   int get hashCode => name.hashCode;
@@ -92,6 +105,7 @@ class LocationService {
   LocationService._();
 
   final ApiService _apiService = ApiService();
+  final UserService _userService = UserService();
 
   // Cache for location data
   List<City>? _cachedCities;
@@ -105,6 +119,14 @@ class LocationService {
         return _cachedCities!;
       }
 
+      final userToken = _userService.getToken();
+      print('🔑 User token for fetching cities: $userToken');
+
+      if (userToken == null || userToken.isEmpty) {
+        debugPrint('⚠️ User not logged in - using default cities');
+        return _getDefaultCities();
+      }
+
       // Initialize API service if needed
       if (!_apiService.isInitialized) {
         await _apiService.initialize();
@@ -116,12 +138,27 @@ class LocationService {
         queryParams['country'] = country;
       }
 
-      // Make API call
-      final response = await _apiService.get(
-        'location',
-        'getCities',
-        queryParameters: queryParams,
-      );
+      // Make API call - try different possible endpoints
+      ApiResponse response;
+      try {
+        // First try the most likely endpoint
+        response = await _apiService.get(
+          'location',
+          'getCities',
+          queryParameters: queryParams,
+          bearerToken: userToken,
+        );
+      } catch (e) {
+        debugPrint(
+            '⚠️ Failed to call location/getCities, trying profile/getCities: $e');
+        // Fallback to profile module
+        response = await _apiService.get(
+          'profile',
+          'getCities',
+          queryParameters: queryParams,
+          bearerToken: userToken,
+        );
+      }
 
       if (response.success && response.data != null) {
         final List<dynamic> citiesData = response.data['cities'] ?? [];
@@ -133,14 +170,17 @@ class LocationService {
           _cachedCities = cities;
         }
 
-        debugPrint('✅ Loaded ${cities.length} cities');
+        debugPrint('✅ Loaded ${cities.length} cities from API');
         return cities;
       } else {
         debugPrint('⚠️ Failed to load cities: ${response.error}');
+        debugPrint('⚠️ Status code: ${response.statusCode}');
+        debugPrint('⚠️ Using default cities as fallback');
         return _getDefaultCities();
       }
     } catch (e) {
       debugPrint('❌ Error loading cities: $e');
+      debugPrint('❌ Using default cities as fallback');
       return _getDefaultCities();
     }
   }
@@ -153,32 +193,74 @@ class LocationService {
         return _cachedCountries!;
       }
 
+      final userToken = _userService.getToken();
+      print('🔑 User token for fetching countries: $userToken');
+
+      if (userToken == null || userToken.isEmpty) {
+        debugPrint('⚠️ User not logged in - using default countries');
+        return _getDefaultCountries();
+      }
+
       // Initialize API service if needed
       if (!_apiService.isInitialized) {
         await _apiService.initialize();
       }
 
-      // Make API call
-      final response = await _apiService.get(
-        'location',
-        'getCountries',
-      );
+      // Make API call - try different possible endpoints
+      ApiResponse response;
+      try {
+        // First try the most likely endpoint
+        response = await _apiService.get(
+          'profile',
+          'getCountries',
+          bearerToken: userToken,
+        );
+      } catch (e) {
+        debugPrint(
+            '⚠️ Failed to call location/getCountries, trying profile/getCountries: $e');
+        // Fallback to profile module
+        response = await _apiService.get(
+          'profile',
+          'getCountries',
+          bearerToken: userToken,
+        );
+      }
 
       if (response.success && response.data != null) {
-        final List<dynamic> countriesData = response.data['countries'] ?? [];
+        // Handle the new API response structure
+        final List<dynamic> countriesData;
+
+        if (response.data['data'] != null) {
+          // New API structure: {"message":"success","data":[...]}
+          countriesData = response.data['data'] as List<dynamic>;
+        } else if (response.data['countries'] != null) {
+          // Old API structure: {"countries":[...]}
+          countriesData = response.data['countries'] as List<dynamic>;
+        } else {
+          debugPrint('⚠️ No countries data found in response');
+          return _getDefaultCountries();
+        }
+
+        // Filter only active countries and parse
         final countries = countriesData
+            .where((countryJson) =>
+                countryJson['isActive'] == true &&
+                (countryJson['isDeleted'] != true))
             .map((countryJson) => Country.fromJson(countryJson))
             .toList();
 
         _cachedCountries = countries;
-        debugPrint('✅ Loaded ${countries.length} countries');
+        debugPrint('✅ Loaded ${countries.length} active countries from API');
         return countries;
       } else {
         debugPrint('⚠️ Failed to load countries: ${response.error}');
+        debugPrint('⚠️ Status code: ${response.statusCode}');
+        debugPrint('⚠️ Using default countries as fallback');
         return _getDefaultCountries();
       }
     } catch (e) {
       debugPrint('❌ Error loading countries: $e');
+      debugPrint('❌ Using default countries as fallback');
       return _getDefaultCountries();
     }
   }
