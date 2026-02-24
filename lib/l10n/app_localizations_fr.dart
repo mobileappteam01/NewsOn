@@ -86,6 +86,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get cancel => 'Annuler';
 
   @override
+  String get selectDate => 'Sélectionner la date';
+
+  @override
+  String get datePickerConfirm => 'Sélectionner';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get datePickerFieldHint => 'Mois/Jour/Année';
+
+  @override
   String get clear => 'Effacer';
 
   @override

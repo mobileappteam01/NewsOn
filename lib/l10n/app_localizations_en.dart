@@ -86,6 +86,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String get selectDate => 'Select Date';
+
+  @override
+  String get datePickerConfirm => 'Select';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get datePickerFieldHint => 'Month/Day/Year';
+
+  @override
   String get clear => 'Clear';
 
   @override

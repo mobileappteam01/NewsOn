@@ -86,6 +86,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cancel => 'Cancelar';
 
   @override
+  String get selectDate => 'Seleccionar fecha';
+
+  @override
+  String get datePickerConfirm => 'Seleccionar';
+
+  @override
+  String get dateLabel => 'Fecha';
+
+  @override
+  String get datePickerFieldHint => 'Mes/Día/Año';
+
+  @override
   String get clear => 'Limpiar';
 
   @override

@@ -251,6 +251,30 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get cancel;
 
+  /// Date picker title
+  ///
+  /// In en, this message translates to:
+  /// **'Select Date'**
+  String get selectDate;
+
+  /// Date picker confirm button
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get datePickerConfirm;
+
+  /// Date field label
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get dateLabel;
+
+  /// Date picker field hint
+  ///
+  /// In en, this message translates to:
+  /// **'Month/Day/Year'**
+  String get datePickerFieldHint;
+
   /// Clear button text
   ///
   /// In en, this message translates to:

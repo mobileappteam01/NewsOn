@@ -86,6 +86,18 @@ class AppLocalizationsHi extends AppLocalizations {
   String get cancel => 'रद्द करें';
 
   @override
+  String get selectDate => 'तारीख चुनें';
+
+  @override
+  String get datePickerConfirm => 'चुनें';
+
+  @override
+  String get dateLabel => 'तारीख';
+
+  @override
+  String get datePickerFieldHint => 'महीना/दिन/साल';
+
+  @override
   String get clear => 'साफ़ करें';
 
   @override

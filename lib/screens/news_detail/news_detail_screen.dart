@@ -38,6 +38,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
 
   // Periodic timer for state synchronization
   Timer? _stateSyncTimer;
+  bool _didRefreshStateOnEnter = false;
 
   @override
   void initState() {
@@ -155,9 +156,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     if (audioIndex < 0 || audioIndex >= audioProvider.playlist.length) return;
     if (audioIndex >= _articlesList.length) return;
 
-    // Check if audio has moved to a different article than current page
-    // This happens when auto-advance plays the next article
-    if (audioIndex != _currentPageIndex) {
+    // Only sync when audio has *advanced forward* (auto-advance to next article).
+    // Do NOT sync when audioIndex < _currentPageIndex: user may have opened a
+    // different article (e.g. tapped 2nd news while 1st was playing) and we must
+    // stay on the article they chose.
+    if (audioIndex > _currentPageIndex) {
       debugPrint(
           '🔄 [AUTO-ADVANCE] Audio at $audioIndex, page at $_currentPageIndex - syncing...');
 
@@ -190,17 +193,22 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _audioProvider = context.read<AudioPlayerProvider>();
+    // When opening or returning to this screen, refresh provider state so the
+    // control bar shows current play state and progress (e.g. same article
+    // still playing from mini player).
+    if (!_didRefreshStateOnEnter) {
+      _didRefreshStateOnEnter = true;
+      _audioProvider!.refreshState();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Cancel state sync timer
     _stateSyncTimer?.cancel();
-    // Stop audio when leaving screen (use cached ref - never use context in dispose)
-    if (_audioProvider != null && _audioProvider!.hasCurrentArticle) {
-      _audioProvider!.stop();
-    }
+    // Do NOT stop audio when leaving screen: playback continues so the user
+    // can keep listening via the mini player; re-opening this article will
+    // show the current player state via Consumer<AudioPlayerProvider>.
     _pageController.dispose();
     super.dispose();
   }

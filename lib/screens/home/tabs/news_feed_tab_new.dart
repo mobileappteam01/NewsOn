@@ -14,6 +14,7 @@ import '../../../providers/audio_player_provider.dart';
 import '../../../providers/bookmark_provider.dart';
 import '../../../core/utils/shared_functions.dart';
 import '../../../core/utils/localization_helper.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/services/font_manager.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
@@ -177,7 +178,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       Consumer<LanguageProvider>(
                         builder: (context, languageProvider, _) {
                           return Tooltip(
-                            message: 'News language: ${languageProvider.newsLanguageName}',
+                            message:
+                                'News language: ${languageProvider.newsLanguageName}',
                             child: GestureDetector(
                               onTap: () =>
                                   showNewsLanguageSelectorDialog(context),
@@ -1550,24 +1552,26 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     } else if (selected == today.subtract(const Duration(days: 1))) {
       return LocalizationHelper.yesterday(context);
     } else {
-      return DateFormat('dd MMM yyyy').format(date);
+      final locale = Localizations.localeOf(context).toString();
+      return DateFormat('dd MMM yyyy', locale).format(date);
     }
   }
 
   Widget _buildDatePicker(BuildContext context) {
     return GestureDetector(
       onTap: () async {
+        final l10n = AppLocalizations.of(context);
         final picked = await showDatePicker(
           context: context,
           initialDate: _selectedDate,
           firstDate: DateTime(2020),
           lastDate: DateTime.now(),
           initialDatePickerMode: DatePickerMode.day,
-          helpText: 'Select Date',
-          cancelText: 'Cancel',
-          confirmText: 'Select',
-          fieldLabelText: 'Date',
-          fieldHintText: 'Month/Day/Year',
+          helpText: l10n.selectDate,
+          cancelText: l10n.cancel,
+          confirmText: l10n.datePickerConfirm,
+          fieldLabelText: l10n.dateLabel,
+          fieldHintText: l10n.datePickerFieldHint,
         );
         if (picked != null && picked != _selectedDate) {
           // Normalize the date to remove time components
@@ -1595,7 +1599,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
             ),
             const SizedBox(width: 6),
             Text(
-              DateFormat('dd MMM').format(_selectedDate),
+              DateFormat('dd MMM', Localizations.localeOf(context).toString())
+                  .format(_selectedDate),
               style: FontManager.caption.copyWith(
                 color: Colors.white,
                 fontSize: 12,

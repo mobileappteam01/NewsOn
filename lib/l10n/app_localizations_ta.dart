@@ -86,6 +86,18 @@ class AppLocalizationsTa extends AppLocalizations {
   String get cancel => 'ரத்து செய்';
 
   @override
+  String get selectDate => 'தேதியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get datePickerConfirm => 'தேர்ந்தெடு';
+
+  @override
+  String get dateLabel => 'தேதி';
+
+  @override
+  String get datePickerFieldHint => 'மாதம்/நாள்/ஆண்டு';
+
+  @override
   String get clear => 'அழி';
 
   @override

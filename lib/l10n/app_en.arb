@@ -105,6 +105,22 @@
   "@cancel": {
     "description": "Cancel button text"
   },
+  "selectDate": "Select Date",
+  "@selectDate": {
+    "description": "Date picker title"
+  },
+  "datePickerConfirm": "Select",
+  "@datePickerConfirm": {
+    "description": "Date picker confirm button"
+  },
+  "dateLabel": "Date",
+  "@dateLabel": {
+    "description": "Date field label"
+  },
+  "datePickerFieldHint": "Month/Day/Year",
+  "@datePickerFieldHint": {
+    "description": "Date picker field hint"
+  },
   "clear": "Clear",
   "@clear": {
     "description": "Clear button text"
