@@ -316,7 +316,7 @@ class _CategoriesTabState extends State<CategoriesTab>
     }
 
     return GestureDetector(
-
+      
       onTap: () async {
         // Show date picker when tapped
         final picked = await showDatePicker(
