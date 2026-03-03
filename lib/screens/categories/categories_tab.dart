@@ -825,12 +825,15 @@ class _CategoriesTabState extends State<CategoriesTab>
                 // Middle - News content
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Category tag
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -852,37 +855,41 @@ class _CategoriesTabState extends State<CategoriesTab>
 
                         const SizedBox(height: 4),
 
-                        // News title
-                        Text(
-                          article.title,
-                          style: GoogleFonts.inter(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
+                        Flexible(
+                          child: Text(
+                            article.title,
+                            style: GoogleFonts.inter(
+                              color:
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
 
                         const SizedBox(height: 4),
 
-                        // Source and time
                         Row(
                           children: [
                             if (article.sourceName?.isNotEmpty == true)
-                              Text(
-                                article.sourceName!,
-                                style: GoogleFonts.inter(
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white70
-                                      : Colors.black54,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Text(
+                                  article.sourceName!,
+                                  style: GoogleFonts.inter(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white70
+                                        : Colors.black54,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             if (article.sourceName?.isNotEmpty == true &&
