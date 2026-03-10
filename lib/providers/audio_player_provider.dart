@@ -1091,7 +1091,7 @@ class AudioPlayerProvider with ChangeNotifier {
     _backgroundMusicService.ensureInitialized().then((_) {
       if (_currentArticle == null || _hasCompleted) return;
       _backgroundMusicService.setVolume(volume);
-      _backgroundMusicService.start().then((_) {
+      _backgroundMusicService.startOrResume().then((_) {
         debugPrint('✅ Background music started (in parallel with news)');
         notifyListeners();
       }).catchError((e) {

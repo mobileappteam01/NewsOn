@@ -164,6 +164,17 @@ class BackgroundMusicService {
     }
   }
 
+  /// Start or resume background music depending on current player state.
+  /// - If a source is already loaded (paused), resume from current position.
+  /// - If idle (stopped or never started), start from the beginning.
+  Future<void> startOrResume() async {
+    if (_player.processingState != ProcessingState.idle) {
+      await resume();
+    } else {
+      await start();
+    }
+  }
+
   /// Set background music volume (0.0 to 1.0)
   Future<void> setVolume(double volume) async {
     // Clamp volume to valid range
