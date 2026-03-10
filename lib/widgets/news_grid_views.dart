@@ -11,6 +11,7 @@ import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
 import '../providers/bookmark_provider.dart';
 import '../providers/audio_player_provider.dart';
+import '../providers/completed_news_provider.dart';
 import '../core/utils/date_formatter.dart';
 
 class NewsGridView extends StatelessWidget {
@@ -121,9 +122,12 @@ class NewsGridView extends StatelessWidget {
   }
 
   showListenButton(RemoteConfigModel config, BuildContext context) {
+    final completedProvider = Provider.of<CompletedNewsProvider>(context);
+    final newsId = newsDetails.articleId ?? newsDetails.title;
+    final isNewsCompleted = completedProvider.isCompleted(newsId);
+
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
-        // Check if this specific article is currently playing or paused
         final currentArticle = audioProvider.currentArticle;
         final isThisArticlePlaying = currentArticle != null &&
             _isSameArticle(newsDetails, currentArticle);
@@ -131,6 +135,10 @@ class NewsGridView extends StatelessWidget {
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
         final isPaused = isThisArticlePlaying && audioProvider.isPaused;
         final isLoading = isThisArticlePlaying && audioProvider.isLoading;
+
+        final buttonColor = isNewsCompleted
+            ? const Color(0xFF2E7D32)
+            : config.primaryColorValue;
 
         return GestureDetector(
           onTap: () {
@@ -146,7 +154,7 @@ class NewsGridView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: config.primaryColorValue,
+              color: buttonColor,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -208,6 +216,10 @@ class NewsGridView extends StatelessWidget {
   }
 
   showRoundedListenButton(RemoteConfigModel config, BuildContext context) {
+    final completedProvider = Provider.of<CompletedNewsProvider>(context);
+    final newsId = newsDetails.articleId ?? newsDetails.title;
+    final isNewsCompleted = completedProvider.isCompleted(newsId);
+
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
         final currentArticle = audioProvider.currentArticle;
@@ -217,6 +229,10 @@ class NewsGridView extends StatelessWidget {
         final isPlaying = isThisArticlePlaying && audioProvider.isPlaying;
         final isPaused = isThisArticlePlaying && audioProvider.isPaused;
         final isLoading = isThisArticlePlaying && audioProvider.isLoading;
+
+        final buttonColor = isNewsCompleted
+            ? const Color(0xFF2E7D32)
+            : config.primaryColorValue;
 
         return GestureDetector(
           onTap: () {
@@ -234,7 +250,7 @@ class NewsGridView extends StatelessWidget {
               width: 50,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: config.primaryColorValue,
+                color: buttonColor,
                 shape: BoxShape.circle,
               ),
               child: Center(

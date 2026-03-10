@@ -486,6 +486,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                               categoryNews,
                                               startIndex,
                                               playTitle: true,
+                                              category: 'date',
                                             );
                                       } else {
                                         // Fallback: play single article
@@ -494,6 +495,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                             .playArticleFromUrl(
                                               article,
                                               playTitle: true,
+                                              category: 'date',
                                             );
                                       }
                                     } catch (e) {
@@ -653,6 +655,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                             todayNews,
                                             startIndex,
                                             playTitle: true,
+                                            category: 'date',
                                           );
                                     } else {
                                       // Fallback: play single article
@@ -661,6 +664,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           .playArticleFromUrl(
                                             article,
                                             playTitle: true,
+                                            category: 'date',
                                           );
                                     }
                                   } catch (e) {
@@ -815,6 +819,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           flashNews,
                                           startIndex,
                                           playTitle: true,
+                                          category: 'flash',
                                         );
                                   } else {
                                     // Fallback: play single article
@@ -823,6 +828,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                         .playArticleFromUrl(
                                           data,
                                           playTitle: true,
+                                          category: 'flash',
                                         );
                                   }
                                 } catch (e) {
@@ -1329,6 +1335,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                             breakingNews,
                                             startIndex,
                                             playTitle: true,
+                                            category: 'breaking',
                                           );
                                     } else {
                                       // Fallback: play single article
@@ -1337,6 +1344,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           .playArticleFromUrl(
                                             article,
                                             playTitle: true,
+                                            category: 'breaking',
                                           );
                                     }
                                   } catch (e) {

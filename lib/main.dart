@@ -22,6 +22,7 @@ import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/dynamic_language_provider.dart';
 import 'providers/remote_config_provider.dart';
+import 'providers/completed_news_provider.dart';
 import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
@@ -240,6 +241,7 @@ class NewsOnApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => CompletedNewsProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
         // Audio Player Provider - Get API key from Firebase
         ChangeNotifierProvider(
@@ -264,66 +266,105 @@ class NewsOnApp extends StatelessWidget {
           },
         ),
       ],
-      child: Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
-        builder: (
-          context,
-          themeProvider,
-          languageProvider,
-          configProvider,
-          child,
-        ) {
-          // Get the locale, but fall back to English for AppLocalizations if not supported
-          final requestedLocale = languageProvider.locale;
+      child: _CompletedNewsBridge(
+        child: Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
+          builder: (
+            context,
+            themeProvider,
+            languageProvider,
+            configProvider,
+            child,
+          ) {
+            // Get the locale, but fall back to English for AppLocalizations if not supported
+            final requestedLocale = languageProvider.locale;
 
-          // Check if the locale is supported by AppLocalizations (ARB files)
-          // Currently only 'en' and 'ta' have ARB files
-          final arbSupportedLocales = ['en', 'ta'];
-          final effectiveLocale =
-              arbSupportedLocales.contains(requestedLocale.languageCode)
-                  ? requestedLocale
-                  : const Locale(
-                      'en',
-                    ); // Fallback to English for AppLocalizations
+            // Check if the locale is supported by AppLocalizations (ARB files)
+            // Currently only 'en' and 'ta' have ARB files
+            final arbSupportedLocales = ['en', 'ta'];
+            final effectiveLocale =
+                arbSupportedLocales.contains(requestedLocale.languageCode)
+                    ? requestedLocale
+                    : const Locale(
+                        'en',
+                      ); // Fallback to English for AppLocalizations
 
-          return MaterialApp(
-            title: configProvider.config.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.getLightTheme(configProvider.config),
-            darkTheme: AppTheme.getDarkTheme(configProvider.config),
-            themeMode: themeProvider.themeMode,
+            return MaterialApp(
+              title: configProvider.config.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.getLightTheme(configProvider.config),
+              darkTheme: AppTheme.getDarkTheme(configProvider.config),
+              themeMode: themeProvider.themeMode,
 
-            // Localization configuration
-            // Use effectiveLocale for Flutter's built-in localization (ARB files)
-            // Dynamic translations are handled separately by DynamicLocalizationService
-            locale: effectiveLocale,
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            // Only include locales that have ARB file support
-            supportedLocales: const [Locale('en'), Locale('ta')],
+              // Localization configuration
+              // Use effectiveLocale for Flutter's built-in localization (ARB files)
+              // Dynamic translations are handled separately by DynamicLocalizationService
+              locale: effectiveLocale,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              // Only include locales that have ARB file support
+              supportedLocales: const [Locale('en'), Locale('ta')],
 
-            // Resolve locale - fall back to English if not supported by ARB
-            localeResolutionCallback: (locale, supportedLocales) {
-              if (locale != null) {
-                for (final supportedLocale in supportedLocales) {
-                  if (supportedLocale.languageCode == locale.languageCode) {
-                    return supportedLocale;
+              // Resolve locale - fall back to English if not supported by ARB
+              localeResolutionCallback: (locale, supportedLocales) {
+                if (locale != null) {
+                  for (final supportedLocale in supportedLocales) {
+                    if (supportedLocale.languageCode == locale.languageCode) {
+                      return supportedLocale;
+                    }
                   }
                 }
-              }
-              return const Locale('en'); // Default fallback
-            },
+                return const Locale('en'); // Default fallback
+              },
 
-            home: const SplashScreen(),
-            // home: CategorySelectionScreen(),
-          );
-        },
+              home: const SplashScreen(),
+              // home: CategorySelectionScreen(),
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+/// One-time setup: load completed news for current user and wire audio completion.
+class _CompletedNewsBridge extends StatefulWidget {
+  const _CompletedNewsBridge({required this.child});
+  final Widget child;
+
+  @override
+  State<_CompletedNewsBridge> createState() => _CompletedNewsBridgeState();
+}
+
+class _CompletedNewsBridgeState extends State<_CompletedNewsBridge> {
+  bool _didSetup = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didSetup) return;
+    _didSetup = true;
+    final completed = context.read<CompletedNewsProvider>();
+    final audio = context.read<AudioPlayerProvider>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      debugPrint('🔄 [CompletedNewsBridge] loading for current user...');
+      await completed.loadForCurrentUser();
+      if (!mounted) return;
+      audio.onNewsCompleted = (newsId, category) {
+        completed.markNewsCompleted(newsId, category);
+      };
+      debugPrint(
+          '🔄 [CompletedNewsBridge] setup done userId=${completed.userId ?? "null"}');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 fetchIPAddressAndURLS() async {

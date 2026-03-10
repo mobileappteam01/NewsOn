@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../core/constants/app_constants.dart';
 
 /// Breaking news card with large image and play button overlay
@@ -20,7 +21,10 @@ class BreakingNewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final audioProvider = Provider.of<AudioPlayerProvider>(context);
+    final completedProvider = Provider.of<CompletedNewsProvider>(context);
     final isPlaying = audioProvider.isArticlePlaying(article);
+    final newsId = article.articleId ?? article.title;
+    final isCompleted = completedProvider.isCompleted(newsId);
 
     return GestureDetector(
       onTap: onTap,
@@ -151,7 +155,9 @@ class BreakingNewsCard extends StatelessWidget {
               Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: theme.primaryColor,
+                    color: isCompleted
+                        ? const Color(0xFF2E7D32)
+                        : theme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(

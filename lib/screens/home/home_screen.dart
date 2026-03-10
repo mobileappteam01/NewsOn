@@ -6,6 +6,7 @@ import 'package:newson/data/models/remote_config_model.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
 import '../../providers/bookmark_provider.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/user_service.dart';
@@ -62,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<NewsProvider>().fetchBreakingNews();
       context.read<BookmarkProvider>().loadBookmarks();
+      context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();
 
       // Update FCM Token when home page initializes

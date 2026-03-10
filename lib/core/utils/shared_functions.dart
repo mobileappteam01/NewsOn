@@ -12,6 +12,7 @@ import '../../data/models/news_article.dart';
 import '../../data/services/background_music_service.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../data/services/storage_service.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -239,11 +240,13 @@ showListenButton(
 ]) {
   return Builder(
     builder: (ctx) {
-      BackgroundMusicService _backgroundMusicService = BackgroundMusicService();
       final buildContext = context ?? ctx;
+      final completedProvider = Provider.of<CompletedNewsProvider>(buildContext, listen: true);
+      final newsId = article != null ? (article.articleId ?? article.title) : '';
+      final isNewsCompleted = newsId.isNotEmpty && completedProvider.isCompleted(newsId);
+
       return Consumer<AudioPlayerProvider>(
         builder: (context, audioProvider, child) {
-          // Check if this specific article is currently playing or paused
           final currentArticle = audioProvider.currentArticle;
           final isThisArticlePlaying = article != null &&
               currentArticle != null &&
@@ -253,20 +256,18 @@ showListenButton(
           final isPaused = isThisArticlePlaying && audioProvider.isPaused;
           final isLoading = isThisArticlePlaying && audioProvider.isLoading;
 
+          final buttonColor = isNewsCompleted
+              ? const Color(0xFF2E7D32)
+              : config.primaryColorValue;
+
           return GestureDetector(
             onTap: () {
               if (isPlaying) {
-                // If this article is playing, pause it
                 audioProvider.pause();
-                // _backgroundMusicService.pause();
               } else if (isPaused) {
-                // If this article is paused, resume it
                 audioProvider.resume();
-                // _backgroundMusicService.resume();
               } else {
-                // Otherwise, start playing this article
                 onListenTapped();
-                // _backgroundMusicService.start();
               }
             },
             child: Container(
@@ -275,9 +276,7 @@ showListenButton(
                   : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(isCompact ? 8 : 12),
-                color: isPlaying || isPaused
-                    ? config.primaryColorValue
-                    : config.primaryColorValue,
+                color: buttonColor,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

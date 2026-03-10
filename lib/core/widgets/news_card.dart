@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
@@ -28,8 +29,11 @@ class NewsCard extends StatelessWidget {
     final theme = Theme.of(context);
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
     final audioProvider = Provider.of<AudioPlayerProvider>(context);
+    final completedProvider = Provider.of<CompletedNewsProvider>(context);
     final isBookmarked = bookmarkProvider.isBookmarked(article);
     final isPlaying = audioProvider.isArticlePlaying(article);
+    final newsId = article.articleId ?? article.title;
+    final isCompleted = completedProvider.isCompleted(newsId);
 
     return Container(
       margin: const EdgeInsets.only(
@@ -143,7 +147,9 @@ class NewsCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.primaryColor,
+                              color: isCompleted
+                                  ? const Color(0xFF2E7D32)
+                                  : theme.primaryColor,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(

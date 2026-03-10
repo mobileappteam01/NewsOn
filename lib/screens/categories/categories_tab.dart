@@ -10,6 +10,7 @@ import '../../core/utils/date_formatter.dart';
 import '../../providers/news_provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../data/models/news_article.dart';
 
 /// Categories tab - Shows breaking news in carousel design when opened (exact design match)
@@ -480,6 +481,10 @@ class _CategoriesTabState extends State<CategoriesTab>
     ThemeData theme,
     AudioPlayerProvider audioProvider,
   ) {
+    final completedProvider = Provider.of<CompletedNewsProvider>(context, listen: true);
+    final newsId = article.articleId ?? article.title;
+    final isNewsCompleted = completedProvider.isCompleted(newsId);
+
     final isCurrentArticle = audioProvider.currentArticle != null &&
         (audioProvider.currentArticle!.articleId ??
                 audioProvider.currentArticle!.title) ==
@@ -518,11 +523,11 @@ class _CategoriesTabState extends State<CategoriesTab>
             vertical: isLargeScreen ? 16 : 14,
           ),
           decoration: BoxDecoration(
-            color: config.primaryColorValue,
+            color: isNewsCompleted ? const Color(0xFF2E7D32) : config.primaryColorValue,
             borderRadius: BorderRadius.circular(isLargeScreen ? 20 : 16),
             boxShadow: [
               BoxShadow(
-                color: config.primaryColorValue.withOpacity(0.3),
+                color: (isNewsCompleted ? const Color(0xFF2E7D32) : config.primaryColorValue).withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -545,7 +550,7 @@ class _CategoriesTabState extends State<CategoriesTab>
                       } else {
                         // Start playing this article
                         audioProvider.playArticleFromUrl(article,
-                            playTitle: true);
+                            playTitle: true, category: 'breaking');
                       }
                     },
                     child: Container(
@@ -775,6 +780,10 @@ class _CategoriesTabState extends State<CategoriesTab>
     ThemeData theme,
     int index,
   ) {
+    final completedProvider = Provider.of<CompletedNewsProvider>(context, listen: true);
+    final newsId = article.articleId ?? article.title;
+    final isNewsCompleted = completedProvider.isCompleted(newsId);
+
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
         final isCurrentArticle = audioProvider.currentArticle != null &&
@@ -783,6 +792,10 @@ class _CategoriesTabState extends State<CategoriesTab>
                 (article.articleId ?? article.title);
         final isPlaying = isCurrentArticle && audioProvider.isPlaying;
         final isLoading = isCurrentArticle && audioProvider.isLoading;
+
+        final playButtonColor = isNewsCompleted
+            ? const Color(0xFF2E7D32)
+            : config.primaryColorValue;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -947,11 +960,11 @@ class _CategoriesTabState extends State<CategoriesTab>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: config.primaryColorValue,
+                        color: playButtonColor,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: config.primaryColorValue.withOpacity(0.3),
+                            color: playButtonColor.withOpacity(0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1007,6 +1020,7 @@ class _CategoriesTabState extends State<CategoriesTab>
           articleIndex,
           playTitle:
               true, // Use user's reading preference (AudioPlayerProvider handles it)
+          category: 'breaking',
         );
         debugPrint(
           '🎵 Playing breaking news from categories tab: index $articleIndex/${_articlesList.length} (using reading preference)',
@@ -1019,6 +1033,7 @@ class _CategoriesTabState extends State<CategoriesTab>
           article,
           playTitle:
               true, // Use user's reading preference (AudioPlayerProvider handles it)
+          category: 'breaking',
         );
       }
     } catch (e) {

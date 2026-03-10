@@ -2,6 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Completed news: user-specific. App uses backend auth (UserService), not Firebase Auth.
+    // This rule allows read/write so writes do not silently fail.
+    match /users/{userId}/completedNews/{newsId} {
+      allow read, write: if true;
+    }
+
     match /{document=**} {
       allow read: if true;   // TEMPORARY — allows public reads
       allow write: if false; // keep writes blocked

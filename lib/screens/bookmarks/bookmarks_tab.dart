@@ -245,6 +245,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                                             todayNews,
                                             startIndex,
                                             playTitle: true,
+                                            category: 'date',
                                           );
                                     } else {
                                       // Fallback: play single article
@@ -253,6 +254,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                                           .playArticleFromUrl(
                                             article,
                                             playTitle: true,
+                                            category: 'date',
                                           );
                                     }
                                   } catch (e) {

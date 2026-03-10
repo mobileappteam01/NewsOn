@@ -40,6 +40,11 @@ class AudioPlayerProvider with ChangeNotifier {
   int?
       _autoAdvanceFromIndex; // Store index when auto-advance timer was set (for validation)
 
+  String _currentCategory = 'date';
+
+  /// Callback when current audio finishes (for marking news as completed in Firestore).
+  void Function(String newsId, String category)? onNewsCompleted;
+
   /// Generation for background music delayed start. Incremented on stop/pause/switch/error
   /// so any pending _startBackgroundMusicWithDelay callback will no-op.
 
@@ -417,6 +422,7 @@ class AudioPlayerProvider with ChangeNotifier {
     List<NewsArticle> articles,
     int startIndex, {
     bool playTitle = true,
+    String category = 'date',
   }) async {
     if (articles.isEmpty) {
       debugPrint('⚠️ Cannot set empty playlist');
@@ -437,13 +443,14 @@ class AudioPlayerProvider with ChangeNotifier {
     _playlist = List.from(articles);
     _currentPlaylistIndex = startIndex;
     _playTitleMode = playTitle;
+    _currentCategory = category;
 
     debugPrint(
       '📋 Playlist set with ${_playlist.length} articles, starting at index $startIndex (mode: ${playTitle ? "list view" : "detail view"})',
     );
 
     // Start playing the article at startIndex
-    await playArticleFromUrl(_playlist[startIndex], playTitle: playTitle);
+    await playArticleFromUrl(_playlist[startIndex], playTitle: playTitle, category: category);
   }
 
   /// Play article from audio URL(s)
@@ -454,6 +461,7 @@ class AudioPlayerProvider with ChangeNotifier {
     NewsArticle article, {
     bool playTitle = false,
     String? forceMode,
+    String category = 'date',
   }) async {
     try {
       // If same article is playing and same mode, just resume
@@ -481,6 +489,7 @@ class AudioPlayerProvider with ChangeNotifier {
       _isLoading = true;
       _error = null;
       _currentArticle = article;
+      _currentCategory = category;
       _hasCompleted = false; // Reset completion flag when starting new audio
       _isAutoAdvancing =
           false; // Reset auto-advance flag when starting new audio
@@ -774,6 +783,13 @@ class AudioPlayerProvider with ChangeNotifier {
     // Stop background music when news completes (BG mirrors news)
     _backgroundMusicService.stop();
 
+    // Notify completed-news so UI can show green tick and Firestore can persist
+    final article = _currentArticle;
+    if (article != null && onNewsCompleted != null) {
+      final newsId = article.articleId ?? article.title;
+      onNewsCompleted!(newsId, _currentCategory);
+    }
+
     // Notify listeners immediately to update UI (pause icon → play icon)
     notifyListeners();
 
@@ -927,7 +943,7 @@ class AudioPlayerProvider with ChangeNotifier {
       notifyListeners();
 
       // Play next article using the same reading mode
-      await playArticleFromUrl(nextArticle, playTitle: _playTitleMode);
+      await playArticleFromUrl(nextArticle, playTitle: _playTitleMode, category: _currentCategory);
 
       debugPrint('✅ Next article started playing: ${nextArticle.title}');
     } catch (e, stackTrace) {
@@ -988,7 +1004,7 @@ class AudioPlayerProvider with ChangeNotifier {
     _currentPlaylistIndex = prevIndex;
 
     try {
-      await playArticleFromUrl(_playlist[prevIndex], playTitle: _playTitleMode);
+      await playArticleFromUrl(_playlist[prevIndex], playTitle: _playTitleMode, category: _currentCategory);
     } catch (e) {
       debugPrint('❌ Error playing previous article: $e');
     }

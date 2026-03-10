@@ -10,6 +10,7 @@ import '../../data/services/profile_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/location_service.dart';
+import '../../providers/completed_news_provider.dart';
 import '../../screens/auth/auth_screen.dart';
 
 class AccountSettings extends StatefulWidget {
@@ -1069,6 +1070,7 @@ class _AccountSettingsState extends State<AccountSettings> {
 
         if (mounted) {
           if (response.success) {
+            await context.read<CompletedNewsProvider>().clearUser();
             // Navigate to auth screen
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const AuthScreen()),
