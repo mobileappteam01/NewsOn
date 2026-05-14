@@ -118,6 +118,21 @@ class StorageService {
     return _settingsBox!.get(AppConstants.newsLanguageKey, defaultValue: '');
   }
 
+  // ==================== Auth Provider ====================
+
+  /// Persist which provider user used to sign in ('google' | 'apple')
+  static Future<void> saveAuthProvider(String? provider) async {
+    if (_settingsBox == null) await initialize();
+    await _settingsBox!.put(AppConstants.authProviderKey, provider);
+  }
+
+  /// Get persisted auth provider ('google' | 'apple'), if any
+  static String? getAuthProvider() {
+    if (_settingsBox == null) return null;
+    final val = _settingsBox!.get(AppConstants.authProviderKey);
+    return val is String && val.isNotEmpty ? val : null;
+  }
+
   /// Save background music enabled preference (play BG music while news plays)
   static Future<void> saveBackgroundMusicEnabled(bool enabled) async {
     if (_settingsBox == null) await initialize();

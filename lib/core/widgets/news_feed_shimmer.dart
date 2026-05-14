@@ -89,7 +89,7 @@ class NewsFeedShimmer extends StatelessWidget {
             // Breaking News carousel shimmer
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 320,
+                height: 220,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -101,7 +101,7 @@ class NewsFeedShimmer extends StatelessWidget {
                         baseColor: baseColor,
                         highlightColor: highlightColor,
                         child: Container(
-                          width: MediaQuery.of(context).size.width * 0.75,
+                          width: MediaQuery.of(context).size.width * 0.90,
                           decoration: BoxDecoration(
                             color: baseColor,
                             borderRadius: BorderRadius.circular(12),
@@ -185,8 +185,8 @@ class NewsFeedShimmer extends StatelessWidget {
                         children: [
                           // Image placeholder
                           Container(
-                            width: 100,
-                            height: 80,
+                            width: MediaQuery.of(context).size.width / 2.5,
+                            height: MediaQuery.of(context).size.height / 5.5,
                             decoration: BoxDecoration(
                               color: baseColor,
                               borderRadius: BorderRadius.circular(12),

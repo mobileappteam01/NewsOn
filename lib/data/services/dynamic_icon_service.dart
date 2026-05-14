@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// Works on Android using activity-alias mechanism
 class DynamicIconService {
   static const MethodChannel _channel = MethodChannel(
-    'com.app.newson/dynamic_icon',
+    'com.newson.application/dynamic_icon',
   );
 
   /// Change app icon to a predefined variant

@@ -12,6 +12,10 @@
   "@swipeToGetStarted": {
     "description": "Swipe button text on splash screen"
   },
+  "getStarted": "Get Started",
+  "@getStarted": {
+    "description": "Get started button text on splash screen"
+  },
   "signIn": "Sign In",
   "@signIn": {
     "description": "Sign in button text"
@@ -79,7 +83,7 @@
   },
   "headlines": "Headlines",
   "@headlines": {
-    "description": "Headlines tab title"
+    "description": "Bottom navigation headlines label"
   },
   "newsFeed": "News Feed",
   "@newsFeed": {
@@ -319,17 +323,9 @@
   "@today": {
     "description": "Bottom navigation today label"
   },
-  "headlines": "Headlines",
-  "@headlines": {
-    "description": "Bottom navigation headlines label"
-  },
   "forLater": "For Later",
   "@forLater": {
     "description": "Bottom navigation for later label"
-  },
-  "accountSettings": "Account Settings",
-  "@accountSettings": {
-    "description": "Account settings menu item"
   },
   "notificationInbox": "Notification Inbox",
   "@notificationInbox": {
@@ -339,17 +335,9 @@
   "@bookmark": {
     "description": "Bookmark menu item"
   },
-  "applicationSettings": "Application Settings",
-  "@applicationSettings": {
-    "description": "Application settings menu item"
-  },
   "termsOfUse": "Terms of Use",
   "@termsOfUse": {
     "description": "Terms of use menu item"
-  },
-  "privacyPolicy": "Privacy Policy",
-  "@privacyPolicy": {
-    "description": "Privacy policy menu item"
   },
   "newsCategories": "News Categories",
   "@newsCategories": {
@@ -541,6 +529,11 @@
   "enableBackgroundMusic": "Enable background music",
   "backgroundMusicVolume": "Background music volume",
   "backgroundMusicEnabled": "Background music enabled",
-  "backgroundMusicDisabled": "Background music disabled"
+  "backgroundMusicDisabled": "Background music disabled",
+  "contactUs": "Contact Us",
+  "getInTouch": "Get in Touch",
+  "contactSupportText": "For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.",
+  "email": "Email",
+  "phone": "Phone",
+  "website": "Website"
 }
-

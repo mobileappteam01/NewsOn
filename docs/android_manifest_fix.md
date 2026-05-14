@@ -4,14 +4,14 @@
 
 The build was failing with this error:
 ```
-Incorrect package="com.app.newson" found in source AndroidManifest.xml
+Incorrect package="com.newson.application" found in source AndroidManifest.xml
 Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported.
-Recommendation: remove package="com.app.newson" from the source AndroidManifest.xml.
+Recommendation: remove package="com.newson.application" from the source AndroidManifest.xml.
 ```
 
 ### **Root Cause:**
 - **Modern Android builds** use `namespace` in `build.gradle.kts` instead of `package` in `AndroidManifest.xml`
-- **Old method**: `package="com.app.newson"` in AndroidManifest.xml
+- **Old method**: `package="com.newson.application"` in AndroidManifest.xml
 - **New method**: `namespace = "com.newson.application"` in build.gradle.kts
 
 ---
@@ -22,7 +22,7 @@ Recommendation: remove package="com.app.newson" from the source AndroidManifest.
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.app.newson">  <!-- ❌ NO LONGER SUPPORTED -->
+    package="com.newson.application">  <!-- ❌ NO LONGER SUPPORTED -->
 ```
 
 ### **After (✅ Fixed):**
@@ -115,7 +115,7 @@ flutter run
 **The fix removes the deprecated `package` attribute from AndroidManifest.xml and relies on the modern `namespace` configuration in build.gradle.kts.**
 
 ### **Key Changes:**
-1. **Removed** `package="com.app.newson"` from AndroidManifest.xml
+1. **Removed** `package="com.newson.application"` from AndroidManifest.xml
 2. **Kept** `namespace = "com.newson.application"` in build.gradle.kts
 3. **Maintained** all permissions and configurations
 

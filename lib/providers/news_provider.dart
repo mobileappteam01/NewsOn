@@ -159,7 +159,12 @@ class NewsProvider with ChangeNotifier {
           debugPrint("First article title: ${response.results.first.title}");
         }
 
-        _breakingNews = response.results;
+        if (page == 1) {
+          _breakingNews = response.results;
+        } else {
+          _breakingNews.addAll(response.results);
+        }
+        
         _isLoading = false;
         debugPrint("✅ Breaking news fetched: ${_breakingNews.length} articles");
         notifyListeners();
@@ -594,7 +599,11 @@ class NewsProvider with ChangeNotifier {
           page: page,
         );
 
-        _todayNews = response.results;
+        if (page == 1) {
+          _todayNews = response.results;
+        } else {
+          _todayNews.addAll(response.results);
+        }
         _isLoadingToday = false;
         debugPrint("✅ Today news fetched: ${_todayNews.length} articles");
         notifyListeners();

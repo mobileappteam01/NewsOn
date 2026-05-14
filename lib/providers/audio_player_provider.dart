@@ -450,7 +450,8 @@ class AudioPlayerProvider with ChangeNotifier {
     );
 
     // Start playing the article at startIndex
-    await playArticleFromUrl(_playlist[startIndex], playTitle: playTitle, category: category);
+    await playArticleFromUrl(_playlist[startIndex],
+        playTitle: playTitle, category: category);
   }
 
   /// Play article from audio URL(s)
@@ -943,7 +944,8 @@ class AudioPlayerProvider with ChangeNotifier {
       notifyListeners();
 
       // Play next article using the same reading mode
-      await playArticleFromUrl(nextArticle, playTitle: _playTitleMode, category: _currentCategory);
+      await playArticleFromUrl(nextArticle,
+          playTitle: _playTitleMode, category: _currentCategory);
 
       debugPrint('✅ Next article started playing: ${nextArticle.title}');
     } catch (e, stackTrace) {
@@ -1004,7 +1006,8 @@ class AudioPlayerProvider with ChangeNotifier {
     _currentPlaylistIndex = prevIndex;
 
     try {
-      await playArticleFromUrl(_playlist[prevIndex], playTitle: _playTitleMode, category: _currentCategory);
+      await playArticleFromUrl(_playlist[prevIndex],
+          playTitle: _playTitleMode, category: _currentCategory);
     } catch (e) {
       debugPrint('❌ Error playing previous article: $e');
     }

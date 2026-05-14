@@ -53,25 +53,28 @@ void main() async {
   // Initialize local storage FIRST (required for cache operations)
   await StorageService.initialize();
 
-  // Fetch all API keys and app icon AFTER StorageService is initialized
-  // This allows fetchDBData to use cache when offline
-  await fetchIPAddressAndURLS();
-  await fetchAppIcon(); // Fetch dynamic app icon from Realtime Database
-  // Wait a bit more to ensure ElevenLabs API key is fetched and provider is updated
-  await Future.delayed(
-    const Duration(milliseconds: 1000),
-  ); // Give time for async fetch to complete
+  // Fetch all DB configs (API keys, URLs, App Icon) in parallel
+  // This drastically reduces startup time compared to sequential fetches
+  final networkService = NetworkService();
+  final remoteConfigProvider = RemoteConfigProvider();
+
+  await Future.wait([
+    fetchAllDBData(),
+    networkService.initialize(),
+    UserService().initialize(),
+    remoteConfigProvider.initialize(),
+    MobileAds.instance.initialize(),
+    AudioBackgroundService.init().catchError((e) {
+      debugPrint("❌ Failed to initialize Audio Background Service: $e");
+    }),
+  ]);
 
   // Initialize Network Service for connectivity monitoring
-  final networkService = NetworkService();
-  await networkService.initialize();
 
   // Initialize User Service - Load saved user data and token
   await UserService().initialize();
 
   // Initialize Remote Config FIRST (required for API config)
-  final remoteConfigProvider = RemoteConfigProvider();
-  await remoteConfigProvider.initialize();
 
   // Update app icon if fetched from Realtime Database
   if (appIconUrl.isNotEmpty) {
@@ -97,53 +100,30 @@ void main() async {
     }
   }
 
-  // Initialize Dynamic API Configuration from Remote Config
-  // This loads all API endpoints, parameters, and settings dynamically
-  await ApiConstants.initialize();
-  debugPrint("✅ Dynamic API Configuration initialized");
+  // Initialize Dynamic Localization Service and API Config
+  // These depend on RemoteConfigProvider being initialized
+  await Future.wait([
+    ApiConstants.initialize(),
+    DynamicLocalizationService().initialize(),
+  ]);
+  debugPrint("✅ Dynamic API and Localization Services initialized");
 
-  // Initialize Dynamic Localization Service
-  // This fetches available languages from Remote Config and downloads translations
-  await DynamicLocalizationService().initialize();
-  debugPrint("✅ Dynamic Localization Service initialized");
-
-  // Optional: Use Realtime Database for real-time API config updates
-  // Uncomment the line below if you want real-time updates from Firebase Realtime Database
-  // await ApiConstants.initializeFromRealtimeDatabase();
-
-  // Initialize Google Mobile Ads SDK
-  await MobileAds.instance.initialize();
-  debugPrint("✅ Google Mobile Ads SDK initialized");
-
-  // Initialize Ad Service - Fetch ad unit IDs from Realtime Database
-  try {
-    await AdService().initialize();
-    debugPrint("✅ Ad Service initialized");
-  } catch (e) {
-    debugPrint("❌ Failed to initialize Ad Service: $e");
-    // Continue app launch - ads will use test IDs
-  }
-
-  // Initialize API Service - Fetch base URL and all endpoints at startup
-  try {
-    await ApiService().initialize();
-    debugPrint("✅ API Service initialized - Base URL and endpoints loaded");
-  } catch (e) {
-    debugPrint("❌ Failed to initialize API Service: $e");
-    // Continue app launch even if API service initialization fails
-    // The app can still work, but API calls will fail until initialized
-  }
-
-  // Initialize Audio Background Service for background playback and notification controls
-  try {
-    await AudioBackgroundService.init();
-    debugPrint("✅ Audio Background Service initialized");
-  } catch (e, stackTrace) {
-    debugPrint("❌ Failed to initialize Audio Background Service: $e");
-    debugPrint("Stack trace: $stackTrace");
-    // Continue app launch - audio will still work but without background/notification support
-    // This is critical - don't let this crash the app
-  }
+  // Initialize dependent services that don't block app start
+  Future.wait([
+    AdService().initialize().catchError((e) {
+      debugPrint("❌ Failed to initialize Ad Service: $e");
+    }),
+    ApiService().initialize().catchError((e) {
+      debugPrint("❌ Failed to initialize API Service: $e");
+    }),
+    FcmService().getToken().then((fcmToken) {
+      if (fcmToken != null) {
+        debugPrint("✅ FCM Token initialized: $fcmToken");
+      }
+    }).catchError((e) {
+      debugPrint("❌ Failed to initialize FCM Service: $e");
+    }),
+  ]);
 
   // Pre-initialize background music (fetch URL from Firebase) so first article gets BG
   BackgroundMusicService().ensureInitialized().catchError((e) {
@@ -151,28 +131,7 @@ void main() async {
     return null;
   });
 
-  // Initialize FCM Service - Request permissions and get token ready
-  // Note: This may fail on emulators without Google Play Services
-  // The app will continue to work without FCM token
-  try {
-    final fcmToken = await FcmService().getToken();
-    if (fcmToken != null) {
-      debugPrint("✅ FCM Token initialized: $fcmToken");
-    } else {
-      debugPrint(
-        "⚠️ FCM Token not available. "
-        "This is normal on emulators without Google Play Services. "
-        "The app will continue without push notifications.",
-      );
-    }
-  } catch (e) {
-    debugPrint("❌ Failed to initialize FCM Service: $e");
-    debugPrint(
-      "ℹ️ App will continue without FCM."
-      "This is expected on some devices/emulators.",
-    );
-    // Continue app launch even if FCM initialization fails
-  }
+  // ... fcm logic moved to Future.wait ...
 
   // Setup background refresh when network comes online
   networkService.onOnline(() async {
@@ -367,74 +326,38 @@ class _CompletedNewsBridgeState extends State<_CompletedNewsBridge> {
   Widget build(BuildContext context) => widget.child;
 }
 
-fetchIPAddressAndURLS() async {
-  debugPrint("Fetching IP address and URLs...");
+/// Fetch all DB configurations in parallel to optimize startup time
+Future<void> fetchAllDBData() async {
+  debugPrint("Fetching API keys and configurations...");
 
-  await fetchDBData('ipAddress').then((val) async {
-    if (val != null) {
-      debugPrint("IP Address fetched: $val");
-      baseURL = val;
-      await fetchNewsDataAPIKey();
+  final results = await Future.wait([
+    fetchDBData('ipAddress'),
+    fetchDBData('newsDataAPIKey'),
+    fetchDBData('elevenLabsKey'),
+    fetchDBData('elevenLabsVoiceId'),
+    fetchDBData('appImages'),
+  ]);
+
+  if (results[0] != null) baseURL = results[0];
+  if (results[1] != null) newsAPIKey = results[1];
+
+  if (results[2] != null) {
+    elevenLabsAPIKey = results[2];
+    if (_globalAudioPlayerProvider != null) {
+      _globalAudioPlayerProvider!.setApiKey(elevenLabsAPIKey);
+      debugPrint('✅ ElevenLabs API key updated in AudioPlayerProvider');
     }
-  });
-}
+  }
 
-fetchNewsDataAPIKey() async {
-  await fetchDBData('newsDataAPIKey').then((val) async {
-    if (val != null) {
-      debugPrint("IP Address fetched: $val");
-      newsAPIKey = val;
-      await fetchElevenLabsAPIKey();
+  if (results[3] != null) {
+    elevenLabsVoiceId = results[3];
+    if (_globalAudioPlayerProvider != null) {
+      _globalAudioPlayerProvider!.setVoiceId(elevenLabsVoiceId);
     }
-  });
-}
+  }
 
-fetchElevenLabsAPIKey() async {
-  await fetchDBData('elevenLabsKey').then((val) async {
-    if (val != null) {
-      debugPrint("Eleven Labs API Key fetched: $val");
-      elevenLabsAPIKey = val;
-      await fetchElevenLabsVoiceId();
-
-      // Update the provider if it's already been created
-      if (_globalAudioPlayerProvider != null) {
-        _globalAudioPlayerProvider!.setApiKey(elevenLabsAPIKey);
-        debugPrint('✅ ElevenLabs API key updated in AudioPlayerProvider');
-      } else {
-        debugPrint(
-          '⚠️ AudioPlayerProvider not yet created, key will be set on creation',
-        );
-      }
-    } else {
-      debugPrint('⚠️ ElevenLabs API key not found in database');
-    }
-  });
-}
-
-fetchElevenLabsVoiceId() async {
-  await fetchDBData('elevenLabsVoiceId').then((val) {
-    if (val != null) {
-      debugPrint("Eleven Labs Voice ID fetched: $val");
-      elevenLabsVoiceId = val;
-      if (_globalAudioPlayerProvider != null) {
-        _globalAudioPlayerProvider!.setVoiceId(elevenLabsVoiceId);
-      } else {
-        debugPrint(
-          '⚠️ AudioPlayerProvider not yet created, key will be set on creation',
-        );
-      }
-    }
-  });
-}
-
-/// Fetch dynamic app icon from Firebase Realtime Database
-fetchAppIcon() async {
-  await fetchDBData('appImages').then((val) {
-    if (val != null) {
-      debugPrint("✅ App Icon URL fetched: $val");
-      appIconUrl = val.toString();
-    } else {
-      debugPrint('⚠️ App Icon URL not found in database');
-    }
-  });
+  if (results[4] != null) {
+    appIconUrl = results[4].toString();
+    debugPrint("✅ App Icon URL fetched: $appIconUrl");
+  }
 }

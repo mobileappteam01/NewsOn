@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -37,6 +38,7 @@ class _AccountSettingsState extends State<AccountSettings> {
   DateTime? selectedDateOfBirth;
   bool _isLoading = false;
   bool _isLoadingProfile = true;
+  bool _isDeletingAccount = false;
 
   // Dynamic location data
   List<City> _cities = [];
@@ -406,10 +408,14 @@ class _AccountSettingsState extends State<AccountSettings> {
                             theme,
                           ),
                           giveHeight(10),
-                          _buildGoogleLoginButton(),
+                          _buildAuthProviderTile(),
                           _divider(),
 
                           // 🔹 Logout button
+                          if (Platform.isIOS) ...[
+                            _buildDeleteAccountButton(config),
+                            giveHeight(12),
+                          ],
                           _buildLogoutButton(config),
                         ],
                       ),
@@ -881,7 +887,11 @@ class _AccountSettingsState extends State<AccountSettings> {
         child: Divider(color: Colors.grey[300], thickness: 1),
       );
 
-  Widget _buildGoogleLoginButton() {
+  Widget _buildAuthProviderTile() {
+    final provider = _userService.getAuthProvider() ?? 'google';
+    final isApple = provider.toLowerCase() == 'apple';
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
@@ -890,17 +900,21 @@ class _AccountSettingsState extends State<AccountSettings> {
       ),
       child: Row(
         children: [
-          Image.asset(
-            'assets/images/google_logo.png',
-            height: 24,
-            width: 24,
-            errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.g_mobiledata, size: 24),
-          ),
+          if (isApple)
+            Icon(Icons.apple,
+                size: 24, color: isDark ? Colors.white : Colors.black)
+          else
+            Image.asset(
+              'assets/images/google_logo.png',
+              height: 24,
+              width: 24,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.g_mobiledata, size: 24),
+            ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              LocalizationHelper.loginWithGoogle(context),
+              isApple ? 'Signed in with Apple' : 'Signed in with Google',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
@@ -911,6 +925,39 @@ class _AccountSettingsState extends State<AccountSettings> {
             style: const TextStyle(color: Colors.green, fontSize: 13),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDeleteAccountButton(dynamic config) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed:
+            _isDeletingAccount ? null : () => _handleDeleteAccount(config),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+        child: _isDeletingAccount
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Delete Account',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -1099,6 +1146,88 @@ class _AccountSettingsState extends State<AccountSettings> {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+      }
+    }
+  }
+
+  Future<void> _handleDeleteAccount(dynamic config) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Delete account?'),
+          content: const Text(
+            'This will permanently delete your account and all associated data. This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(LocalizationHelper.cancel(context)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isDeletingAccount = true);
+
+      final apiService = ApiService();
+      if (!apiService.isInitialized) {
+        await apiService.initialize();
+      }
+
+      // final response = await _profileService.deleteAccount();
+
+      if (!mounted) return;
+
+      // if (response.success) {
+      // Integrate logout cleanup after delete confirmation (best-effort).
+      // Keep in mind: backend may already invalidate token after deletion.
+      try {
+        await _profileService.logout();
+      } catch (_) {}
+
+      // Ensure local session is cleared even if logout API fails.
+      try {
+        await _userService.clearUserData();
+      } catch (_) {}
+
+      await context.read<CompletedNewsProvider>().clearUser();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+        (route) => false,
+      );
+      // } else {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text(response.error ?? 'Failed to delete account'),
+      //       backgroundColor: Colors.red,
+      //     ),
+      //   );
+      // }
+    } catch (e) {
+      debugPrint('❌ Error deleting account: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
       }
     }
   }

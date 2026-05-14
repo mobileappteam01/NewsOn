@@ -6,6 +6,7 @@ import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/core/services/font_manager.dart';
 import 'package:provider/provider.dart';
 
+import '../core/widgets/animated_pressable.dart';
 import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
@@ -206,13 +207,9 @@ class NewsGridView extends StatelessWidget {
 
   /// Helper function to check if two articles are the same
   bool _isSameArticle(NewsArticle a, NewsArticle b) {
-    if (a.articleId != null &&
-        b.articleId != null &&
-        a.articleId!.isNotEmpty &&
-        b.articleId!.isNotEmpty) {
-      return a.articleId == b.articleId;
-    }
-    return a.title == b.title;
+    final keyA = a.newsId ?? a.articleId ?? a.title;
+    final keyB = b.newsId ?? b.articleId ?? b.title;
+    return keyA == keyB;
   }
 
   showRoundedListenButton(RemoteConfigModel config, BuildContext context) {
@@ -310,7 +307,7 @@ class NewsGridView extends StatelessWidget {
   ) {
     return Column(
       children: [
-        GestureDetector(
+        AnimatedPressable(
           onTap: () => onNewsTapped(),
           child: Container(
             margin: const EdgeInsets.only(top: 2),
@@ -393,7 +390,7 @@ class NewsGridView extends StatelessWidget {
     BuildContext context,
     ThemeData theme,
   ) {
-    return GestureDetector(
+    return AnimatedPressable(
       onTap: () => onNewsTapped(),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -491,7 +488,7 @@ class NewsGridView extends StatelessWidget {
     BuildContext context,
     ThemeData theme,
   ) {
-    return GestureDetector(
+    return AnimatedPressable(
       onTap: () => onNewsTapped(),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),

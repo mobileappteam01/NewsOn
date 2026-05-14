@@ -23,6 +23,7 @@ class AppConstants {
   static const String userTokenKey = 'user_token';
   static const String userDataKey = 'user_data';
   static const String tempGoogleAccountKey = 'temp_google_account';
+  static const String authProviderKey = 'auth_provider'; // 'google' | 'apple'
   static const String newsReadingModeKey = 'news_reading_mode';
   static const String backgroundMusicEnabledKey = 'background_music_enabled';
   static const String backgroundMusicVolumeKey = 'background_music_volume';

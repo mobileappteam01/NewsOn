@@ -7,26 +7,26 @@ class ConnectivityHelper {
   /// Check if device has internet connection
   static Future<bool> hasConnection() async {
     try {
-      final result = await _connectivity.checkConnectivity();
-      return result != ConnectivityResult.none;
+      final results = await _connectivity.checkConnectivity();
+      return results.any((r) => r != ConnectivityResult.none);
     } catch (e) {
       return false;
     }
   }
 
   /// Get connectivity stream for real-time updates
-  static Stream<ConnectivityResult> get connectivityStream {
+  static Stream<List<ConnectivityResult>> get connectivityStream {
     return _connectivity.onConnectivityChanged;
   }
 
   /// Check specific connection type
   static Future<bool> isWifi() async {
-    final result = await _connectivity.checkConnectivity();
-    return result == ConnectivityResult.wifi;
+    final results = await _connectivity.checkConnectivity();
+    return results.contains(ConnectivityResult.wifi);
   }
 
   static Future<bool> isMobile() async {
-    final result = await _connectivity.checkConnectivity();
-    return result == ConnectivityResult.mobile;
+    final results = await _connectivity.checkConnectivity();
+    return results.contains(ConnectivityResult.mobile);
   }
 }

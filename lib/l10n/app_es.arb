@@ -3,6 +3,7 @@
   "appName": "NewsOn",
   "welcomeTo": "BIENVENIDO A",
   "swipeToGetStarted": "Desliza para comenzar",
+  "getStarted": "Comenzar",
   "signIn": "Iniciar sesión",
   "signInToYourAccount": "Inicia sesión en tu cuenta",
   "connecting": "Conectando...",
@@ -102,6 +103,11 @@
   "enableBackgroundMusic": "Activar música de fondo",
   "backgroundMusicVolume": "Volumen de música de fondo",
   "backgroundMusicEnabled": "Música de fondo activada",
-  "backgroundMusicDisabled": "Música de fondo desactivada"
+  "backgroundMusicDisabled": "Música de fondo desactivada",
+  "contactUs": "Contáctenos",
+  "getInTouch": "Ponerse en contacto",
+  "contactSupportText": "Para soporte, consultas o comentarios sobre nuestro contenido, contáctenos.",
+  "email": "Correo electrónico",
+  "phone": "Teléfono",
+  "website": "Sitio web"
 }
-

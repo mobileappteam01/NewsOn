@@ -1,4 +1,4 @@
-package com.newson.application
+package com.app.newson
 
 import com.ryanheise.audioservice.AudioServiceActivity
 

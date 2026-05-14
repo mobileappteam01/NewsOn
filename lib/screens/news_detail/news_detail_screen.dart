@@ -479,7 +479,15 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _getTimeAgo(article),
+                          'Source: ${article.sourceName ?? 'NewsOn'}${(article.creator != null && article.creator!.isNotEmpty) ? ' | Author: ${article.creator![0]}' : ''}',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Published: ${article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())} (${_getTimeAgo(article)})',
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -566,9 +574,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     AudioPlayerProvider audioProvider,
   ) {
     final isCurrentArticle = audioProvider.currentArticle != null &&
-        (audioProvider.currentArticle!.articleId ??
+        (audioProvider.currentArticle!.newsId ??
+                audioProvider.currentArticle!.articleId ??
                 audioProvider.currentArticle!.title) ==
-            (article.articleId ?? article.title);
+            (article.newsId ?? article.articleId ?? article.title);
 
     final isPlaying = isCurrentArticle && audioProvider.isPlaying;
     final isLoading = isCurrentArticle && audioProvider.isLoading;

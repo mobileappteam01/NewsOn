@@ -81,6 +81,16 @@ class LocalizationHelper {
     );
   }
 
+  /// Get localized string for get started button
+  static String getStarted(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.getStarted,
+      'Get Started',
+      key: 'getStarted',
+    );
+  }
+
   /// Get localized string for sign in
   static String signIn(BuildContext context) {
     return _getString(context, (l10n) => l10n.signIn, 'Sign In', key: 'signIn');
@@ -587,6 +597,30 @@ class LocalizationHelper {
       'News Categories',
       key: 'newsCategories',
     );
+  }
+
+  static String contactUs(BuildContext context) {
+    return _getString(context, (l10n) => l10n.contactUs, 'Contact Us', key: 'contactUs');
+  }
+
+  static String getInTouch(BuildContext context) {
+    return _getString(context, (l10n) => l10n.getInTouch, 'Get in Touch', key: 'getInTouch');
+  }
+
+  static String contactSupportText(BuildContext context) {
+    return _getString(context, (l10n) => l10n.contactSupportText, 'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.', key: 'contactSupportText');
+  }
+
+  static String emailText(BuildContext context) {
+    return _getString(context, (l10n) => l10n.email, 'Email', key: 'email');
+  }
+
+  static String phoneText(BuildContext context) {
+    return _getString(context, (l10n) => l10n.phone, 'Phone', key: 'phone');
+  }
+
+  static String websiteText(BuildContext context) {
+    return _getString(context, (l10n) => l10n.website, 'Website', key: 'website');
   }
 
   /// Get localized drawer menu title based on route/index

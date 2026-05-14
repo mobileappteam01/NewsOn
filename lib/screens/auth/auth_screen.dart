@@ -87,6 +87,7 @@ class _AuthScreenState extends State<AuthScreen>
         'email': account.email,
         'id': account.id,
         'photoUrl': account.photoUrl,
+        'authProvider': 'google',
       };
       await _userService.saveTempGoogleAccount(googleAccountData);
 

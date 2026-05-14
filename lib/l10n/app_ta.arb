@@ -3,6 +3,7 @@
   "appName": "NewsOn",
   "welcomeTo": "வரவேற்கிறோம்",
   "swipeToGetStarted": "தொடங்குவதற்கு வலப்புறம் நகர்த்தவும்",
+  "getStarted": "தொடங்குங்கள்",
   "signIn": "உள்நுழைய",
   "signInToYourAccount": "உங்கள் கணக்கில் உள்நுழைய",
   "connecting": "இணைக்கப்படுகிறது...",
@@ -97,14 +98,10 @@
   "selectCategoryDesc": "நீங்கள் பின்தொடர விரும்பும் வகைகளைத் தேர்ந்தெடுக்கவும்",
   "menu": "மெனு",
   "today": "இன்று",
-  "headlines": "தலைப்புகள்",
   "forLater": "பின்னர்",
-  "accountSettings": "கணக்கு அமைப்புகள்",
   "notificationInbox": "அறிவிப்பு இன்பாக்ஸ்",
   "bookmark": "புத்தகக்குறி",
-  "applicationSettings": "பயன்பாட்டு அமைப்புகள்",
   "termsOfUse": "பயன்பாட்டு விதிமுறைகள்",
-  "privacyPolicy": "தனியுரிமை கொள்கை",
   "newsCategories": "செய்தி வகைகள்",
   "listen": "கேள்",
   "userName": "பயனர் பெயர்",
@@ -157,6 +154,11 @@
   "enableBackgroundMusic": "பின்னணி இசையை இயக்கு",
   "backgroundMusicVolume": "பின்னணி இசை வலிமை",
   "backgroundMusicEnabled": "பின்னணி இசை இயக்கப்பட்டது",
-  "backgroundMusicDisabled": "பின்னணி இசை அணைக்கப்பட்டது"
+  "backgroundMusicDisabled": "பின்னணி இசை அணைக்கப்பட்டது",
+  "contactUs": "எங்களை தொடர்பு கொள்ள",
+  "getInTouch": "தொடர்பில் இருங்கள்",
+  "contactSupportText": "எங்கள் உள்ளடக்கம் மற்றும் தளம் தொடர்பான ஆதரவு, விசாரணைகள் அல்லது பின்னூட்டங்களுக்கு, தயவுசெய்து எங்களை தொடர்பு கொள்ளவும்.",
+  "email": "மின்னஞ்சல்",
+  "phone": "தொலைபேசி",
+  "website": "இணையதளம்"
 }
-

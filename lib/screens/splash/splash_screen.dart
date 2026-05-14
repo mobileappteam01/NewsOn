@@ -164,23 +164,86 @@ class _SplashScreenState extends State<SplashScreen>
                   giveHeight(32),
 
                   /// 3️⃣ Bottom Swipe Button
+                  // Padding(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 12),
+                  //   child: SwipeButton.expand(
+                  //     thumb: const Icon(
+                  //       Icons.chevron_right,
+                  //       color: Colors.white,
+                  //       size: 28,
+                  //     ),
+                  //     activeThumbColor: primaryColor,
+                  //     activeTrackColor: const Color(0xFF4A4A4A),
+                  //     onSwipe: _goNext,
+                  //     child: Padding(
+                  //       padding: const EdgeInsets.only(left: 24.0),
+                  //       child: Text(
+                  //         LocalizationHelper.swipeToGetStarted(context),
+                  //         style: TextStyle(
+                  //           color: Colors.white,
+                  //           fontSize: 14,
+                  //           fontWeight: config.splashSwipeFontWeightValue,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+
+                  giveHeight(12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: SwipeButton.expand(
-                      thumb: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      activeThumbColor: primaryColor,
-                      activeTrackColor: const Color(0xFF4A4A4A),
-                      onSwipe: _goNext,
-                      child: Text(
-                        LocalizationHelper.swipeToGetStarted(context),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: config.splashSwipeFontWeightValue,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _goNext(),
+                        borderRadius: BorderRadius.circular(50),
+                        splashColor: Colors.white24,
+                        highlightColor: Colors.white12,
+                        child: Container(
+                          width: double.infinity,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: BorderRadius.circular(50),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  LocalizationHelper.getStarted(context),
+                                  style: GoogleFonts.roboto(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight:
+                                        config.splashSwipeFontWeightValue,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),

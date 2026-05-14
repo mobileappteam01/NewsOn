@@ -177,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     newsList: newsList,
                   ),
                   const CategoriesTab(),
-
                   const BookmarksTab(),
                   const SearchTab(),
                 ],
@@ -275,10 +274,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBottomBar(ThemeData theme, RemoteConfigModel config) {
     return Container(
       decoration: BoxDecoration(
-        color:
-            theme.brightness == Brightness.dark
-                ? Colors.grey[900]
-                : Colors.white,
+        color: theme.brightness == Brightness.dark
+            ? Colors.grey[900]
+            : Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -310,10 +308,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _buildBottomNavItem(
                           Icon(
                             Icons.calendar_today_outlined,
-                            color:
-                                _currentIndex == 0
-                                    ? config.primaryColorValue
-                                    : theme.colorScheme.secondary,
+                            color: _currentIndex == 0
+                                ? config.primaryColorValue
+                                : theme.colorScheme.secondary,
                           ),
                           LocalizationHelper.today(context),
                           onTap: () => setState(() => _currentIndex = 0),
@@ -325,12 +322,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           Image.network(
                             config.headlineImg,
                             height: 24,
-                            color:
-                                _currentIndex == 1
-                                    ? config.primaryColorValue
-                                    : theme.colorScheme.secondary,
+                            color: _currentIndex == 1
+                                ? config.primaryColorValue
+                                : theme.colorScheme.secondary,
                           ),
-
                           LocalizationHelper.headlines(context),
                           onTap: () => setState(() => _currentIndex = 1),
                           isSelected: _currentIndex == 1,
@@ -340,10 +335,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _buildBottomNavItem(
                           Icon(
                             Icons.bookmark_border,
-                            color:
-                                _currentIndex == 2
-                                    ? config.primaryColorValue
-                                    : theme.colorScheme.secondary,
+                            color: _currentIndex == 2
+                                ? config.primaryColorValue
+                                : theme.colorScheme.secondary,
                           ),
                           LocalizationHelper.forLater(context),
                           onTap: () => setState(() => _currentIndex = 2),
@@ -357,10 +351,9 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildBottomNavItem(
                 Icon(
                   Icons.search,
-                  color:
-                      _currentIndex == 3
-                          ? config.primaryColorValue
-                          : theme.colorScheme.secondary,
+                  color: _currentIndex == 3
+                      ? config.primaryColorValue
+                      : theme.colorScheme.secondary,
                 ),
                 LocalizationHelper.search(context),
                 onTap: () => setState(() => _currentIndex = 3),

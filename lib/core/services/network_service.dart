@@ -9,7 +9,7 @@ class NetworkService {
   NetworkService._internal();
 
   final Connectivity _connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   
   bool _isOnline = true;
   final List<VoidCallback> _onOnlineCallbacks = [];
@@ -20,15 +20,17 @@ class NetworkService {
   /// Initialize network monitoring
   Future<void> initialize() async {
     // Check initial connectivity
-    final result = await _connectivity.checkConnectivity();
-    _isOnline = result != ConnectivityResult.none;
+    final results = await _connectivity.checkConnectivity();
+    _isOnline =
+        results.any((r) => r != ConnectivityResult.none);
     debugPrint('🌐 Network status: ${_isOnline ? "Online" : "Offline"}');
 
     // Listen to connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
-      (ConnectivityResult result) {
+      (List<ConnectivityResult> results) {
         final wasOnline = _isOnline;
-        _isOnline = result != ConnectivityResult.none;
+        _isOnline =
+            results.any((r) => r != ConnectivityResult.none);
         
         debugPrint('🌐 Network status changed: ${_isOnline ? "Online" : "Offline"}');
 
@@ -81,8 +83,9 @@ class NetworkService {
   /// Check if device has internet connection
   Future<bool> hasConnection() async {
     try {
-      final result = await _connectivity.checkConnectivity();
-      _isOnline = result != ConnectivityResult.none;
+      final results = await _connectivity.checkConnectivity();
+      _isOnline =
+          results.any((r) => r != ConnectivityResult.none);
       return _isOnline;
     } catch (e) {
       debugPrint('❌ Error checking connectivity: $e');

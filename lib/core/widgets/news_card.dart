@@ -8,6 +8,7 @@ import '../../providers/completed_news_provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
+import '../../core/utils/date_formatter.dart';
 
 /// Reusable news card widget
 class NewsCard extends StatelessWidget {
@@ -98,19 +99,31 @@ class NewsCard extends StatelessWidget {
                   // Metadata row
                   Row(
                     children: [
-                      // Source
+                      // Source and Date explicitly
                       Expanded(
-                        child: Text(
-                          article.creator != null && article.creator!.isNotEmpty
-                              ? article.creator![0]
-                              : article.sourceName ??
-                                  LocalizationHelper.unknownSource(context),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.textTheme.bodySmall?.color
-                                ?.withOpacity(0.7),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Source: ${article.sourceName ?? LocalizationHelper.unknownSource(context)}${(article.creator != null && article.creator!.isNotEmpty) ? ' | Author: ${article.creator![0]}' : ''}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                                fontSize: 10,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Published: ${article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                                fontSize: 10,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
 

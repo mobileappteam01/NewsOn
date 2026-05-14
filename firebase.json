@@ -1,1 +1,37 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"newson-dea6b","appId":"1:127869269941:android:7e7e7b6723c31cc9ca4bfc","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"newson-dea6b","appId":"1:127869269941:ios:9983dbad5b6d848fca4bfc","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"newson-dea6b","configurations":{"android":"1:127869269941:android:7e7e7b6723c31cc9ca4bfc","ios":"1:127869269941:ios:9983dbad5b6d848fca4bfc"}}}}},"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"remoteconfig":{"template":"firebase_remote_config_template.json"}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "newson-dea6b",
+          "appId": "1:127869269941:android:7e7e7b6723c31cc9ca4bfc",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "newson-dea6b",
+          "appId": "1:127869269941:ios:838841e692b57d1fca4bfc",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "newson-dea6b",
+          "configurations": {
+            "android": "1:127869269941:android:7e7e7b6723c31cc9ca4bfc",
+            "ios": "1:127869269941:ios:9983dbad5b6d848fca4bfc"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "remoteconfig": {
+    "template": "firebase_remote_config_template.json"
+  }
+}

@@ -65,9 +65,10 @@ class DefaultFirebaseOptions {
     projectId: 'newson-dea6b',
     databaseURL: 'https://newson-dea6b-default-rtdb.firebaseio.com',
     storageBucket: 'newson-dea6b.firebasestorage.app',
-    androidClientId: '127869269941-6m4ufbajspu4i8if024lnofh3rl82rei.apps.googleusercontent.com',
-    iosClientId: '127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm.apps.googleusercontent.com',
-    iosBundleId: 'com.app.newson',
+    androidClientId:
+        '127869269941-6m4ufbajspu4i8if024lnofh3rl82rei.apps.googleusercontent.com',
+    iosClientId:
+        '127869269941-pquese7dne3sl1fhaolvlap5rs86c3vm.apps.googleusercontent.com',
+    iosBundleId: 'com.newson.application',
   );
-
 }

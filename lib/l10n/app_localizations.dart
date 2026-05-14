@@ -119,6 +119,12 @@ abstract class AppLocalizations {
   /// **'Swipe To Get Started'**
   String get swipeToGetStarted;
 
+  /// Get started button text on splash screen
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get getStarted;
+
   /// Sign in button text
   ///
   /// In en, this message translates to:
@@ -898,6 +904,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Background music disabled'**
   String get backgroundMusicDisabled;
+
+  /// No description provided for @contactUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactUs;
+
+  /// No description provided for @getInTouch.
+  ///
+  /// In en, this message translates to:
+  /// **'Get in Touch'**
+  String get getInTouch;
+
+  /// No description provided for @contactSupportText.
+  ///
+  /// In en, this message translates to:
+  /// **'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.'**
+  String get contactSupportText;
+
+  /// No description provided for @email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get email;
+
+  /// No description provided for @phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get phone;
+
+  /// No description provided for @website.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get website;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

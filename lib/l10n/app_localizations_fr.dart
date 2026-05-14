@@ -18,6 +18,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get swipeToGetStarted => 'Glissez pour commencer';
 
   @override
+  String get getStarted => 'Commencer';
+
+  @override
   String get signIn => 'Se connecter';
 
   @override
@@ -412,4 +415,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get backgroundMusicDisabled => 'Musique de fond désactivée';
+
+  @override
+  String get contactUs => 'Contactez-nous';
+
+  @override
+  String get getInTouch => 'Entrer en contact';
+
+  @override
+  String get contactSupportText => 'Pour le support, les demandes ou les commentaires, veuillez nous contacter.';
+
+  @override
+  String get email => 'E-mail';
+
+  @override
+  String get phone => 'Téléphone';
+
+  @override
+  String get website => 'Site Web';
 }

@@ -6,10 +6,6 @@ class GoogleAuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
 
-    // ✔ Android client ID
-    clientId:
-        "127869269941-sjls3shqo436vt3oq9kqc4rlqimsb3rh.apps.googleusercontent.com",
-
     // ✔ Web client ID OPTIONAL (required for Firebase Auth)
     serverClientId:
         "127869269941-2p1d7r414luv6dolb09khq5b0af8fqvc.apps.googleusercontent.com",

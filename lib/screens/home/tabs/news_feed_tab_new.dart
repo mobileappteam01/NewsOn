@@ -53,22 +53,184 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   String _selectedCategory = 'All';
   DateTime _selectedDate =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  final int _newsLimit = 20;
+
+  int _todayNewsPage = 1;
+  bool _isLoadingMoreToday = false;
+  bool _hasMoreTodayNews = true;
+
+  List<NewsArticle> _allTodayNews = [];
+
+  int _categoryNewsPage = 1;
+  bool _isLoadingMoreCategory = false;
+  bool _hasMoreCategoryNews = true;
+
+  List<NewsArticle> _allCategoryNews = [];
 
   @override
   void initState() {
     super.initState();
-    // Fetch data on initialization
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    _scrollController.addListener(_onScrollPagination);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         final newsProvider = context.read<NewsProvider>();
-        // Fetch categories from API
-        newsProvider.fetchCategories();
-        // Fetch today's news with limit of 5
-        newsProvider.fetchNewsByDate(_selectedDate, limit: 5);
-        // Fetch breaking news with limit of 10
-        newsProvider.fetchBreakingNews(limit: 10);
+
+        await newsProvider.fetchCategories();
+
+        await newsProvider.fetchBreakingNews(limit: 10);
+
+        await _loadInitialTodayNews();
       }
     });
+  }
+
+  void _onScrollPagination() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      if (_selectedCategory == 'All') {
+        if (!_isLoadingMoreToday && _hasMoreTodayNews) {
+          _loadMoreTodayNews();
+        }
+      } else {
+        if (!_isLoadingMoreCategory && _hasMoreCategoryNews) {
+          _loadMoreCategoryNews();
+        }
+      }
+    }
+  }
+
+  Future<void> _loadInitialTodayNews() async {
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      final languageProvider = context.read<LanguageProvider>();
+
+      final language = languageProvider.getApiLanguageCode();
+
+      final dateString =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+      final response = await newsProvider.repository.fetchTodayNews(
+        date: dateString,
+        language: language,
+        limit: _newsLimit,
+        page: 1,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _allTodayNews = response.results;
+        _todayNewsPage = 1;
+        _hasMoreTodayNews = response.results.length == _newsLimit;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _loadMoreTodayNews() async {
+    if (_isLoadingMoreToday || !_hasMoreTodayNews) return;
+
+    setState(() {
+      _isLoadingMoreToday = true;
+    });
+
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      final languageProvider = context.read<LanguageProvider>();
+
+      final language = languageProvider.getApiLanguageCode();
+
+      final nextPage = _todayNewsPage + 1;
+
+      final dateString =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+      final response = await newsProvider.repository.fetchTodayNews(
+        date: dateString,
+        language: language,
+        limit: _newsLimit,
+        page: nextPage,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _allTodayNews.addAll(response.results);
+        _todayNewsPage = nextPage;
+        _hasMoreTodayNews = response.results.length == _newsLimit;
+        _isLoadingMoreToday = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMoreToday = false;
+      });
+    }
+  }
+
+  Future<void> _loadInitialCategoryNews(String category) async {
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      final languageProvider = context.read<LanguageProvider>();
+
+      final language = languageProvider.getApiLanguageCode();
+
+      final response = await newsProvider.repository.fetchNewsByCategory(
+        category,
+        language: language,
+        limit: _newsLimit,
+        page: 1,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _allCategoryNews = response.results;
+        _categoryNewsPage = 1;
+        _hasMoreCategoryNews = response.results.length == _newsLimit;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _loadMoreCategoryNews() async {
+    if (_isLoadingMoreCategory || !_hasMoreCategoryNews) return;
+
+    setState(() {
+      _isLoadingMoreCategory = true;
+    });
+
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      final languageProvider = context.read<LanguageProvider>();
+
+      final language = languageProvider.getApiLanguageCode();
+
+      final nextPage = _categoryNewsPage + 1;
+
+      final response = await newsProvider.repository.fetchNewsByCategory(
+        _selectedCategory.toLowerCase(),
+        language: language,
+        limit: _newsLimit,
+        page: nextPage,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _allCategoryNews.addAll(response.results);
+        _categoryNewsPage = nextPage;
+        _hasMoreCategoryNews = response.results.length == _newsLimit;
+        _isLoadingMoreCategory = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMoreCategory = false;
+      });
+    }
   }
 
   @override
@@ -90,32 +252,15 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     }
   }
 
-  showHeadingText(String text, ThemeData theme, {VoidCallback? onViewAll}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: Text(
-            text,
-            style: FontManager.headline5.copyWith(
-              color: theme.colorScheme.secondary,
-              fontSize: 20,
-            ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-        ),
-        GestureDetector(
-          onTap: onViewAll,
-          child: Text(
-            LocalizationHelper.viewAll(context),
-            style: FontManager.button.copyWith(
-              color: Color(0xFFC70000),
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ],
+  Widget showHeadingText(String text, ThemeData theme) {
+    return Text(
+      text,
+      style: FontManager.headline5.copyWith(
+        color: theme.colorScheme.secondary,
+        fontSize: 20,
+      ),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
     );
   }
 
@@ -236,18 +381,20 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               debugPrint(
                                 '📂 Category selected: $apiCategory',
                               );
-                              context.read<NewsProvider>().fetchCategoryNews(
-                                    apiCategory,
-                                    limit: 10,
-                                  );
+                              // context.read<NewsProvider>().fetchCategoryNews(
+                              //       apiCategory,
+                              //       limit: 10,
+                              //     );
+                              _loadInitialCategoryNews(apiCategory);
                             } else {
                               // If "All" is selected, clear category filter
                               debugPrint(
                                 '📂 All categories selected',
                               );
-                              context
-                                  .read<NewsProvider>()
-                                  .clearCategoryFilter();
+                              // context
+                              //     .read<NewsProvider>()
+                              //     .clearCategoryFilter();
+                              _loadInitialTodayNews();
                             }
                           },
                           child: Container(
@@ -288,7 +435,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   // Refresh breaking news
                   await newsProvider.fetchBreakingNews();
                   // Refresh today's news
-                  await newsProvider.fetchNewsByDate(_selectedDate);
+                  await _loadInitialTodayNews();
                 },
                 child: CustomScrollView(
                   key: const PageStorageKey('news_feed_scroll_view'),
@@ -306,7 +453,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         child: Text(
                           LocalizationHelper.breakingNews(context),
                           style: FontManager.headline3.copyWith(
-                            color: Color(0xFFE31E24),
+                            color: const Color(0xFFE31E24),
                             fontSize: 24,
                           ),
                         ),
@@ -318,7 +465,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         newsProvider.breakingNews.isEmpty)
                       SliverToBoxAdapter(
                         child: SizedBox(
-                          height: 400,
+                          height: 220,
                           child: _buildBreakingNewsShimmer(theme),
                         ),
                       )
@@ -364,7 +511,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
                     // Ad 1: Standard Banner (320x50) - After categories
-                    SliverToBoxAdapter(
+                    const SliverToBoxAdapter(
                       child: BannerAdContainer(adSize: AdSize.banner),
                     ),
 
@@ -377,39 +524,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                         child: showHeadingText(
                           _selectedCategory != 'All'
-                              ? _selectedCategory // Show category name when selected
-                              : _getDateHeadingText(
-                                  newsProvider.selectedDate ?? _selectedDate,
-                                ),
+                              ? _selectedCategory
+                              : _getDateHeadingText(_selectedDate),
                           theme,
-                          onViewAll: _selectedCategory != 'All'
-                              ? () {
-                                  // Navigate to category-wise news view all
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          TodayNewsViewAllScreen(
-                                        selectedCategory: _selectedCategory
-                                            .toLowerCase(), // Convert to API format
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : () {
-                                  print("insideeeeeeeeeeeeeeeee");
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          TodayNewsViewAllScreen(
-                                        selectedDate:
-                                            newsProvider.selectedDate ??
-                                                _selectedDate,
-                                      ),
-                                    ),
-                                  );
-                                },
                         ),
                       ),
                     ),
@@ -432,7 +549,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                             ),
                           ),
                         )
-                      else if (newsProvider.categoryNews.isEmpty)
+                      else if (_allCategoryNews.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -453,8 +570,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final article =
-                                    newsProvider.categoryNews[index];
+                                final article = _allCategoryNews[index];
                                 return NewsGridView(
                                   key: ValueKey(
                                     'category_${article.articleId ?? index}',
@@ -465,8 +581,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     try {
                                       final newsProvider =
                                           context.read<NewsProvider>();
-                                      final categoryNews =
-                                          newsProvider.categoryNews;
+                                      final categoryNews = _allCategoryNews;
 
                                       // Find the index of current article in category news
                                       final startIndex =
@@ -583,7 +698,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   },
                                 );
                               },
-                              childCount: newsProvider.categoryNews.length
+                              childCount: _allCategoryNews.length
                                   .clamp(0, 10), // Limit to 10 on home page
                             ),
                           ),
@@ -605,7 +720,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           ),
                         ),
                       )
-                    else if (newsProvider.todayNews.isEmpty)
+                    else if (_allTodayNews.isEmpty)
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -626,113 +741,81 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final article = newsProvider.todayNews[index];
+                              final totalAds = _allTodayNews.length ~/ 4;
+                              final totalItems =
+                                  _allTodayNews.length + totalAds;
+
+                              if (index >= totalItems) {
+                                return _isLoadingMoreToday
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      )
+                                    : const SizedBox();
+                              }
+
+                              // SHOW AD EVERY 4 NEWS
+                              if (index != 0 && index % 5 == 4) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: BannerAdContainer(
+                                    adSize: AdSize.mediumRectangle,
+                                  ),
+                                );
+                              }
+
+                              final actualIndex = index - (index ~/ 5);
+
+                              final article = _allTodayNews[actualIndex];
+
                               return NewsGridView(
                                 key: ValueKey(
-                                  'today_${article.articleId ?? index}',
+                                  'today_${article.articleId ?? actualIndex}',
                                 ),
                                 type: 'listview',
                                 newsDetails: article,
                                 onListenTapped: () async {
                                   try {
-                                    final newsProvider =
-                                        context.read<NewsProvider>();
-                                    final todayNews = newsProvider.todayNews;
-
-                                    // Find the index of current article in today's news
-                                    final startIndex = todayNews.indexWhere(
+                                    final startIndex = _allTodayNews.indexWhere(
                                       (a) =>
                                           (a.articleId ?? a.title) ==
                                           (article.articleId ?? article.title),
                                     );
 
-                                    if (startIndex >= 0 &&
-                                        startIndex < todayNews.length) {
-                                      // Set playlist with all today's news and start from clicked article
+                                    if (startIndex >= 0) {
                                       await context
                                           .read<AudioPlayerProvider>()
                                           .setPlaylistAndPlay(
-                                            todayNews,
+                                            _allTodayNews,
                                             startIndex,
                                             playTitle: true,
                                             category: 'date',
                                           );
-                                    } else {
-                                      // Fallback: play single article
-                                      await context
-                                          .read<AudioPlayerProvider>()
-                                          .playArticleFromUrl(
-                                            article,
-                                            playTitle: true,
-                                            category: 'date',
-                                          );
                                     }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Error playing audio: $e',
-                                          ),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
+                                  } catch (e) {}
                                 },
                                 onSaveTapped: () async {
                                   try {
                                     final bookmarkProvider =
                                         context.read<BookmarkProvider>();
+
                                     final newStatus = await bookmarkProvider
                                         .toggleBookmark(article);
 
-                                    // Update article status in NewsProvider lists
-                                    final newsProvider =
-                                        context.read<NewsProvider>();
                                     newsProvider.updateArticleBookmarkStatus(
                                       article,
                                       newStatus,
                                     );
-
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            newStatus
-                                                ? 'Added to bookmarks'
-                                                : 'Removed from bookmarks',
-                                          ),
-                                          duration: const Duration(seconds: 1),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Error: ${e.toString()}',
-                                          ),
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    }
-                                  }
+                                  } catch (e) {}
                                 },
                                 onNewsTapped: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => NewsDetailScreen(
-                                        article: article,
-                                      ),
+                                      builder: (context) =>
+                                          NewsDetailScreen(article: article),
                                     ),
                                   );
                                 },
@@ -746,15 +829,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 },
                               );
                             },
-                            childCount: newsProvider.todayNews.length.clamp(
-                              0,
-                              5,
-                            ),
-                          ), // Limit to 5 on home page
+                            childCount: _allTodayNews.length +
+                                (_allTodayNews.length ~/ 4) +
+                                (_isLoadingMoreToday ? 1 : 0),
+                          ),
                         ),
                       ),
                     // Ad 2: Large Banner (320x100) - After today's news
-                    SliverToBoxAdapter(
+                    const SliverToBoxAdapter(
                       child: BannerAdContainer(adSize: AdSize.largeBanner),
                     ),
                     // Flash news section title
@@ -765,17 +847,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           vertical: 12,
                         ),
                         child: showHeadingText(
-                          LocalizationHelper.flashNews(context),
+                          _selectedCategory != 'All'
+                              ? _selectedCategory
+                              : _getDateHeadingText(_selectedDate),
                           theme,
-                          onViewAll: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const BreakingNewsViewAllScreen(),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
@@ -906,160 +981,161 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
                     ),
-                    SliverToBoxAdapter(child: const BannerAdContainer()),
                     const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    const SliverToBoxAdapter(child: BannerAdContainer()),
+
                     // Live Cricket Score Section
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          children: [
-                            showHeadingText(
-                              LocalizationHelper.liveCricketScore(context),
-                              theme,
-                            ),
-                            const SizedBox(height: 12),
-                            // card
-                            Container(
-                              margin: const EdgeInsets.only(top: 8),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE31E24),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'LIVE',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'World T20 - T20 16 of 45',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  // India row
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 32,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          color: Colors.orange,
-                                        ),
-                                        child: const Center(
-                                          child: Text(
-                                            '🇮🇳',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'IND',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      const Text(
-                                        '172-8 (20)',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Pakistan row
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 32,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          color: Colors.green,
-                                        ),
-                                        child: const Center(
-                                          child: Text(
-                                            '🇵🇰',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'PAK',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      const Text(
-                                        '152/3 (15.4)',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  showMatchVS("AUS", "IND", remoteConfig),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 24,
-                            ), // bottom spacing for nav
-                          ],
-                        ),
-                      ),
-                    ),
+                    // SliverToBoxAdapter(
+                    //   child: Padding(
+                    //     padding: const EdgeInsets.symmetric(horizontal: 16),
+                    //     child: Column(
+                    //       children: [
+                    //         showHeadingText(
+                    //           LocalizationHelper.liveCricketScore(context),
+                    //           theme,
+                    //         ),
+                    //         const SizedBox(height: 12),
+                    //         // card
+                    //         Container(
+                    //           margin: const EdgeInsets.only(top: 8),
+                    //           padding: const EdgeInsets.all(16),
+                    //           decoration: BoxDecoration(
+                    //             color: Colors.white,
+                    //             borderRadius: BorderRadius.circular(12),
+                    //             boxShadow: [
+                    //               BoxShadow(
+                    //                 color: Colors.black.withOpacity(0.05),
+                    //                 blurRadius: 10,
+                    //                 offset: Offset(0, 2),
+                    //               ),
+                    //             ],
+                    //           ),
+                    //           child: Column(
+                    //             children: [
+                    //               Row(
+                    //                 children: [
+                    //                   Container(
+                    //                     padding: const EdgeInsets.symmetric(
+                    //                       horizontal: 8,
+                    //                       vertical: 4,
+                    //                     ),
+                    //                     decoration: BoxDecoration(
+                    //                       color: const Color(0xFFE31E24),
+                    //                       borderRadius: BorderRadius.circular(
+                    //                         4,
+                    //                       ),
+                    //                     ),
+                    //                     child: const Text(
+                    //                       'LIVE',
+                    //                       style: TextStyle(
+                    //                         color: Colors.white,
+                    //                         fontSize: 10,
+                    //                         fontWeight: FontWeight.bold,
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                   const SizedBox(width: 8),
+                    //                   const Text(
+                    //                     'World T20 - T20 16 of 45',
+                    //                     style: TextStyle(
+                    //                       fontSize: 12,
+                    //                       fontWeight: FontWeight.w600,
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               const SizedBox(height: 16),
+                    //               // India row
+                    //               Row(
+                    //                 children: [
+                    //                   Container(
+                    //                     width: 32,
+                    //                     height: 24,
+                    //                     decoration: BoxDecoration(
+                    //                       borderRadius: BorderRadius.circular(
+                    //                         4,
+                    //                       ),
+                    //                       color: Colors.orange,
+                    //                     ),
+                    //                     child: const Center(
+                    //                       child: Text(
+                    //                         '🇮🇳',
+                    //                         style: TextStyle(fontSize: 16),
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                   const SizedBox(width: 12),
+                    //                   const Text(
+                    //                     'IND',
+                    //                     style: TextStyle(
+                    //                       fontSize: 14,
+                    //                       fontWeight: FontWeight.bold,
+                    //                     ),
+                    //                   ),
+                    //                   const Spacer(),
+                    //                   const Text(
+                    //                     '172-8 (20)',
+                    //                     style: TextStyle(
+                    //                       fontSize: 14,
+                    //                       fontWeight: FontWeight.bold,
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               const SizedBox(height: 12),
+                    //               // Pakistan row
+                    //               Row(
+                    //                 children: [
+                    //                   Container(
+                    //                     width: 32,
+                    //                     height: 24,
+                    //                     decoration: BoxDecoration(
+                    //                       borderRadius: BorderRadius.circular(
+                    //                         4,
+                    //                       ),
+                    //                       color: Colors.green,
+                    //                     ),
+                    //                     child: const Center(
+                    //                       child: Text(
+                    //                         '🇵🇰',
+                    //                         style: TextStyle(fontSize: 16),
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                   const SizedBox(width: 12),
+                    //                   const Text(
+                    //                     'PAK',
+                    //                     style: TextStyle(
+                    //                       fontSize: 14,
+                    //                       fontWeight: FontWeight.bold,
+                    //                     ),
+                    //                   ),
+                    //                   const Spacer(),
+                    //                   const Text(
+                    //                     '152/3 (15.4)',
+                    //                     style: TextStyle(
+                    //                       fontSize: 14,
+                    //                       fontWeight: FontWeight.bold,
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               const SizedBox(height: 16),
+                    //               showMatchVS("AUS", "IND", remoteConfig),
+                    //             ],
+                    //           ),
+                    //         ),
+                    //         const SizedBox(
+                    //           height: 24,
+                    //         ), // bottom spacing for nav
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                     // Ad 4: Large Banner (320x100) - At the end
-                    SliverToBoxAdapter(
-                      child: BannerAdContainer(adSize: AdSize.largeBanner),
-                    ),
+                    // SliverToBoxAdapter(
+                    //   child: BannerAdContainer(adSize: AdSize.largeBanner),
+                    // ),
                   ],
                 ),
               ),
@@ -1085,7 +1161,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               // Refresh breaking news
               await newsProvider.fetchBreakingNews();
               // Refresh today's news
-              await newsProvider.fetchNewsByDate(_selectedDate);
+              await _loadInitialTodayNews();
             },
       backgroundColor: remoteConfig.primaryColorValue,
       child: isRefreshing
@@ -1491,8 +1567,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         children: [
           // Image placeholder
           Container(
-            width: 100,
-            height: 80,
+            width: MediaQuery.of(context).size.width / 2.5,
+            height: MediaQuery.of(context).size.height / 5.5,
             decoration: BoxDecoration(
               color: baseColor,
               borderRadius: BorderRadius.circular(12),
@@ -1588,7 +1664,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
           setState(() => _selectedDate = normalizedDate);
           // Fetch news for the selected date
           if (mounted) {
-            context.read<NewsProvider>().fetchNewsByDate(normalizedDate);
+            // context.read<NewsProvider>().fetchNewsByDate(normalizedDate);
+            _selectedDate = normalizedDate;
+            await _loadInitialTodayNews();
           }
         }
       },
@@ -1635,7 +1713,7 @@ showShareModalBottomSheet(context) {
         color: theme.scaffoldBackgroundColor,
         height: 200,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

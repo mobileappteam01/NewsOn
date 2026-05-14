@@ -8,6 +8,7 @@ import 'package:newson/screens/drawer_widgets/application_settings.dart';
 import 'package:newson/screens/drawer_widgets/bookmark.dart';
 import 'package:newson/screens/drawer_widgets/privacy_policy.dart';
 import 'package:newson/screens/drawer_widgets/terms_and_conditions.dart';
+import 'package:newson/screens/drawer_widgets/contact_us.dart';
 import 'package:provider/provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -123,6 +124,25 @@ class AppDrawer extends StatelessWidget {
                           },
                           iconColor: config.primaryColorValue,
                         ),
+                      _buildMenuItem(
+                        context,
+                        icon: Icons.contact_support_outlined,
+                        title: LocalizationHelper.contactUs(context),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Future.delayed(
+                            const Duration(milliseconds: 200),
+                            () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (c) => const ContactUsScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        iconColor: config.primaryColorValue,
+                      ),
                     ],
                   ),
                 ),

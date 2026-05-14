@@ -18,6 +18,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get swipeToGetStarted => 'தொடங்குவதற்கு வலப்புறம் நகர்த்தவும்';
 
   @override
+  String get getStarted => 'தொடங்குங்கள்';
+
+  @override
   String get signIn => 'உள்நுழைய';
 
   @override
@@ -412,4 +415,22 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get backgroundMusicDisabled => 'பின்னணி இசை அணைக்கப்பட்டது';
+
+  @override
+  String get contactUs => 'எங்களை தொடர்பு கொள்ள';
+
+  @override
+  String get getInTouch => 'தொடர்பில் இருங்கள்';
+
+  @override
+  String get contactSupportText => 'எங்கள் உள்ளடக்கம் மற்றும் தளம் தொடர்பான ஆதரவு, விசாரணைகள் அல்லது பின்னூட்டங்களுக்கு, தயவுசெய்து எங்களை தொடர்பு கொள்ளவும்.';
+
+  @override
+  String get email => 'மின்னஞ்சல்';
+
+  @override
+  String get phone => 'தொலைபேசி';
+
+  @override
+  String get website => 'இணையதளம்';
 }

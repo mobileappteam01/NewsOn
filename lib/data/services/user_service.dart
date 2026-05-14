@@ -52,6 +52,26 @@ class UserService {
   }) async {
     try {
       _token = token;
+      // Preserve auth provider across profile refreshes.
+      // Priority:
+      // 1) explicit userData['authProvider']
+      // 2) temp account (from sign-in screen, used during onboarding)
+      // 3) previously saved setting
+      final explicitProvider = userData['authProvider'] as String?;
+      final tempProvider = getTempGoogleAccount()?['authProvider'] as String?;
+      final storedProvider = StorageService.getAuthProvider();
+      final provider = (explicitProvider?.isNotEmpty == true)
+          ? explicitProvider
+          : (tempProvider?.isNotEmpty == true)
+              ? tempProvider
+              : storedProvider;
+
+      if (provider != null && provider.isNotEmpty) {
+        userData = Map<String, dynamic>.from(userData);
+        userData['authProvider'] = provider;
+        await StorageService.saveAuthProvider(provider);
+      }
+
       _userData = userData;
 
       // Save to local storage
@@ -111,8 +131,16 @@ class UserService {
 
     await StorageService.saveSetting(AppConstants.userTokenKey, null);
     await StorageService.saveSetting(AppConstants.userDataKey, null);
+    await StorageService.saveAuthProvider(null);
 
     debugPrint('🗑️ User data cleared');
+  }
+
+  /// Get persisted auth provider ('google' | 'apple')
+  String? getAuthProvider() {
+    final provider = _userData?['authProvider'] as String? ??
+        StorageService.getAuthProvider();
+    return provider != null && provider.isNotEmpty ? provider : null;
   }
 
   /// Save temporary Google account data (before sign-up)

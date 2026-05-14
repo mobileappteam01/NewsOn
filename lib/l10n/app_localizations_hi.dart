@@ -18,6 +18,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get swipeToGetStarted => 'शुरू करने के लिए स्वाइप करें';
 
   @override
+  String get getStarted => 'शुरू करें';
+
+  @override
   String get signIn => 'साइन इन करें';
 
   @override
@@ -412,4 +415,22 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get backgroundMusicDisabled => 'पृष्ठभूमि संगीत बंद';
+
+  @override
+  String get contactUs => 'संपर्क करें';
+
+  @override
+  String get getInTouch => 'संपर्क में रहें';
+
+  @override
+  String get contactSupportText => 'हमारे सामग्री और प्लेटफ़ॉर्म से संबंधित समर्थन, पूछताछ या फीडबैक के लिए, कृपया हमसे संपर्क करें।';
+
+  @override
+  String get email => 'ईमेल';
+
+  @override
+  String get phone => 'फ़ोन';
+
+  @override
+  String get website => 'वेबसाइट';
 }

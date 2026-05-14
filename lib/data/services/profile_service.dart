@@ -266,4 +266,55 @@ class ProfileService {
       );
     }
   }
+
+  /// Delete Account (required for Apple App Store guideline compliance)
+  /// iOS UI will call this. Backend must permanently delete the user.
+  Future<ApiResponse> deleteAccount() async {
+    try {
+      debugPrint('🗑️ Deleting user account...');
+
+      final userToken = _userService.getToken();
+      if (userToken == null || userToken.isEmpty) {
+        return ApiResponse(
+          success: false,
+          data: null,
+          error: 'User not logged in',
+          statusCode: 401,
+        );
+      }
+
+      // Try profile/deleteAccount first (most consistent with existing ProfileService module)
+      ApiResponse response;
+      try {
+        response = await _apiService.delete(
+          'profile',
+          'deleteAccount',
+          bearerToken: userToken,
+        );
+      } catch (_) {
+        // Fallback to user/deleteAccount (mentioned in README)
+        response = await _apiService.delete(
+          'user',
+          'deleteAccount',
+          bearerToken: userToken,
+        );
+      }
+
+      if (response.success) {
+        debugPrint('✅ Account deleted successfully');
+      } else {
+        debugPrint('❌ Account delete failed: ${response.error}');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('❌ Error deleting account: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
 }

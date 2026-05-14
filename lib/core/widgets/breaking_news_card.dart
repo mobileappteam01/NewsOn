@@ -5,6 +5,7 @@ import '../../data/models/news_article.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/date_formatter.dart';
 
 /// Breaking news card with large image and play button overlay
 class BreakingNewsCard extends StatelessWidget {
@@ -124,11 +125,15 @@ class BreakingNewsCard extends StatelessWidget {
                       // Metadata
                       Row(
                         children: [
-                          Text(
-                            article.creator![0],
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
+                          Expanded(
+                            child: Text(
+                              'Source: ${article.sourceName ?? 'NewsOn'}${(article.creator != null && article.creator!.isNotEmpty) ? ' | Author: ${article.creator![0]}' : ''}',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -138,10 +143,10 @@ class BreakingNewsCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            article.pubDate!,
+                            'Published: ${article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())}',
                             style: const TextStyle(
                               color: Colors.white70,
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                           ),
                         ],

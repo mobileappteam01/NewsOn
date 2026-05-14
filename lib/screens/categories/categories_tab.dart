@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/shared_functions.dart';
 import '../../providers/news_provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/remote_config_provider.dart';
@@ -33,9 +34,15 @@ class _CategoriesTabState extends State<CategoriesTab>
   DateTime _selectedDate = DateTime.now();
   bool _hasInitialized = false;
 
+  final ScrollController _scrollController = ScrollController();
+  int _currentPage = 1;
+  bool _isLoadingMore = false;
+  bool _hasMorePages = true;
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(
       viewportFraction: 0.85, // Show partial adjacent cards (carousel effect)
@@ -72,6 +79,11 @@ class _CategoriesTabState extends State<CategoriesTab>
           '📰 Categories tab: Using breaking news (${sourceArticles.length} articles)');
     }
 
+    // Reset pagination state when initializing
+    _currentPage = 1;
+    _hasMorePages = true;
+    _isLoadingMore = false;
+
     if (sourceArticles.isNotEmpty) {
       setState(() {
         _articlesList = sourceArticles;
@@ -106,8 +118,62 @@ class _CategoriesTabState extends State<CategoriesTab>
     }
   }
 
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent * 0.8) {
+      if (!_isLoadingMore && _hasMorePages) {
+        _loadMoreNews();
+      }
+    }
+  }
+
+  Future<void> _loadMoreNews() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      final nextPage = _currentPage + 1;
+      
+      int previousLength = newsProvider.selectedDate != null 
+          ? newsProvider.todayNews.length 
+          : newsProvider.breakingNews.length;
+
+      if (newsProvider.selectedDate != null) {
+        await newsProvider.fetchNewsByDate(newsProvider.selectedDate!, limit: 10, page: nextPage);
+      } else {
+        await newsProvider.fetchBreakingNews(limit: 10, page: nextPage);
+      }
+      
+      if (mounted) {
+        setState(() {
+          _currentPage = nextPage;
+          int currentLength = newsProvider.selectedDate != null 
+              ? newsProvider.todayNews.length 
+              : newsProvider.breakingNews.length;
+              
+          if (currentLength <= previousLength) {
+            _hasMorePages = false;
+          }
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     // Stop audio when leaving the tab
@@ -218,6 +284,7 @@ class _CategoriesTabState extends State<CategoriesTab>
 
   /// Build modern header with responsive design
   Widget _buildModernHeader(BuildContext context, dynamic config) {
+    final theme = Theme.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTablet = constraints.maxWidth > 600;
@@ -238,59 +305,27 @@ class _CategoriesTabState extends State<CategoriesTab>
               children: [
                 // App branding
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: config.primaryColorValue,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        Icons.article,
-                        color: Colors.white,
-                        size: isLargeScreen ? 28 : 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'NewsOn',
-                          style: GoogleFonts.playfairDisplay(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
-                            fontSize: isLargeScreen ? 32 : 28,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        Text(
-                          'Your Daily News Source',
-                          style: GoogleFonts.inter(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white70
-                                    : Colors.black54,
-                            fontSize: isLargeScreen ? 16 : 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        showImage(
+                          config.getAppNameLogoForTheme(theme.brightness),
+                          BoxFit.contain,
+                          height: 60,
+                          width: 80,
                         ),
                       ],
                     ),
+                    _buildModernDateSelector(
+                        context,
+                        config,
+                        _articlesList.isNotEmpty
+                            ? _articlesList[_currentPageIndex]
+                            : null),
                   ],
                 ),
-
-                // Date selector
-                SizedBox(height: isLargeScreen ? 24 : 20),
-                _buildModernDateSelector(
-                    context,
-                    config,
-                    _articlesList.isNotEmpty
-                        ? _articlesList[_currentPageIndex]
-                        : null),
               ],
             ),
           ),
@@ -317,7 +352,6 @@ class _CategoriesTabState extends State<CategoriesTab>
     }
 
     return GestureDetector(
-
       onTap: () async {
         // Show date picker when tapped
         final picked = await showDatePicker(
@@ -341,11 +375,15 @@ class _CategoriesTabState extends State<CategoriesTab>
 
           // Fetch news for the selected date (this will populate todayNews which we can use for headlines)
           if (mounted) {
+            setState(() {
+              _currentPage = 1;
+              _hasMorePages = true;
+            });
             debugPrint(
                 '📰 Categories tab: Fetching news for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
             await context
                 .read<NewsProvider>()
-                .fetchNewsByDate(normalizedDate, limit: 10);
+                .fetchNewsByDate(normalizedDate, limit: 10, page: 1);
           }
         }
       },
@@ -425,18 +463,18 @@ class _CategoriesTabState extends State<CategoriesTab>
   ) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 8 : 0,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
         vertical: 12,
       ),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: config.primaryColorValue.withOpacity(0.2),
-            width: 2,
-          ),
-        ),
-      ),
+      // decoration: BoxDecoration(
+      //   border: Border(
+      //     bottom: BorderSide(
+      //       color: config.primaryColorValue.withOpacity(0.2),
+      //       width: 2,
+      //     ),
+      //   ),
+      // ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -457,18 +495,18 @@ class _CategoriesTabState extends State<CategoriesTab>
           ),
 
           // Subtitle or description
-          SizedBox(height: 4),
-          Text(
-            'Breaking stories from around the world',
-            style: GoogleFonts.inter(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white70
-                  : Colors.black54,
-              fontSize: isLargeScreen ? 16 : 14,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-            ),
-          ),
+          // SizedBox(height: 4),
+          // Text(
+          //   'Breaking stories from around the world',
+          //   style: GoogleFonts.inter(
+          //     color: Theme.of(context).brightness == Brightness.dark
+          //         ? Colors.white70
+          //         : Colors.black54,
+          //     fontSize: isLargeScreen ? 16 : 14,
+          //     fontWeight: FontWeight.w500,
+          //     letterSpacing: 0.2,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -481,7 +519,8 @@ class _CategoriesTabState extends State<CategoriesTab>
     ThemeData theme,
     AudioPlayerProvider audioProvider,
   ) {
-    final completedProvider = Provider.of<CompletedNewsProvider>(context, listen: true);
+    final completedProvider =
+        Provider.of<CompletedNewsProvider>(context, listen: true);
     final newsId = article.articleId ?? article.title;
     final isNewsCompleted = completedProvider.isCompleted(newsId);
 
@@ -523,11 +562,16 @@ class _CategoriesTabState extends State<CategoriesTab>
             vertical: isLargeScreen ? 16 : 14,
           ),
           decoration: BoxDecoration(
-            color: isNewsCompleted ? const Color(0xFF2E7D32) : config.primaryColorValue,
+            color: isNewsCompleted
+                ? const Color(0xFF2E7D32)
+                : config.primaryColorValue,
             borderRadius: BorderRadius.circular(isLargeScreen ? 20 : 16),
             boxShadow: [
               BoxShadow(
-                color: (isNewsCompleted ? const Color(0xFF2E7D32) : config.primaryColorValue).withOpacity(0.3),
+                color: (isNewsCompleted
+                        ? const Color(0xFF2E7D32)
+                        : config.primaryColorValue)
+                    .withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -764,9 +808,20 @@ class _CategoriesTabState extends State<CategoriesTab>
     NewsProvider newsProvider,
   ) {
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _articlesList.length,
+      itemCount: _articlesList.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _articlesList.length) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: config.primaryColorValue,
+              ),
+            ),
+          );
+        }
         final article = _articlesList[index];
         return _buildNewsListItem(article, config, theme, index);
       },
@@ -780,7 +835,8 @@ class _CategoriesTabState extends State<CategoriesTab>
     ThemeData theme,
     int index,
   ) {
-    final completedProvider = Provider.of<CompletedNewsProvider>(context, listen: true);
+    final completedProvider =
+        Provider.of<CompletedNewsProvider>(context, listen: true);
     final newsId = article.articleId ?? article.title;
     final isNewsCompleted = completedProvider.isCompleted(newsId);
 
@@ -799,7 +855,7 @@ class _CategoriesTabState extends State<CategoriesTab>
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          height: 100,
+          // height: 100,
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey[900]
@@ -865,17 +921,15 @@ class _CategoriesTabState extends State<CategoriesTab>
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 4),
-
                         Flexible(
                           child: Text(
                             article.title,
                             style: GoogleFonts.inter(
-                              color:
-                                  Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               height: 1.2,
@@ -884,9 +938,7 @@ class _CategoriesTabState extends State<CategoriesTab>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-
                         const SizedBox(height: 4),
-
                         Row(
                           children: [
                             if (article.sourceName?.isNotEmpty == true)
