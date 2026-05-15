@@ -214,7 +214,7 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> playFromUrl(String url) async {
     try {
       debugPrint('🎵 [AudioHandler] Playing from URL: $url');
-      await _player.setUrl(url);
+      await _player.setAudioSource(LockCachingAudioSource(Uri.parse(url)));
       await _player.play();
     } catch (e) {
       debugPrint('❌ [AudioHandler] Error playing from URL: $e');

@@ -18,6 +18,7 @@ class BackgroundMusicService {
   /// Used so resume() does nothing if we never started (avoids play() with no source).
   bool _wasStartedThisSession = false;
   String? _primaryMusicUrl;
+  LockCachingAudioSource? _bgAudioSource;
   double _volume = 0.19; // Store volume separately
   Completer<void>? _initCompleter;
 
@@ -88,8 +89,11 @@ class BackgroundMusicService {
       if (!_isPlaying) {
         debugPrint('🎵 Starting background music with URL: $_primaryMusicUrl');
 
+        if (_bgAudioSource == null) {
+          _bgAudioSource = LockCachingAudioSource(Uri.parse(_primaryMusicUrl!));
+        }
         // Set the URL and wait for it to load (important on first run)
-        await _player.setUrl(_primaryMusicUrl!);
+        await _player.setAudioSource(_bgAudioSource!);
 
         // Brief wait for source to be ready (keep short so BG starts quickly)
         await Future.delayed(const Duration(milliseconds: 150));

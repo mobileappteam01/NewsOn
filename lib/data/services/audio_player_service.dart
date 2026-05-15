@@ -123,7 +123,7 @@ class AudioPlayerService {
   Future<void> playFromUrl(String url) async {
     try {
       _currentAudioPath = url;
-      await _player.setUrl(url);
+      await _player.setAudioSource(LockCachingAudioSource(Uri.parse(url)));
       await _player.play();
     } catch (e) {
       debugPrint('Error playing audio from URL: $e');
