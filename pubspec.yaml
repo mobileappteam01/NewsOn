@@ -19,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # For IOS
 # version: 1.0.0+2
 # For Android
-version: 0.0.2+5
+version: 0.0.2+5 
 
 environment:
 
@@ -48,6 +48,7 @@ dependencies:
   # HTTP & API
   http: ^1.1.0
   dio: ^5.4.0
+  crypto: ^3.0.6
 
   # Local Storage
   shared_preferences: ^2.2.2

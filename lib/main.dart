@@ -1,5 +1,7 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -27,6 +29,7 @@ import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
 import 'data/services/background_music_service.dart';
+import 'data/services/news_audio_cache_service.dart';
 import 'data/services/ad_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
@@ -131,6 +134,13 @@ void main() async {
     return null;
   });
 
+  // Prefetch audio for previously cached news lists (offline listen after one online session)
+  unawaited(
+    NewsAudioCacheService.instance.prefetchAllStoredNewsCaches().catchError((e) {
+      debugPrint('⚠️ News audio cache prefetch at startup: $e');
+    }),
+  );
+
   // ... fcm logic moved to Future.wait ...
 
   // Setup background refresh when network comes online
@@ -147,6 +157,10 @@ void main() async {
       if (_globalNewsProvider != null) {
         await _globalNewsProvider!.refreshAllNews();
       }
+
+      unawaited(
+        NewsAudioCacheService.instance.prefetchAllStoredNewsCaches(),
+      );
     } catch (e) {
       debugPrint('⚠️ Error refreshing data on network connect: $e');
     }

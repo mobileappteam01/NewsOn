@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:ui' show Color;
+
 import 'package:audio_service/audio_service.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
+
 import '../models/news_article.dart';
+import 'news_audio_cache_service.dart';
 
 /// Background Audio Service Handler
 /// Manages audio playback in the background with notification controls
@@ -214,7 +217,9 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> playFromUrl(String url) async {
     try {
       debugPrint('🎵 [AudioHandler] Playing from URL: $url');
-      await _player.setAudioSource(LockCachingAudioSource(Uri.parse(url)));
+      final source =
+          await NewsAudioCacheService.instance.resolvePlaybackSource(url);
+      await _player.setAudioSource(source);
       await _player.play();
     } catch (e) {
       debugPrint('❌ [AudioHandler] Error playing from URL: $e');

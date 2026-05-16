@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:just_audio/just_audio.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+
 import 'audio_background_service.dart';
+import 'news_audio_cache_service.dart';
 
 /// Audio Player Service using just_audio
 /// Handles audio playback with Spotify-like features
@@ -119,11 +123,17 @@ class AudioPlayerService {
     }
   }
 
-  /// Play audio from URL
+  /// Resolve a remote news MP3 URL to a source usable offline after cache (local file) or online stream.
+  Future<AudioSource> resolveNewsAudioSource(String url) {
+    return NewsAudioCacheService.instance.resolvePlaybackSource(url);
+  }
+
+  /// Play audio from URL (uses persistent cache when possible for offline replay).
   Future<void> playFromUrl(String url) async {
     try {
-      _currentAudioPath = url;
-      await _player.setAudioSource(LockCachingAudioSource(Uri.parse(url)));
+      final source = await resolveNewsAudioSource(url);
+      _currentAudioPath = url.trim();
+      await _player.setAudioSource(source);
       await _player.play();
     } catch (e) {
       debugPrint('Error playing audio from URL: $e');

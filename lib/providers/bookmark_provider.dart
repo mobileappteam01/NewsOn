@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
 import '../data/models/news_article.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/services/bookmark_api_service.dart';
+import '../data/services/news_audio_cache_service.dart';
 import '../data/services/storage_service.dart';
 import '../data/services/user_service.dart';
 
@@ -84,6 +88,13 @@ class BookmarkProvider with ChangeNotifier {
 
         // Cache bookmark list for offline use
         await StorageService.saveBookmarkListCache(_bookmarks);
+
+        unawaited(
+          NewsAudioCacheService.instance.prefetchArticles(
+            _bookmarks,
+            maxUrls: 40,
+          ),
+        );
 
         // Update local storage for backward compatibility
         for (final article in _bookmarks) {

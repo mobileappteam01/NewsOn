@@ -1,7 +1,12 @@
 import 'dart:async';
-import 'package:just_audio/just_audio.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
+
+import '../../core/utils/connectivity_helper.dart';
+import 'news_audio_cache_service.dart';
+import 'storage_service.dart';
 
 /// Background Music Service
 /// Manages background music playback with mild volume
@@ -18,9 +23,12 @@ class BackgroundMusicService {
   /// Used so resume() does nothing if we never started (avoids play() with no source).
   bool _wasStartedThisSession = false;
   String? _primaryMusicUrl;
-  LockCachingAudioSource? _bgAudioSource;
+  AudioSource? _bgAudioSource;
+  String? _loadedBgSourceKey;
   double _volume = 0.19; // Store volume separately
   Completer<void>? _initCompleter;
+  /// Incremented on [stop] so in-flight [start] calls exit before playing.
+  int _operationGeneration = 0;
 
   /// Ensure service is initialized. Safe to call multiple times.
   /// Returns a Future that completes when initialization is done (for first-time wait).
@@ -75,6 +83,8 @@ class BackgroundMusicService {
     }
   }
 
+  bool _isOperationCancelled(int generation) => generation != _operationGeneration;
+
   /// Start background music. Only plays when news is playing; call stop() when news stops.
   Future<void> start() async {
     if (!_isInitialized) await initialize();
@@ -85,28 +95,37 @@ class BackgroundMusicService {
       return;
     }
 
+    final generation = _operationGeneration;
+
     try {
       if (!_isPlaying) {
         debugPrint('🎵 Starting background music with URL: $_primaryMusicUrl');
 
-        if (_bgAudioSource == null) {
-          _bgAudioSource = LockCachingAudioSource(Uri.parse(_primaryMusicUrl!));
+        final source = await _resolveBackgroundMusicSource();
+        if (_bgAudioSource == null || _loadedBgSourceKey != _primaryMusicUrl) {
+          _bgAudioSource = source;
+          _loadedBgSourceKey = _primaryMusicUrl;
+          await _player.setAudioSource(source);
         }
-        // Set the URL and wait for it to load (important on first run)
-        await _player.setAudioSource(_bgAudioSource!);
+        if (_isOperationCancelled(generation)) return;
 
         // Brief wait for source to be ready (keep short so BG starts quickly)
         await Future.delayed(const Duration(milliseconds: 150));
+        if (_isOperationCancelled(generation)) return;
 
         // Start playback
         await _player.play();
+        if (_isOperationCancelled(generation)) {
+          await _player.stop();
+          return;
+        }
         _isPlaying = true;
         _wasStartedThisSession = true;
         debugPrint('🎵 Background music started successfully');
 
         // Brief verify (if we were stopped during this delay, treat as cancelled, don't throw)
         await Future.delayed(const Duration(milliseconds: 100));
-        if (!_isPlaying) return; // Stopped by stop() in the meantime - cancelled
+        if (_isOperationCancelled(generation) || !_isPlaying) return;
         if (!_player.playing) {
           _isPlaying = false;
           _wasStartedThisSession = false;
@@ -115,6 +134,7 @@ class BackgroundMusicService {
         }
       }
     } catch (e) {
+      if (_isOperationCancelled(generation)) return;
       debugPrint('❌ Error starting background music: $e');
       _isPlaying = false;
       _wasStartedThisSession = false;
@@ -124,15 +144,16 @@ class BackgroundMusicService {
 
   /// Stop background music. Call whenever news stops (pause, stop, complete, error, switch).
   Future<void> stop() async {
+    _operationGeneration++;
+    _isPlaying = false;
+    _wasStartedThisSession = false;
     try {
-      if (_isPlaying || _player.processingState != ProcessingState.idle) {
+      if (_player.processingState != ProcessingState.idle) {
         await _player.stop();
-        _isPlaying = false;
         debugPrint('🛑 Background music stopped');
       }
     } catch (e) {
       debugPrint('❌ Error stopping background music: $e');
-      _isPlaying = false;
     }
   }
 
@@ -172,6 +193,10 @@ class BackgroundMusicService {
   /// - If a source is already loaded (paused), resume from current position.
   /// - If idle (stopped or never started), start from the beginning.
   Future<void> startOrResume() async {
+    if (!_wasStartedThisSession) {
+      await start();
+      return;
+    }
     if (_player.processingState != ProcessingState.idle) {
       await resume();
     } else {
@@ -218,23 +243,58 @@ class BackgroundMusicService {
     }
   }
 
-  /// Fetch background music URL from Firebase Realtime Database
-  Future<void> _fetchBackgroundMusicUrl() async {
-    try {
-      final DatabaseReference ref = FirebaseDatabase.instance.ref();
-      final DataSnapshot snapshot = await ref.child('bgMusicUrl').get();
-
-      if (snapshot.exists && snapshot.value != null) {
-        _primaryMusicUrl = snapshot.value as String;
-        debugPrint(
-            '🎵 Fetched background music URL from Firebase: $_primaryMusicUrl');
-      } else {
-        throw Exception('bgMusicUrl not found in Firebase');
-      }
-    } catch (e) {
-      debugPrint('❌ Error fetching background music URL from Firebase: $e');
-      rethrow;
+  Future<AudioSource> _resolveBackgroundMusicSource() async {
+    final url = _primaryMusicUrl;
+    if (url == null || url.isEmpty) {
+      throw Exception('No background music URL available');
     }
+    return NewsAudioCacheService.instance.resolvePlaybackSource(url);
+  }
+
+  /// Fetch background music URL from Firebase Realtime Database (with offline cache).
+  Future<void> _fetchBackgroundMusicUrl() async {
+    const cacheKey = 'bgMusicUrl';
+    final cachedUrl = StorageService.getRealtimeDbCache(cacheKey);
+    final cachedString =
+        cachedUrl is String ? cachedUrl : cachedUrl?.toString();
+
+    if (await ConnectivityHelper.hasConnection()) {
+      try {
+        final DatabaseReference ref = FirebaseDatabase.instance.ref();
+        final DataSnapshot snapshot = await ref.child(cacheKey).get();
+
+        if (snapshot.exists && snapshot.value != null) {
+          _primaryMusicUrl = snapshot.value as String;
+          await StorageService.saveRealtimeDbCache(cacheKey, _primaryMusicUrl);
+          debugPrint(
+            '🎵 Fetched background music URL from Firebase: $_primaryMusicUrl',
+          );
+          if (_primaryMusicUrl != null && _primaryMusicUrl!.isNotEmpty) {
+            unawaited(
+              NewsAudioCacheService.instance.downloadAndCache(_primaryMusicUrl!),
+            );
+          }
+          return;
+        }
+        throw Exception('bgMusicUrl not found in Firebase');
+      } catch (e) {
+        debugPrint('❌ Error fetching background music URL from Firebase: $e');
+        if (cachedString != null && cachedString.isNotEmpty) {
+          _primaryMusicUrl = cachedString;
+          debugPrint('📦 Using cached background music URL (offline fallback)');
+          return;
+        }
+        rethrow;
+      }
+    }
+
+    if (cachedString != null && cachedString.isNotEmpty) {
+      _primaryMusicUrl = cachedString;
+      debugPrint('📦 Using cached background music URL (device offline)');
+      return;
+    }
+
+    throw Exception('Background music URL not available offline');
   }
 
   /// Get current background music URL

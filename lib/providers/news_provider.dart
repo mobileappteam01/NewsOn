@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/models/category_model.dart';
+import '../core/constants/app_constants.dart';
+import '../core/utils/connectivity_helper.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/services/storage_service.dart';
 import '../data/services/category_api_service.dart';
@@ -301,9 +303,30 @@ class NewsProvider with ChangeNotifier {
       _isLoadingCategoryNews = true;
       _currentCategory = categoryName;
       _error = null;
-      notifyListeners();
+
+      // Show last cached category/search articles immediately (offline-friendly)
+      final cachedArticles = StorageService.getArticlesCache();
+      if (cachedArticles.isNotEmpty) {
+        _categoryNews = cachedArticles;
+        notifyListeners();
+        debugPrint(
+          '📦 Loaded ${cachedArticles.length} articles from cache for category UI',
+        );
+      } else {
+        notifyListeners();
+      }
 
       debugPrint('📰 Fetching news for category: $categoryName');
+
+      if (!await ConnectivityHelper.hasConnection()) {
+        if (_categoryNews.isNotEmpty) {
+          _isLoadingCategoryNews = false;
+          _error = null;
+          notifyListeners();
+          return;
+        }
+        throw Exception(AppConstants.noInternetError);
+      }
 
       // Update language code from provider if available
       if (_languageProvider != null) {
@@ -323,9 +346,19 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('❌ Error fetching category news: $e');
-      _error = e.toString();
+      if (_categoryNews.isEmpty) {
+        final cachedArticles = StorageService.getArticlesCache();
+        if (cachedArticles.isNotEmpty) {
+          _categoryNews = cachedArticles;
+          _error = null;
+        } else {
+          _error = e.toString();
+          _categoryNews = [];
+        }
+      } else {
+        _error = null;
+      }
       _isLoadingCategoryNews = false;
-      _categoryNews = [];
       notifyListeners();
     }
   }

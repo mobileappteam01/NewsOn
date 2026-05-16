@@ -1,7 +1,14 @@
+import 'dart:async';
+
 import '../models/news_article.dart';
 import '../models/news_response.dart';
 import '../services/backend_news_service.dart';
+import '../services/news_audio_cache_service.dart';
 import '../services/storage_service.dart';
+
+void _scheduleNewsAudioPrefetch(List<NewsArticle> articles) {
+  unawaited(NewsAudioCacheService.instance.prefetchArticles(articles));
+}
 
 /// Repository layer for news data management
 /// Handles both API calls and local storage
@@ -67,6 +74,7 @@ class NewsRepository {
       // Cache articles for offline use (only first page)
       if (page == 1) {
         await StorageService.saveArticlesCache(updatedResults);
+        _scheduleNewsAudioPrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -109,6 +117,7 @@ class NewsRepository {
       // Cache articles for offline use (only first page)
       if (page == 1) {
         await StorageService.saveArticlesCache(updatedResults);
+        _scheduleNewsAudioPrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -151,6 +160,7 @@ class NewsRepository {
       // Cache search results for offline use (only first page)
       if (page == 1) {
         await StorageService.saveArticlesCache(updatedResults);
+        _scheduleNewsAudioPrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -190,6 +200,7 @@ class NewsRepository {
       // Cache breaking news for offline use (only first page)
       if (page == 1) {
         await StorageService.saveBreakingNewsCache(updatedResults);
+        _scheduleNewsAudioPrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -232,6 +243,7 @@ class NewsRepository {
       // Cache today's news for offline use (only first page)
       if (page == 1) {
         await StorageService.saveTodayNewsCache(updatedResults);
+        _scheduleNewsAudioPrefetch(updatedResults);
       }
 
       return NewsResponse(

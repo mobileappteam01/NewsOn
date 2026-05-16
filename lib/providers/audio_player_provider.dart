@@ -7,6 +7,7 @@ import '../data/services/elevenlabs_service.dart';
 import '../data/services/audio_player_service.dart';
 import '../data/services/audio_background_service.dart';
 import '../data/services/background_music_service.dart';
+import '../data/services/news_audio_cache_service.dart';
 import '../data/services/storage_service.dart';
 import '../core/constants/app_constants.dart';
 import '../main.dart';
@@ -45,8 +46,8 @@ class AudioPlayerProvider with ChangeNotifier {
   /// Callback when current audio finishes (for marking news as completed in Firestore).
   void Function(String newsId, String category)? onNewsCompleted;
 
-  /// Generation for background music delayed start. Incremented on stop/pause/switch/error
-  /// so any pending _startBackgroundMusicWithDelay callback will no-op.
+  /// Invalidates in-flight background-music start chains (completion, switch, error).
+  int _bgMusicGeneration = 0;
 
   // Stream subscriptions
   StreamSubscription<Duration>? _positionSubscription;
@@ -118,14 +119,14 @@ class AudioPlayerProvider with ChangeNotifier {
               _isPlaying = true;
               _isPaused = false;
               _hasCompleted = false;
-              _startBackgroundMusicWhenPlaying();
+              _syncBackgroundMusic();
               notifyListeners();
             }
           } else if (isPausedFromNotification && _isPlaying) {
             debugPrint('⏸️ [Notification] Pause detected - syncing UI state');
             _isPlaying = false;
             _isPaused = true;
-            _backgroundMusicService.pause();
+            _pauseBackgroundMusic();
             notifyListeners();
           }
         });
@@ -223,7 +224,7 @@ class AudioPlayerProvider with ChangeNotifier {
           _isPlaying = false;
           _isPaused = false;
           _hasCompleted = true; // Mark as completed if idle
-          _backgroundMusicService.stop();
+          _stopBackgroundMusic();
           debugPrint(
             '🔄 Audio player idle - resetting state: isPlaying=$_isPlaying, isPaused=$_isPaused',
           );
@@ -262,7 +263,7 @@ class AudioPlayerProvider with ChangeNotifier {
           _autoAdvanceTimer?.cancel();
           _isAutoAdvancing = false;
           _autoAdvanceFromIndex = null;
-          _startBackgroundMusicWhenPlaying();
+          _syncBackgroundMusic();
           debugPrint(
             '🔄 Audio manually resumed after completion - resetting completion flag and cancelling auto-advance',
           );
@@ -272,7 +273,7 @@ class AudioPlayerProvider with ChangeNotifier {
           if (_isPlaying || _isPaused) {
             _isPlaying = false;
             _isPaused = false;
-            _backgroundMusicService.stop();
+            _stopBackgroundMusic();
             debugPrint(
               '⚠️ Preventing state reset after completion: isPlaying=$_isPlaying, isPaused=$_isPaused',
             );
@@ -284,16 +285,9 @@ class AudioPlayerProvider with ChangeNotifier {
           _isPaused =
               state.processingState == ProcessingState.ready && !state.playing;
 
-          // Mirror BG to news: start BG when news starts playing, pause BG when news is paused.
-          // Do not start BG when player is in completed state (e.g. last article just finished).
+          // Mirror BG to news: only while news is actively playing (not loading/completed/gap).
           if (wasPlaying != _isPlaying || wasPaused != _isPaused) {
-            if (_isPlaying &&
-                !wasPlaying &&
-                state.processingState != ProcessingState.completed) {
-              _startBackgroundMusicWhenPlaying();
-            } else if (_isPaused && wasPlaying) {
-              _backgroundMusicService.pause();
-            }
+            _syncBackgroundMusic();
           }
 
           // Notify listeners on state changes
@@ -449,6 +443,13 @@ class AudioPlayerProvider with ChangeNotifier {
       '📋 Playlist set with ${_playlist.length} articles, starting at index $startIndex (mode: ${playTitle ? "list view" : "detail view"})',
     );
 
+    unawaited(
+      NewsAudioCacheService.instance.prefetchPlaylist(
+        _playlist,
+        playTitle: playTitle,
+      ),
+    );
+
     // Start playing the article at startIndex
     await playArticleFromUrl(_playlist[startIndex],
         playTitle: playTitle, category: category);
@@ -476,7 +477,7 @@ class AudioPlayerProvider with ChangeNotifier {
       }
 
       // Stop current playback and background music before starting new audio
-      await _backgroundMusicService.stop();
+      await _stopBackgroundMusic();
 
       if (_audioPlayerService.isPlaying || _isPaused || _hasCompleted) {
         debugPrint(
@@ -503,140 +504,32 @@ class AudioPlayerProvider with ChangeNotifier {
 
       notifyListeners();
 
-      if (playTitle) {
-        // Home screen/list views: Use stored news reading preference
-        final readingMode = forceMode ?? StorageService.getNewsReadingMode();
-        final List<String> urlsToPlay = [];
+      final readingMode = forceMode ?? StorageService.getNewsReadingMode();
+      final urlsToPlay = NewsAudioCacheService.playbackUrlsForArticle(
+        article,
+        playTitle: playTitle,
+        readingMode: readingMode,
+      );
 
-        // Debug: Log the reading mode being used
-        debugPrint('🎧 ========== AUDIO PLAYBACK MODE ==========');
-        debugPrint('🎧 Reading Mode from Settings: "$readingMode"');
-        debugPrint(
-          '🎧 Expected modes: title_only="${AppConstants.readingModeTitleOnly}", description_only="${AppConstants.readingModeDescriptionOnly}", full_news="${AppConstants.readingModeFullNews}"',
+      debugPrint('🎧 ========== AUDIO PLAYBACK MODE ==========');
+      debugPrint('🎧 Reading Mode: "$readingMode" | playTitle: $playTitle');
+      debugPrint('🎧 URLs to play: ${urlsToPlay.length}');
+
+      if (urlsToPlay.isEmpty) {
+        throw Exception(
+          playTitle
+              ? 'No audio available for this article. It may still be generating on the server.'
+              : 'No audio URL available (content or description)',
         );
-        debugPrint(
-          '🎧 Article: ${article.title.substring(0, article.title.length > 50 ? 50 : article.title.length)}...',
-        );
-        debugPrint('🎧 Title URL: ${article.titleAudioUrl ?? "NULL"}');
-        debugPrint(
-          '🎧 Description URL: ${article.descriptionAudioUrl ?? "NULL"}',
-        );
-        debugPrint('🎧 Content URL: ${article.contentAudioUrl ?? "NULL"}');
+      }
 
-        if (readingMode == AppConstants.readingModeTitleOnly) {
-          // Play title only
-          final titleUrl = article.titleAudioUrl;
-          if (titleUrl == null || titleUrl.isEmpty) {
-            throw Exception('Title audio URL not available');
-          }
-          urlsToPlay.add(titleUrl);
-          debugPrint('🎵 [TITLE ONLY MODE] Playing title from URL: $titleUrl');
-        } else if (readingMode == AppConstants.readingModeDescriptionOnly) {
-          // Play description only
-          final descriptionUrl = article.descriptionAudioUrl;
-          if (descriptionUrl == null || descriptionUrl.isEmpty) {
-            // Fallback to title if description not available
-            debugPrint(
-              '⚠️ Description URL not available, falling back to title',
-            );
-            final titleUrl = article.titleAudioUrl;
-            if (titleUrl == null || titleUrl.isEmpty) {
-              throw Exception(
-                'Neither description nor title audio URL available',
-              );
-            }
-            urlsToPlay.add(titleUrl);
-            debugPrint(
-              '🎵 [DESCRIPTION MODE - FALLBACK] Playing title from URL: $titleUrl',
-            );
-          } else {
-            urlsToPlay.add(descriptionUrl);
-            debugPrint(
-              '🎵 [DESCRIPTION ONLY MODE] Playing description from URL: $descriptionUrl',
-            );
-          }
-        } else if (readingMode == AppConstants.readingModeFullNews) {
-          // Play full news: Play CONTENT URL only (full article content audio)
-          // Fallback chain: content → description → title
-          final contentUrl = article.contentAudioUrl;
-          final descriptionUrl = article.descriptionAudioUrl;
-          final titleUrl = article.titleAudioUrl;
+      _isLoading = false;
+      notifyListeners();
 
-          if (contentUrl != null && contentUrl.isNotEmpty) {
-            urlsToPlay.add(contentUrl);
-            debugPrint('🎵 [FULL NEWS MODE] Playing content URL: $contentUrl');
-          } else if (descriptionUrl != null && descriptionUrl.isNotEmpty) {
-            // Fallback to description if content not available
-            urlsToPlay.add(descriptionUrl);
-            debugPrint(
-              '🎵 [FULL NEWS MODE - FALLBACK] Content not available, playing description URL: $descriptionUrl',
-            );
-          } else if (titleUrl != null && titleUrl.isNotEmpty) {
-            // Fallback to title if neither content nor description available
-            urlsToPlay.add(titleUrl);
-            debugPrint(
-              '🎵 [FULL NEWS MODE - FALLBACK] Content/Description not available, playing title URL: $titleUrl',
-            );
-          } else {
-            throw Exception('No audio URL available for full news mode');
-          }
-        } else {
-          // Fallback to default (title only) - this should not happen if storage is working correctly
-          // But if reading mode is invalid/null, default to title only as per user requirement
-          final titleUrl = article.titleAudioUrl;
-          if (titleUrl == null || titleUrl.isEmpty) {
-            throw Exception('Title audio URL not available');
-          }
-          urlsToPlay.add(titleUrl);
-          debugPrint(
-            '⚠️ [FALLBACK MODE] Unknown reading mode "$readingMode", playing title only from URL: $titleUrl',
-          );
-        }
-
-        debugPrint('🎧 ========== STARTING PLAYBACK ==========');
-        debugPrint('🎧 Total URLs to play: ${urlsToPlay.length}');
-        for (int i = 0; i < urlsToPlay.length; i++) {
-          debugPrint('🎧 URL ${i + 1}: ${urlsToPlay[i]}');
-        }
-
-        _isLoading = false;
-        notifyListeners();
-
-        if (urlsToPlay.length == 1) {
-          // Single URL - play directly
-          debugPrint('🎵 Playing single URL directly');
-          await _audioPlayerService.playFromUrl(urlsToPlay[0]);
-        } else {
-          // Multiple URLs - play sequentially
-          debugPrint('🎵 Playing ${urlsToPlay.length} URLs sequentially');
-          await _playSequentialUrls(urlsToPlay);
-        }
-
-        // BG is started when player state transitions to playing (state listener)
+      if (urlsToPlay.length == 1) {
+        await _audioPlayerService.playFromUrl(urlsToPlay[0]);
       } else {
-        // Detail screen: Play content URL (full article content audio)
-        // Fallback to description URL if content URL is not available
-        String? audioUrl = article.contentAudioUrl;
-        String urlType = 'content';
-
-        if (audioUrl == null || audioUrl.isEmpty) {
-          // Fallback to description URL
-          audioUrl = article.descriptionAudioUrl;
-          urlType = 'description (fallback)';
-        }
-
-        if (audioUrl == null || audioUrl.isEmpty) {
-          throw Exception('No audio URL available (content or description)');
-        }
-
-        debugPrint('🎵 [DETAIL SCREEN] Playing $urlType audio URL: $audioUrl');
-        _isLoading = false;
-        notifyListeners();
-
-        // Play the audio URL
-        await _audioPlayerService.playFromUrl(audioUrl);
-
-        // BG is started when player state transitions to playing (state listener)
+        await _playSequentialUrls(urlsToPlay);
       }
     } catch (e) {
       _error = e.toString();
@@ -645,7 +538,7 @@ class AudioPlayerProvider with ChangeNotifier {
       _isPaused = false;
       _hasCompleted = false; // Reset completion flag on error
       _currentArticle = null;
-      await _backgroundMusicService.stop();
+      await _stopBackgroundMusic();
       debugPrint('❌ Error playing article from URL: $e');
       notifyListeners();
       rethrow;
@@ -699,8 +592,7 @@ class AudioPlayerProvider with ChangeNotifier {
 
       await _audioPlayerService.pause();
 
-      // Pause background music when speech is paused
-      await _backgroundMusicService.pause();
+      await _pauseBackgroundMusic();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -717,8 +609,7 @@ class AudioPlayerProvider with ChangeNotifier {
       }
       await _audioPlayerService.play();
 
-      // Resume background music when speech resumes
-      await _backgroundMusicService.resume();
+      await _resumeBackgroundMusic();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -735,8 +626,7 @@ class AudioPlayerProvider with ChangeNotifier {
 
       await _audioPlayerService.stop();
 
-      // Stop background music when speech stops
-      await _backgroundMusicService.stop();
+      await _stopBackgroundMusic();
 
       _isPlaying = false;
       _isPaused = false;
@@ -782,7 +672,7 @@ class AudioPlayerProvider with ChangeNotifier {
     );
 
     // Stop background music when news completes (BG mirrors news)
-    _backgroundMusicService.stop();
+    _stopBackgroundMusic();
 
     // Notify completed-news so UI can show green tick and Firestore can persist
     final article = _currentArticle;
@@ -835,7 +725,7 @@ class AudioPlayerProvider with ChangeNotifier {
       _isAutoAdvancing = false;
       _autoAdvanceFromIndex = null;
       // Last article completed: ensure BG is stopped (no next news)
-      _backgroundMusicService.stop();
+      _stopBackgroundMusic();
     }
   }
 
@@ -904,6 +794,9 @@ class AudioPlayerProvider with ChangeNotifier {
     debugPrint(
       '⏭️ Auto-advancing to next article: ${nextIndex + 1}/${_playlist.length}',
     );
+
+    // Ensure BG stays off during the gap until the next article is actually playing.
+    await _stopBackgroundMusic();
 
     try {
       // CRITICAL: Get the next article BEFORE updating index to avoid race conditions
@@ -1080,29 +973,85 @@ class AudioPlayerProvider with ChangeNotifier {
   void disposeBackgroundMusic() {
     if (_backgroundMusicService.isPlaying) {
       debugPrint('🗑️ Disposing background music service');
-      _backgroundMusicService.stop();
+      _stopBackgroundMusic();
       _backgroundMusicService.dispose();
+    }
+  }
+
+  /// True only while news audio is actively playing (not gap between articles).
+  bool _shouldBackgroundMusicPlay() {
+    return _currentArticle != null &&
+        _isPlaying &&
+        !_isPaused &&
+        !_hasCompleted &&
+        !_isAutoAdvancing &&
+        !_isLoading &&
+        StorageService.getBackgroundMusicEnabled();
+  }
+
+  void _invalidateBackgroundMusicStarts() {
+    _bgMusicGeneration++;
+  }
+
+  Future<void> _stopBackgroundMusic() async {
+    _invalidateBackgroundMusicStarts();
+    await _backgroundMusicService.stop();
+  }
+
+  Future<void> _pauseBackgroundMusic() async {
+    await _backgroundMusicService.pause();
+  }
+
+  Future<void> _resumeBackgroundMusic() async {
+    if (_currentArticle == null || _hasCompleted || _isAutoAdvancing) return;
+    if (!StorageService.getBackgroundMusicEnabled()) return;
+    await _backgroundMusicService.resume();
+  }
+
+  /// Keep background music in sync with news: play / pause / stop.
+  void _syncBackgroundMusic() {
+    if (_shouldBackgroundMusicPlay()) {
+      _startBackgroundMusicWhenPlaying();
+    } else if (_isPaused &&
+        _currentArticle != null &&
+        !_hasCompleted &&
+        !_isAutoAdvancing) {
+      _pauseBackgroundMusic();
+    } else {
+      _stopBackgroundMusic();
     }
   }
 
   /// Start background music when news is playing. Only starts if user has enabled BG in settings.
   /// BG mirrors news: play with news, pause with news, stop with news.
   void _startBackgroundMusicWhenPlaying() {
-    if (_currentArticle == null || _hasCompleted) return;
-    if (!StorageService.getBackgroundMusicEnabled()) return;
+    if (!_shouldBackgroundMusicPlay()) return;
+
+    final token = _bgMusicGeneration;
     final volume = StorageService.getBackgroundMusicVolume();
-    _backgroundMusicService.ensureInitialized().then((_) {
-      if (_currentArticle == null || _hasCompleted) return;
-      _backgroundMusicService.setVolume(volume);
-      _backgroundMusicService.startOrResume().then((_) {
-        debugPrint('✅ Background music started (in parallel with news)');
-        notifyListeners();
-      }).catchError((e) {
-        debugPrint('⚠️ Background music start failed: $e');
-      });
-    }).catchError((e) {
-      debugPrint('⚠️ Background music init failed: $e');
-    });
+    unawaited(_runBackgroundMusicStart(token, volume));
+  }
+
+  Future<void> _runBackgroundMusicStart(int token, double volume) async {
+    try {
+      await _backgroundMusicService.ensureInitialized();
+      if (token != _bgMusicGeneration || !_shouldBackgroundMusicPlay()) {
+        return;
+      }
+      await _backgroundMusicService.setVolume(volume);
+      if (token != _bgMusicGeneration || !_shouldBackgroundMusicPlay()) {
+        return;
+      }
+      await _backgroundMusicService.startOrResume();
+      if (token != _bgMusicGeneration || !_shouldBackgroundMusicPlay()) {
+        await _backgroundMusicService.stop();
+        return;
+      }
+      debugPrint('✅ Background music started (in parallel with news)');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('⚠️ Background music start failed: $e');
+    }
   }
 
   /// Check if specific article is currently playing
@@ -1133,10 +1082,11 @@ class AudioPlayerProvider with ChangeNotifier {
       );
 
       // Create AudioSource URIs for each URL
-      final List<AudioSource> audioSources = validUrls.map((url) {
+      final List<AudioSource> audioSources = [];
+      for (final url in validUrls) {
         debugPrint('🎵 Creating AudioSource for: $url');
-        return AudioSource.uri(Uri.parse(url));
-      }).toList();
+        audioSources.add(await _audioPlayerService.resolveNewsAudioSource(url));
+      }
 
       // Create ConcatenatingAudioSource which will play URLs sequentially
       final concatenatedSource = ConcatenatingAudioSource(
