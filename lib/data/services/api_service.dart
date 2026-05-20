@@ -6,6 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
+import 'storage_service.dart';
+
 /// Reusable API Service for making HTTP requests
 /// - Fetches base URL from Firebase Realtime Database (ipAddress)
 /// - Fetches endpoints from Firestore (apiEndPoints collection)
@@ -81,6 +83,8 @@ class ApiService {
     try {
       debugPrint('🚀 Initializing API Service...');
 
+      _hydrateFromLocalCache();
+
       // Step 1: Fetch base URL from Realtime Database
       await _fetchBaseUrl();
 
@@ -96,7 +100,24 @@ class ApiService {
       debugPrint('   Endpoints loaded: ${_cachedEndpoints.length}');
     } catch (e) {
       debugPrint('❌ Error initializing API Service: $e');
+      if (_cachedBaseUrl != null) {
+        _isInitialized = true;
+        debugPrint('✅ API Service using cached URLs (offline)');
+        return;
+      }
       rethrow;
+    }
+  }
+
+  void _hydrateFromLocalCache() {
+    final cachedImageBase = StorageService.getImageBaseUrlCache();
+    if (cachedImageBase != null && cachedImageBase.isNotEmpty) {
+      _cachedImageBaseUrl = cachedImageBase;
+    }
+
+    final cachedIp = StorageService.getRealtimeDbCache('ipAddress');
+    if (cachedIp != null) {
+      _cachedBaseUrl = cachedIp.toString();
     }
   }
 
@@ -108,6 +129,7 @@ class ApiService {
 
       if (snapshot.exists) {
         _cachedBaseUrl = snapshot.value.toString();
+        await StorageService.saveRealtimeDbCache('ipAddress', _cachedBaseUrl);
         debugPrint('✅ Base URL fetched: $_cachedBaseUrl');
       } else {
         throw Exception('Base URL not found in Realtime Database');
@@ -126,6 +148,7 @@ class ApiService {
 
       if (snapshot.exists) {
         _cachedImageBaseUrl = snapshot.value.toString();
+        await StorageService.saveImageBaseUrlCache(_cachedImageBaseUrl!);
         debugPrint('✅ Image Base URL fetched: $_cachedImageBaseUrl');
       } else {
         debugPrint('⚠️ Image Base URL not found in Realtime Database');
@@ -199,6 +222,38 @@ class ApiService {
     );
   }
 
+  /// Full URL for endpoints with a path segment (e.g. .../getNewsByIdMobile/:id).
+  String buildUrlWithPathSegment(
+    String module,
+    String endpointKey,
+    String pathSegment,
+  ) {
+    final base = buildUrl(module, endpointKey);
+    final segment = Uri.encodeComponent(pathSegment);
+    if (base.endsWith('/')) return '$base$segment';
+    return '$base/$segment';
+  }
+
+  /// Build URL using [fallbackRelativePath] when Firestore endpoint is missing.
+  String buildUrlWithPathSegmentOrFallback(
+    String module,
+    String endpointKey,
+    String pathSegment, {
+    required String fallbackRelativePath,
+  }) {
+    try {
+      return buildUrlWithPathSegment(module, endpointKey, pathSegment);
+    } catch (_) {
+      final baseUri = Uri.parse(getBaseUrl());
+      final domain = '${baseUri.scheme}://${baseUri.host}';
+      final path = fallbackRelativePath.startsWith('/')
+          ? fallbackRelativePath
+          : '/$fallbackRelativePath';
+      final segment = Uri.encodeComponent(pathSegment);
+      return '$domain$path/$segment';
+    }
+  }
+
   /// Build full URL from base URL and endpoint
   String buildUrl(String module, String endpointKey) {
     final baseUrl = getBaseUrl();
@@ -245,6 +300,51 @@ class ApiService {
     final finalUrl = '$domain$cleanBasePath$cleanEndpoint';
     debugPrint('🔗 Final URL: $finalUrl');
     return finalUrl;
+  }
+
+  /// GET with path segment appended to the endpoint (e.g. article id).
+  Future<ApiResponse> getWithPathSegment(
+    String module,
+    String endpointKey,
+    String pathSegment, {
+    required String fallbackRelativePath,
+    Map<String, String>? headers,
+    String? bearerToken,
+  }) async {
+    try {
+      final url = buildUrlWithPathSegmentOrFallback(
+        module,
+        endpointKey,
+        pathSegment,
+        fallbackRelativePath: fallbackRelativePath,
+      );
+
+      debugPrint('🌐 GET Request (path): $url');
+
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+
+      final response = await _dio.get(
+        url,
+        options: Options(headers: finalHeaders),
+      );
+
+      return _handleDioResponse(response);
+    } on DioException catch (e) {
+      debugPrint('❌ GET path Request Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ GET path Request Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
   }
 
   /// Make GET request

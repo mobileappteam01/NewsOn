@@ -8,7 +8,7 @@ import '../../data/models/news_article.dart';
 import '../news_detail/news_detail_screen.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../core/widgets/audio_mini_player.dart';
-import '../../screens/home/tabs/news_feed_tab_new.dart' as news_feed;
+import '../../core/widgets/news_share_bottom_sheet.dart';
 
 /// View All screen for Today's News with pagination
 class TodayNewsViewAllScreen extends StatefulWidget {
@@ -279,13 +279,7 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                               );
                             },
                             onShareTapped: () {
-                              showModalBottomSheet(
-                                context: context,
-                                builder: (c) {
-                                  return news_feed
-                                      .showShareModalBottomSheet(context);
-                                },
-                              );
+                              showNewsShareBottomSheet(context, article);
                             },
                           );
                         },

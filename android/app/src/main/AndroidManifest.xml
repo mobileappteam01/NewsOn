@@ -10,14 +10,16 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="NewsOn"
+        android:label="NewsOn India"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/launcher_icon">
         <!-- AdMob App  ID - Must be inside <application> tag, not <activity> -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-6015484156094454~1454431247"/>
+            android:value="ca-app-pub-6015484156094454~1775075691"
+            />  
+            
         
         <!-- Main Activity - Primary launcher for Flutter build system -->
         <activity
@@ -42,6 +44,23 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Deep link: newson://news?articleId=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="newson" android:host="news"/>
+            </intent-filter>
+            <!-- HTTPS app link: https://api.newson.app/news/{articleId} -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="api.newson.app"
+                    android:pathPrefix="/news"/>
             </intent-filter>
         </activity>
 

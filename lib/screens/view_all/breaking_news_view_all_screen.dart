@@ -8,7 +8,7 @@ import '../../data/models/news_article.dart';
 import '../news_detail/news_detail_screen.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../core/widgets/audio_mini_player.dart';
-import '../../screens/home/tabs/news_feed_tab_new.dart' as news_feed;
+import '../../core/widgets/news_share_bottom_sheet.dart';
 
 /// View All screen for Breaking News with pagination
 class BreakingNewsViewAllScreen extends StatefulWidget {
@@ -221,12 +221,7 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                           );
                         },
                         onShareTapped: () {
-                          showModalBottomSheet(
-                            context: context,
-                            builder: (c) {
-                              return news_feed.showShareModalBottomSheet(context);
-                            },
-                          );
+                          showNewsShareBottomSheet(context, article);
                         },
                       );
                     },

@@ -5,6 +5,7 @@ import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
+import '../../core/widgets/news_share_bottom_sheet.dart';
 import '../../providers/news_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
@@ -258,7 +259,7 @@ class NewsCard extends StatelessWidget {
                       // Share icon
                       InkWell(
                         onTap: () {
-                          // Share functionality
+                          showNewsShareBottomSheet(context, article);
                         },
                         child: const Padding(
                           padding: EdgeInsets.all(4),

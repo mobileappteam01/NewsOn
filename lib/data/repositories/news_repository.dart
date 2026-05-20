@@ -1,13 +1,37 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../models/news_article.dart';
 import '../models/news_response.dart';
 import '../services/backend_news_service.dart';
 import '../services/news_audio_cache_service.dart';
+import '../services/news_image_cache_service.dart';
 import '../services/storage_service.dart';
 
 void _scheduleNewsAudioPrefetch(List<NewsArticle> articles) {
   unawaited(NewsAudioCacheService.instance.prefetchArticles(articles));
+}
+
+void _scheduleNewsImagePrefetch(List<NewsArticle> articles) {
+  unawaited(NewsImageCacheService.instance.prefetchArticles(articles));
+}
+
+List<NewsArticle> _withBookmarkFlags(List<NewsArticle> articles) {
+  return articles.map((article) {
+    final key = article.articleId ?? article.title;
+    final isBookmarked = StorageService.isBookmarked(key);
+    return article.copyWith(isBookmarked: isBookmarked);
+  }).toList();
+}
+
+NewsResponse _offlineNewsResponse(List<NewsArticle> articles) {
+  return NewsResponse(
+    status: 'cached',
+    totalResults: articles.length,
+    results: _withBookmarkFlags(articles),
+    nextPage: null,
+  );
 }
 
 /// Repository layer for news data management
@@ -75,6 +99,7 @@ class NewsRepository {
       if (page == 1) {
         await StorageService.saveArticlesCache(updatedResults);
         _scheduleNewsAudioPrefetch(updatedResults);
+        _scheduleNewsImagePrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -84,6 +109,13 @@ class NewsRepository {
         nextPage: response.nextPage,
       );
     } catch (e) {
+      if (page == 1) {
+        final cached = StorageService.getArticlesCache();
+        if (cached.isNotEmpty) {
+          debugPrint('📦 fetchNewsByCategory offline: ${cached.length} cached');
+          return _offlineNewsResponse(cached);
+        }
+      }
       rethrow;
     }
   }
@@ -201,6 +233,7 @@ class NewsRepository {
       if (page == 1) {
         await StorageService.saveBreakingNewsCache(updatedResults);
         _scheduleNewsAudioPrefetch(updatedResults);
+        _scheduleNewsImagePrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -210,6 +243,13 @@ class NewsRepository {
         nextPage: response.nextPage,
       );
     } catch (e) {
+      if (page == 1) {
+        final cached = StorageService.getBreakingNewsCache();
+        if (cached.isNotEmpty) {
+          debugPrint('📦 fetchBreakingNews offline: ${cached.length} cached');
+          return _offlineNewsResponse(cached);
+        }
+      }
       rethrow;
     }
   }
@@ -244,6 +284,7 @@ class NewsRepository {
       if (page == 1) {
         await StorageService.saveTodayNewsCache(updatedResults);
         _scheduleNewsAudioPrefetch(updatedResults);
+        _scheduleNewsImagePrefetch(updatedResults);
       }
 
       return NewsResponse(
@@ -253,6 +294,13 @@ class NewsRepository {
         nextPage: response.nextPage,
       );
     } catch (e) {
+      if (page == 1) {
+        final cached = StorageService.getTodayNewsCache();
+        if (cached.isNotEmpty) {
+          debugPrint('📦 fetchTodayNews offline: ${cached.length} cached');
+          return _offlineNewsResponse(cached);
+        }
+      }
       rethrow;
     }
   }
@@ -274,6 +322,21 @@ class NewsRepository {
       limit: 50,
       page: 1,
     );
+  }
+
+  /// Fetch one article by id (shared links / deep links).
+  Future<NewsArticle?> fetchArticleById(String articleId) async {
+    try {
+      final article = await _backendService.fetchNewsById(articleId);
+      if (article == null) return null;
+
+      final key = article.articleId ?? article.title;
+      final isBookmarked = StorageService.isBookmarked(key);
+      return article.copyWith(isBookmarked: isBookmarked);
+    } catch (e) {
+      debugPrint('❌ NewsRepository.fetchArticleById: $e');
+      rethrow;
+    }
   }
 
   /// Toggle bookmark status

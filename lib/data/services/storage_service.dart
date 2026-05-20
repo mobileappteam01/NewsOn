@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/constants/app_constants.dart';
+import '../models/category_model.dart';
 import '../models/news_article.dart';
 import '../models/remote_config_model.dart';
 import '../models/api_config_model.dart';
@@ -386,6 +387,64 @@ class StorageService {
       }
     } catch (e) {
       debugPrint('❌ Error loading articles cache: $e');
+    }
+    return [];
+  }
+
+  // ==================== Categories & image base URL cache ====================
+
+  static Future<void> saveImageBaseUrlCache(String url) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      await _settingsBox!.put(AppConstants.imageBaseUrlCacheKey, url);
+    } catch (e) {
+      debugPrint('❌ Error saving image base URL cache: $e');
+    }
+  }
+
+  static String? getImageBaseUrlCache() {
+    if (_settingsBox == null) return null;
+    try {
+      return _settingsBox!.get(AppConstants.imageBaseUrlCacheKey) as String?;
+    } catch (e) {
+      debugPrint('❌ Error loading image base URL cache: $e');
+    }
+    return null;
+  }
+
+  static Future<void> saveCategoriesCache(List<CategoryModel> categories) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      final jsonList = categories.map((c) => c.toJson()).toList();
+      await _settingsBox!.put(
+        AppConstants.categoriesCacheKey,
+        jsonEncode(jsonList),
+      );
+      debugPrint('💾 Categories cached (${categories.length})');
+    } catch (e) {
+      debugPrint('❌ Error saving categories cache: $e');
+    }
+  }
+
+  static List<CategoryModel> getCategoriesCache() {
+    if (_settingsBox == null) return [];
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.categoriesCacheKey) as String?;
+      if (jsonString == null) return [];
+
+      final imageBaseUrl = getImageBaseUrlCache();
+      final jsonList = jsonDecode(jsonString) as List<dynamic>;
+      return jsonList
+          .map(
+            (json) => CategoryModel.fromJson(
+              json as Map<String, dynamic>,
+              imageBaseUrl,
+            ),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error loading categories cache: $e');
     }
     return [];
   }

@@ -7,12 +7,14 @@ import 'package:shimmer/shimmer.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:newson/screens/news_detail/news_detail_screen.dart';
 import 'package:provider/provider.dart';
+import '../../../core/widgets/inline_medium_ad_widget.dart';
 import '../../../providers/news_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../providers/audio_player_provider.dart';
 import '../../../providers/bookmark_provider.dart';
 import '../../../core/utils/shared_functions.dart';
+import '../../../core/widgets/news_share_bottom_sheet.dart';
 import '../../../core/utils/localization_helper.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/services/font_manager.dart';
@@ -20,6 +22,8 @@ import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
+import '../../../data/services/news_image_cache_service.dart';
+import '../../../data/services/storage_service.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -71,6 +75,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   void initState() {
     super.initState();
 
+    _hydrateOfflineLists();
+
     _scrollController.addListener(_onScrollPagination);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -84,6 +90,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         await _loadInitialTodayNews();
       }
     });
+  }
+
+  /// Show last cached lists immediately when reopening offline.
+  void _hydrateOfflineLists() {
+    final today = StorageService.getTodayNewsCache();
+    if (today.isNotEmpty) {
+      _allTodayNews = today;
+    }
+    final category = StorageService.getArticlesCache();
+    if (category.isNotEmpty) {
+      _allCategoryNews = category;
+    }
   }
 
   void _onScrollPagination() {
@@ -104,29 +122,32 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   Future<void> _loadInitialTodayNews() async {
     try {
       final newsProvider = context.read<NewsProvider>();
-      final languageProvider = context.read<LanguageProvider>();
 
-      final language = languageProvider.getApiLanguageCode();
-
-      final dateString =
-          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-
-      final response = await newsProvider.repository.fetchTodayNews(
-        date: dateString,
-        language: language,
+      await newsProvider.fetchNewsByDate(
+        _selectedDate,
         limit: _newsLimit,
         page: 1,
       );
 
       if (!mounted) return;
 
+      final results = newsProvider.todayNews;
       setState(() {
-        _allTodayNews = response.results;
+        _allTodayNews =
+            results.isNotEmpty ? results : StorageService.getTodayNewsCache();
         _todayNewsPage = 1;
-        _hasMoreTodayNews = response.results.length == _newsLimit;
+        _hasMoreTodayNews = _allTodayNews.length == _newsLimit;
       });
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('⚠️ _loadInitialTodayNews: $e');
+      if (!mounted) return;
+      final cached = StorageService.getTodayNewsCache();
+      if (cached.isNotEmpty) {
+        setState(() {
+          _allTodayNews = cached;
+          _hasMoreTodayNews = false;
+        });
+      }
     }
   }
 
@@ -173,26 +194,28 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   Future<void> _loadInitialCategoryNews(String category) async {
     try {
       final newsProvider = context.read<NewsProvider>();
-      final languageProvider = context.read<LanguageProvider>();
 
-      final language = languageProvider.getApiLanguageCode();
-
-      final response = await newsProvider.repository.fetchNewsByCategory(
-        category,
-        language: language,
-        limit: _newsLimit,
-        page: 1,
-      );
+      await newsProvider.fetchCategoryNews(category, limit: _newsLimit);
 
       if (!mounted) return;
 
+      final results = newsProvider.categoryNews;
       setState(() {
-        _allCategoryNews = response.results;
+        _allCategoryNews =
+            results.isNotEmpty ? results : StorageService.getArticlesCache();
         _categoryNewsPage = 1;
-        _hasMoreCategoryNews = response.results.length == _newsLimit;
+        _hasMoreCategoryNews = _allCategoryNews.length == _newsLimit;
       });
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('⚠️ _loadInitialCategoryNews: $e');
+      if (!mounted) return;
+      final cached = StorageService.getArticlesCache();
+      if (cached.isNotEmpty) {
+        setState(() {
+          _allCategoryNews = cached;
+          _hasMoreCategoryNews = false;
+        });
+      }
     }
   }
 
@@ -510,11 +533,6 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-                    // Ad 1: Standard Banner (320x50) - After categories
-                    const SliverToBoxAdapter(
-                      child: BannerAdContainer(adSize: AdSize.banner),
-                    ),
-
                     // Heading - Category name or Date heading
                     SliverToBoxAdapter(
                       child: Padding(
@@ -534,7 +552,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     // Category news or Today's news list items
                     if (_selectedCategory != 'All')
                       // Show category news when a category is selected
-                      if (newsProvider.isLoadingCategoryNews)
+                      if (newsProvider.isLoadingCategoryNews &&
+                          _allCategoryNews.isEmpty)
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList(
@@ -687,14 +706,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     );
                                   },
                                   onShareTapped: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      builder: (c) {
-                                        return showShareModalBottomSheet(
-                                          context,
-                                        );
-                                      },
-                                    );
+                                    showNewsShareBottomSheet(context, article);
                                   },
                                 );
                               },
@@ -705,7 +717,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         )
                     else
                     // Show today's news when "All" is selected
-                    if (newsProvider.isLoadingToday)
+                    if (newsProvider.isLoadingToday && _allTodayNews.isEmpty)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         sliver: SliverList(
@@ -741,7 +753,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final totalAds = _allTodayNews.length ~/ 4;
+                              final totalAds = _allTodayNews.length ~/ 10;
                               final totalItems =
                                   _allTodayNews.length + totalAds;
 
@@ -757,16 +769,15 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               }
 
                               // SHOW AD EVERY 4 NEWS
-                              if (index != 0 && index % 5 == 4) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: BannerAdContainer(
-                                    adSize: AdSize.mediumRectangle,
-                                  ),
+                              if (index != 0 && index % 10 == 9) {
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  child: InlineMediumAdWidget(index: index),
                                 );
                               }
 
-                              final actualIndex = index - (index ~/ 5);
+                              final actualIndex = index - (index ~/ 10);
 
                               final article = _allTodayNews[actualIndex];
 
@@ -820,12 +831,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   );
                                 },
                                 onShareTapped: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (c) {
-                                      return showShareModalBottomSheet(context);
-                                    },
-                                  );
+                                  showNewsShareBottomSheet(context, article);
                                 },
                               );
                             },
@@ -836,9 +842,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         ),
                       ),
                     // Ad 2: Large Banner (320x100) - After today's news
-                    const SliverToBoxAdapter(
-                      child: BannerAdContainer(adSize: AdSize.largeBanner),
-                    ),
+
                     // Flash news section title
                     SliverToBoxAdapter(
                       child: Padding(
@@ -969,12 +973,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 );
                               },
                               onShareTapped: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  builder: (c) {
-                                    return showShareModalBottomSheet(context);
-                                  },
-                                );
+                                showNewsShareBottomSheet(context, data);
                               },
                             );
                           },
@@ -982,7 +981,6 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                    const SliverToBoxAdapter(child: BannerAdContainer()),
 
                     // Live Cricket Score Section
                     // SliverToBoxAdapter(
@@ -1472,35 +1470,19 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       );
     }
 
-    return Image.network(
-      imageUrl,
+    return NewsImageCacheService.instance.cachedImage(
+      url: imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey[300],
-          child: Center(
-            child: Icon(
-              Icons.image_not_supported,
-              size: 50,
-              color: Colors.grey[600],
-            ),
+      errorWidget: Container(
+        color: Colors.grey[300],
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported,
+            size: 50,
+            color: Colors.grey[600],
           ),
-        );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.grey[300],
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1702,63 +1684,4 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   @override
   bool get wantKeepAlive => true;
-}
-
-showShareModalBottomSheet(context) {
-  RemoteConfigModel config = RemoteConfigModel();
-  final theme = Theme.of(context);
-  return Stack(
-    children: [
-      Container(
-        color: theme.scaffoldBackgroundColor,
-        height: 200,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (int i = 0; i < 3; i++)
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
-                    child: Row(
-                      children: [
-                        i == 0
-                            ? Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.rotationY(
-                                  3.1416,
-                                ), // 180° flip horizontally
-                                child: Icon(
-                                  Icons.reply_outlined,
-                                  size: 24,
-                                  color: config.primaryColorValue,
-                                ),
-                              )
-                            : Icon(
-                                i == 1 ? Icons.block : Icons.flag_outlined,
-                                color: config.primaryColorValue,
-                              ),
-                        giveWidth(12),
-                        Text(
-                          i == 0
-                              ? "Share"
-                              : i == 1
-                                  ? "Block relevant News"
-                                  : "Report",
-                          style: TextStyle(color: config.primaryColorValue),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
 }

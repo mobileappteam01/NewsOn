@@ -16,6 +16,7 @@ import '../../core/widgets/app_drawer.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 import '../../core/widgets/app_update_dialog.dart';
+import '../../data/services/deep_link_service.dart';
 import '../home/tabs/news_feed_tab_new.dart';
 import '../categories/categories_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
@@ -59,9 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Initialize other providers
-      context.read<NewsProvider>().fetchBreakingNews();
-      context.read<NewsProvider>().fetchBreakingNews();
-      context.read<NewsProvider>().fetchBreakingNews();
+      await context.read<NewsProvider>().fetchBreakingNews();
+      DeepLinkService.instance.processPendingLink();
       context.read<BookmarkProvider>().loadBookmarks();
       context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();

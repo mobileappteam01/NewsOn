@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../data/services/news_share_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/news_article.dart';
 import '../../core/constants/app_constants.dart';
@@ -879,7 +879,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                   // Share button
                   GestureDetector(
                     onTap: () {
-                      Share.share('${article.title}\n\n${article.link ?? ''}');
+                      NewsShareService.shareArticle(article);
                     },
                     child: Container(
                       padding: EdgeInsets.all(isLargeScreen ? 10 : 8),

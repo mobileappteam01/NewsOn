@@ -13,7 +13,7 @@ import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../widgets/news_grid_views.dart';
 import '../../providers/audio_player_provider.dart';
-import '../home/tabs/news_feed_tab_new.dart';
+import '../../core/widgets/news_share_bottom_sheet.dart';
 import '../news_detail/news_detail_screen.dart';
 import '../../core/services/voice_search_service.dart';
 
@@ -1121,12 +1121,7 @@ class _SearchTabState extends State<SearchTab>
                   );
                 },
                 onShareTapped: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (c) {
-                      return showShareModalBottomSheet(context);
-                    },
-                  );
+                  showNewsShareBottomSheet(context, article);
                 },
               );
             },

@@ -269,17 +269,27 @@ class NewsProvider with ChangeNotifier {
 
     try {
       _isLoadingCategories = true;
-      notifyListeners();
+
+      final cachedCategories = StorageService.getCategoriesCache();
+      if (cachedCategories.isNotEmpty) {
+        _categories = cachedCategories;
+        _isLoadingCategories = false;
+        notifyListeners();
+        debugPrint(
+          '📦 Loaded ${cachedCategories.length} categories from cache',
+        );
+      } else {
+        notifyListeners();
+      }
 
       debugPrint('📂 Fetching categories from API...');
       final response = await _categoryApiService.getCategories(limit: 50);
 
-      if (response.success) {
+      if (response.success && response.categories.isNotEmpty) {
         _categories = response.categories;
+        await StorageService.saveCategoriesCache(_categories);
         debugPrint('✅ Categories fetched: ${_categories.length} categories');
-        debugPrint(
-            '   Categories: ${_categories.map((c) => c.name).join(", ")}');
-      } else {
+      } else if (_categories.isEmpty) {
         debugPrint('❌ Failed to fetch categories: ${response.message}');
       }
 
@@ -287,6 +297,9 @@ class NewsProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('❌ Error fetching categories: $e');
+      if (_categories.isEmpty) {
+        _categories = StorageService.getCategoriesCache();
+      }
       _isLoadingCategories = false;
       notifyListeners();
     }

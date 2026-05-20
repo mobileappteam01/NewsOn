@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import '../../data/services/ad_service.dart';
 
-/// Reusable Banner Ad Widget
-/// Displays a Google AdMob banner ad at the bottom of the screen
 class BannerAdWidget extends StatefulWidget {
-  /// Optional custom ad size (defaults to AdSize.banner)
   final AdSize adSize;
 
-  const BannerAdWidget({super.key, this.adSize = AdSize.banner});
+  const BannerAdWidget({
+    super.key,
+    this.adSize = AdSize.banner,
+  });
 
   @override
   State<BannerAdWidget> createState() => _BannerAdWidgetState();
@@ -16,21 +17,22 @@ class BannerAdWidget extends StatefulWidget {
 
 class _BannerAdWidgetState extends State<BannerAdWidget> {
   BannerAd? _bannerAd;
+
   bool _isAdLoaded = false;
+
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAndLoadAd();
+
+    _initializeAds();
   }
 
-  Future<void> _initializeAndLoadAd() async {
+  Future<void> _initializeAds() async {
     final adService = AdService();
 
-    // Ensure AdService is initialized before creating ads
     if (!adService.isInitialized) {
-      debugPrint('📢 AdService not initialized, initializing now...');
       await adService.initialize();
     }
 
@@ -38,57 +40,55 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 
   void _loadBannerAd() {
-    if (_isLoading) {
-      debugPrint('⚠️ Banner ad is already loading, skipping...');
-      return;
-    }
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
 
     final adService = AdService();
-    final adUnitId = adService.bannerAdUnitId;
-
-    debugPrint('📢 Loading banner ad with unit ID: $adUnitId');
-
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
 
     _bannerAd = adService.createBannerAd(
       size: widget.adSize,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          debugPrint('✅ Banner ad loaded successfully');
-          if (mounted) {
-            setState(() {
-              _isAdLoaded = true;
-              _isLoading = false;
-            });
-          }
+          debugPrint('✅ Banner loaded');
+
+          if (!mounted) return;
+
+          setState(() {
+            _bannerAd = ad as BannerAd;
+            _isAdLoaded = true;
+            _isLoading = false;
+          });
         },
         onAdFailedToLoad: (ad, error) {
-          debugPrint('❌ Banner ad failed to load: ${error.message}');
-          debugPrint('   Error code: ${error.code}');
-          debugPrint('   Error domain: ${error.domain}');
-          debugPrint('   Ad Unit ID used: $adUnitId');
+          debugPrint(
+            '❌ Banner failed: ${error.message}',
+          );
+
+          debugPrint(
+            '❌ Error code: ${error.code}',
+          );
 
           ad.dispose();
-          if (mounted) {
-            setState(() {
-              _isAdLoaded = false;
-              _isLoading = false;
-              _bannerAd = null;
-            });
-          }
-        },
-        onAdOpened: (ad) {
-          debugPrint('📢 Banner ad opened');
-        },
-        onAdClosed: (ad) {
-          debugPrint('📢 Banner ad closed');
+
+          if (!mounted) return;
+
+          setState(() {
+            _bannerAd = null;
+            _isAdLoaded = false;
+            _isLoading = false;
+          });
         },
         onAdImpression: (ad) {
-          debugPrint('📢 Banner ad impression recorded');
+          debugPrint('📢 Ad impression');
+        },
+        onAdOpened: (ad) {
+          debugPrint('📢 Ad opened');
+        },
+        onAdClosed: (ad) {
+          debugPrint('📢 Ad closed');
         },
       ),
     );
@@ -99,13 +99,13 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   @override
   void dispose() {
     _bannerAd?.dispose();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isAdLoaded || _bannerAd == null) {
-      // Return empty container to avoid layout shifts
       return const SizedBox.shrink();
     }
 
@@ -118,13 +118,9 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 }
 
-/// Banner Ad Container Widget
-/// Wraps the BannerAdWidget with proper styling and safe area handling
 class BannerAdContainer extends StatelessWidget {
-  /// Background color for the ad container
   final Color? backgroundColor;
 
-  /// Ad size to display (defaults to AdSize.banner)
   final AdSize adSize;
 
   const BannerAdContainer({
@@ -136,9 +132,16 @@ class BannerAdContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 12),
+      margin: const EdgeInsets.symmetric(
+        vertical: 12,
+      ),
       color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-      child: SafeArea(top: false, child: BannerAdWidget(adSize: adSize)),
+      child: SafeArea(
+        top: false,
+        child: BannerAdWidget(
+          adSize: adSize,
+        ),
+      ),
     );
   }
 }

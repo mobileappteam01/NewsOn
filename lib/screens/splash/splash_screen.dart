@@ -7,6 +7,7 @@ import 'package:newson/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 
+import '../../data/services/deep_link_service.dart';
 import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
 // Uncomment to use dynamic app icon:
@@ -48,6 +49,13 @@ class _SplashScreenState extends State<SplashScreen>
       begin: const Offset(0, 0.3), // slightly below
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+
+    // Share link cold start: skip swipe — go to login or article immediately.
+    if (DeepLinkService.instance.hasPendingArticle) {
+      Future<void>.delayed(const Duration(milliseconds: 900), () {
+        if (mounted) _goNext();
+      });
+    }
   }
 
   void _goNext() {
@@ -63,6 +71,9 @@ class _SplashScreenState extends State<SplashScreen>
           builder: (context) => const HomeScreen(selectedCategories: []),
         ),
       );
+      if (DeepLinkService.instance.hasPendingArticle) {
+        DeepLinkService.instance.processPendingLink();
+      }
     } else {
       // User is not logged in - route to AuthScreen
       Navigator.pushReplacement(

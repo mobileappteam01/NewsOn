@@ -1,11 +1,11 @@
 // ignore_for_file: depend_on_referenced_packages
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:newson/core/utils/shared_functions.dart';
+import 'package:newson/core/widgets/ad_cache_manager.dart';
 import 'package:newson/l10n/app_localizations.dart';
 import 'package:newson/screens/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +30,9 @@ import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
 import 'data/services/background_music_service.dart';
 import 'data/services/news_audio_cache_service.dart';
+import 'data/services/news_image_cache_service.dart';
+import 'data/services/deep_link_service.dart';
+import 'core/navigation/app_navigator.dart';
 import 'data/services/ad_service.dart';
 import 'core/services/network_service.dart';
 import 'package:language_detector/language_detector.dart';
@@ -47,6 +50,23 @@ AudioPlayerProvider? _globalAudioPlayerProvider;
 // Global reference to news provider for network refresh
 NewsProvider? _globalNewsProvider;
 
+Future<void> _warmOfflineMediaCaches() async {
+  try {
+    await NewsImageCacheService.instance.prefetchArticles(
+      StorageService.getBreakingNewsCache(),
+    );
+    await NewsImageCacheService.instance.prefetchArticles(
+      StorageService.getTodayNewsCache(),
+    );
+    final cachedConfig = StorageService.getRemoteConfigCache();
+    if (cachedConfig != null) {
+      await NewsImageCacheService.instance.prefetchRemoteConfig(cachedConfig);
+    }
+  } catch (e) {
+    debugPrint('⚠️ Offline media warm-up: $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -55,6 +75,10 @@ void main() async {
 
   // Initialize local storage FIRST (required for cache operations)
   await StorageService.initialize();
+
+  unawaited(_warmOfflineMediaCaches());
+
+  await DeepLinkService.instance.initialize();
 
   // Fetch all DB configs (API keys, URLs, App Icon) in parallel
   // This drastically reduces startup time compared to sequential fetches
@@ -116,6 +140,7 @@ void main() async {
     AdService().initialize().catchError((e) {
       debugPrint("❌ Failed to initialize Ad Service: $e");
     }),
+    AdCacheManager.instance.preloadMediumAds(),
     ApiService().initialize().catchError((e) {
       debugPrint("❌ Failed to initialize API Service: $e");
     }),
@@ -136,7 +161,9 @@ void main() async {
 
   // Prefetch audio for previously cached news lists (offline listen after one online session)
   unawaited(
-    NewsAudioCacheService.instance.prefetchAllStoredNewsCaches().catchError((e) {
+    NewsAudioCacheService.instance
+        .prefetchAllStoredNewsCaches()
+        .catchError((e) {
       debugPrint('⚠️ News audio cache prefetch at startup: $e');
     }),
   );
@@ -161,6 +188,7 @@ void main() async {
       unawaited(
         NewsAudioCacheService.instance.prefetchAllStoredNewsCaches(),
       );
+      DeepLinkService.instance.processPendingLink();
     } catch (e) {
       debugPrint('⚠️ Error refreshing data on network connect: $e');
     }
@@ -239,68 +267,94 @@ class NewsOnApp extends StatelessWidget {
           },
         ),
       ],
-      child: _CompletedNewsBridge(
-        child: Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
-          builder: (
-            context,
-            themeProvider,
-            languageProvider,
-            configProvider,
-            child,
-          ) {
-            // Get the locale, but fall back to English for AppLocalizations if not supported
-            final requestedLocale = languageProvider.locale;
+      child: _DeepLinkBridge(
+        child: _CompletedNewsBridge(
+          child:
+              Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
+            builder: (
+              context,
+              themeProvider,
+              languageProvider,
+              configProvider,
+              child,
+            ) {
+              // Get the locale, but fall back to English for AppLocalizations if not supported
+              final requestedLocale = languageProvider.locale;
 
-            // Check if the locale is supported by AppLocalizations (ARB files)
-            // Currently only 'en' and 'ta' have ARB files
-            final arbSupportedLocales = ['en', 'ta'];
-            final effectiveLocale =
-                arbSupportedLocales.contains(requestedLocale.languageCode)
-                    ? requestedLocale
-                    : const Locale(
-                        'en',
-                      ); // Fallback to English for AppLocalizations
+              // Check if the locale is supported by AppLocalizations (ARB files)
+              // Currently only 'en' and 'ta' have ARB files
+              final arbSupportedLocales = ['en', 'ta'];
+              final effectiveLocale =
+                  arbSupportedLocales.contains(requestedLocale.languageCode)
+                      ? requestedLocale
+                      : const Locale(
+                          'en',
+                        ); // Fallback to English for AppLocalizations
 
-            return MaterialApp(
-              title: configProvider.config.appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.getLightTheme(configProvider.config),
-              darkTheme: AppTheme.getDarkTheme(configProvider.config),
-              themeMode: themeProvider.themeMode,
+              return MaterialApp(
+                navigatorKey: appNavigatorKey,
+                title: configProvider.config.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.getLightTheme(configProvider.config),
+                darkTheme: AppTheme.getDarkTheme(configProvider.config),
+                themeMode: themeProvider.themeMode,
 
-              // Localization configuration
-              // Use effectiveLocale for Flutter's built-in localization (ARB files)
-              // Dynamic translations are handled separately by DynamicLocalizationService
-              locale: effectiveLocale,
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              // Only include locales that have ARB file support
-              supportedLocales: const [Locale('en'), Locale('ta')],
+                // Localization configuration
+                // Use effectiveLocale for Flutter's built-in localization (ARB files)
+                // Dynamic translations are handled separately by DynamicLocalizationService
+                locale: effectiveLocale,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                // Only include locales that have ARB file support
+                supportedLocales: const [Locale('en'), Locale('ta')],
 
-              // Resolve locale - fall back to English if not supported by ARB
-              localeResolutionCallback: (locale, supportedLocales) {
-                if (locale != null) {
-                  for (final supportedLocale in supportedLocales) {
-                    if (supportedLocale.languageCode == locale.languageCode) {
-                      return supportedLocale;
+                // Resolve locale - fall back to English if not supported by ARB
+                localeResolutionCallback: (locale, supportedLocales) {
+                  if (locale != null) {
+                    for (final supportedLocale in supportedLocales) {
+                      if (supportedLocale.languageCode == locale.languageCode) {
+                        return supportedLocale;
+                      }
                     }
                   }
-                }
-                return const Locale('en'); // Default fallback
-              },
+                  return const Locale('en'); // Default fallback
+                },
 
-              home: const SplashScreen(),
-              // home: CategorySelectionScreen(),
-            );
-          },
+                home: const SplashScreen(),
+                // home: CategorySelectionScreen(),
+              );
+            },
+          ),
         ),
       ),
     );
   }
+}
+
+/// Processes pending share / deep links once [MaterialApp] has a navigator.
+class _DeepLinkBridge extends StatefulWidget {
+  const _DeepLinkBridge({required this.child});
+  final Widget child;
+
+  @override
+  State<_DeepLinkBridge> createState() => _DeepLinkBridgeState();
+}
+
+class _DeepLinkBridgeState extends State<_DeepLinkBridge> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.instance.processPendingLink();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// One-time setup: load completed news for current user and wire audio completion.

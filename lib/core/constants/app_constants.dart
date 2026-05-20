@@ -12,6 +12,8 @@ class AppConstants {
   static const String breakingNewsCacheKey = 'breaking_news_cache';
   static const String todayNewsCacheKey = 'today_news_cache';
   static const String articlesCacheKey = 'articles_cache';
+  static const String categoriesCacheKey = 'categories_cache';
+  static const String imageBaseUrlCacheKey = 'image_base_url_cache';
   static const String realtimeDbCacheKey = 'realtime_db_cache';
   static const String bookmarkListCacheKey = 'bookmark_list_cache';
   static const String themeKey = 'theme_mode';

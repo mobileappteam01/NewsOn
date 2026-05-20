@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../data/models/remote_config_model.dart';
+import '../data/services/news_image_cache_service.dart';
 import '../data/services/remote_config_service.dart';
 import '../data/services/storage_service.dart';
 
@@ -38,6 +41,9 @@ class RemoteConfigProvider extends ChangeNotifier {
           _isInitialized = true;
           notifyListeners(); // Notify immediately with cached data
           debugPrint('📦 RemoteConfigProvider initialized with cached data');
+          unawaited(
+            NewsImageCacheService.instance.prefetchRemoteConfig(_config),
+          );
           // Continue to try fetching fresh data in background
         } else {
           // No cached data, use defaults from RemoteConfigService
@@ -58,6 +64,7 @@ class RemoteConfigProvider extends ChangeNotifier {
       await _remoteConfigService.initialize();
       _config = _remoteConfigService.getConfig();
       _isInitialized = true;
+      unawaited(NewsImageCacheService.instance.prefetchRemoteConfig(_config));
       notifyListeners(); // Notify again with fresh data (if fetched) or defaults
       debugPrint('✅ RemoteConfigProvider fully initialized');
     } catch (e) {

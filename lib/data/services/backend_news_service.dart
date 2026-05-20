@@ -294,6 +294,74 @@ class BackendNewsService {
     }
   }
 
+  static const String _newsByIdEndpointKey = 'getNewsByIdMobile';
+  static const String _newsByIdFallbackPath =
+      'api/latestnews/getNewsByIdMobile';
+
+  /// Fetch a single article by id — GET /api/latestnews/getNewsByIdMobile/:id
+  Future<NewsArticle?> fetchNewsById(String articleId) async {
+    final id = articleId.trim();
+    if (id.isEmpty) return null;
+
+    try {
+      debugPrint('📰 Fetching article by id: $id');
+
+      String? bearerToken;
+      if (_userService.isLoggedIn) {
+        bearerToken = _userService.getToken();
+      }
+
+      final response = await _apiService.getWithPathSegment(
+        'news',
+        _newsByIdEndpointKey,
+        id,
+        fallbackRelativePath: _newsByIdFallbackPath,
+        bearerToken: bearerToken,
+      );
+
+      if (response.success && response.data != null) {
+        final article = _parseSingleArticle(response.data);
+        if (article != null) {
+          debugPrint('✅ Fetched article by id: ${article.title}');
+          return article;
+        }
+      }
+
+      debugPrint(
+        '❌ fetchNewsById failed: ${response.error} (${response.statusCode})',
+      );
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error fetching article by id: $e');
+      return null;
+    }
+  }
+
+  /// Parse single-article API response.
+  NewsArticle? _parseSingleArticle(dynamic data) {
+    try {
+      if (data is! Map<String, dynamic>) return null;
+
+      final dynamic payload = data['data'] ?? data['article'] ?? data['news'];
+      if (payload is Map<String, dynamic>) {
+        return NewsArticle.fromJson(payload);
+      }
+      if (payload is List && payload.isNotEmpty) {
+        final first = payload.first;
+        if (first is Map<String, dynamic>) {
+          return NewsArticle.fromJson(first);
+        }
+      }
+
+      if (data.containsKey('article_id') || data.containsKey('title')) {
+        return NewsArticle.fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error parsing single article: $e');
+    }
+    return null;
+  }
+
   /// Parse backend API response to NewsResponse
   /// Expected response format:
   /// {

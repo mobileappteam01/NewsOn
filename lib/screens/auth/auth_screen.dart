@@ -5,9 +5,11 @@ import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/remote_config_provider.dart';
+import '../../data/services/deep_link_service.dart';
 import '../../data/services/google_auth_service.dart';
 import '../../data/services/apple_auth_service.dart';
 import '../../data/services/user_service.dart';
+import '../home/home_screen.dart';
 import '../../widgets/google_signin_button.dart';
 import '../../widgets/apple_signin_button.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -33,6 +35,20 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Already logged in (e.g. restored session) + share link pending.
+      if (_userService.isLoggedIn &&
+          DeepLinkService.instance.hasPendingArticle) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(selectedCategories: []),
+          ),
+        );
+        DeepLinkService.instance.processPendingLink();
+      }
+    });
     _loadingMessage = ''; // Will be set when context is available
     _loadingAnimationController = AnimationController(
       vsync: this,
@@ -216,11 +232,41 @@ class _AuthScreenState extends State<AuthScreen>
         final config = configProvider.config;
         final theme = Theme.of(context);
 
+        final pendingShare = DeepLinkService.instance.hasPendingArticle;
+
         return Stack(
           children: [
             Scaffold(
               body: ListView(
                 children: [
+                  if (pendingShare)
+                    Material(
+                      color: theme.colorScheme.primaryContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.link,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Sign in to read the shared article',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   giveHeight(32),
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.45,

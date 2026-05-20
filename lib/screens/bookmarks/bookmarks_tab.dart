@@ -11,7 +11,7 @@ import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/banner_ad_widget.dart';
 import '../../providers/news_provider.dart';
 import '../../widgets/news_grid_views.dart';
-import '../home/tabs/news_feed_tab_new.dart';
+import '../../core/widgets/news_share_bottom_sheet.dart';
 import '../news_detail/news_detail_screen.dart';
 
 /// Bookmarks tab - View saved articles
@@ -328,12 +328,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                                   );
                                 },
                                 onShareTapped: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (c) {
-                                      return showShareModalBottomSheet(context);
-                                    },
-                                  );
+                                  showNewsShareBottomSheet(context, article);
                                 },
                               );
                             },
