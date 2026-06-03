@@ -73,6 +73,36 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
         final config = configProvider.config;
         final theme = Theme.of(context);
 
+        if (!configProvider.isVoiceFeaturesEnabled) {
+          return Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    commonappBar(
+                      config.getAppNameLogoForTheme(
+                        Theme.of(context).brightness,
+                      ),
+                      () => Navigator.pop(context),
+                    ),
+                    giveHeight(24),
+                    Text(
+                      'Voice and audio features are currently unavailable.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
           body: SafeArea(

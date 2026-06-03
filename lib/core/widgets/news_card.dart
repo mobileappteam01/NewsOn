@@ -7,6 +7,7 @@ import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
 import '../../core/widgets/news_share_bottom_sheet.dart';
 import '../../providers/news_provider.dart';
+import '../../providers/remote_config_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/utils/date_formatter.dart';
@@ -32,6 +33,8 @@ class NewsCard extends StatelessWidget {
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
     final audioProvider = Provider.of<AudioPlayerProvider>(context);
     final completedProvider = Provider.of<CompletedNewsProvider>(context);
+    final voiceEnabled =
+        context.watch<RemoteConfigProvider>().isVoiceFeaturesEnabled;
     final isBookmarked = bookmarkProvider.isBookmarked(article);
     final isPlaying = audioProvider.isArticlePlaying(article);
     final newsId = article.articleId ?? article.title;
@@ -131,7 +134,7 @@ class NewsCard extends StatelessWidget {
                       const SizedBox(width: 8),
 
                       // Listen button with red background
-                      if (showPlayButton)
+                      if (showPlayButton && voiceEnabled)
                         GestureDetector(
                           onTap: () async {
                             try {

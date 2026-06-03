@@ -217,7 +217,19 @@ class RemoteConfigService {
 
       // Feature flags
       'enable_voice_search': false,
+      'enable_voice_features': true,
     };
+  }
+
+  bool _getRemoteConfigBool(String key, {required bool defaultValue}) {
+    try {
+      return _remoteConfig.getBool(key);
+    } catch (_) {
+      final raw = _remoteConfig.getString(key).trim().toLowerCase();
+      if (raw == 'true') return true;
+      if (raw == 'false') return false;
+      return defaultValue;
+    }
   }
 
   /// Get current config as RemoteConfigModel
@@ -365,7 +377,14 @@ class RemoteConfigService {
       drawerMenu: _safeJsonDecode(_remoteConfig.getString('drawer_menu'), []),
 
       // Feature flags
-      enableVoiceSearch: _remoteConfig.getBool('enable_voice_search'),
+      enableVoiceSearch: _getRemoteConfigBool(
+        'enable_voice_search',
+        defaultValue: false,
+      ),
+      enableVoiceFeatures: _getRemoteConfigBool(
+        'enable_voice_features',
+        defaultValue: true,
+      ),
     );
   }
 

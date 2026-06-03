@@ -189,6 +189,13 @@
       "description": "Enable voice search in search tab",
       "valueType": "STRING"
     },
+    "enable_voice_features": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Master switch for all voice/audio: listen buttons, audio player, background music settings, news reading (listen) mode, and voice search",
+      "valueType": "BOOLEAN"
+    },
     "language_version": {
       "defaultValue": {
         "value": "1.0.2"

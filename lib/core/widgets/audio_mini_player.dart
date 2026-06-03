@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/audio_player_provider.dart';
+import '../../providers/remote_config_provider.dart';
 import '../screens/audio_player/audio_player_screen.dart';
 
 /// Spotify-like Mini Player Widget
@@ -11,8 +12,12 @@ class AudioMiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AudioPlayerProvider>(
-      builder: (context, audioProvider, child) {
+    return Consumer2<AudioPlayerProvider, RemoteConfigProvider>(
+      builder: (context, audioProvider, configProvider, child) {
+        if (!configProvider.isVoiceFeaturesEnabled) {
+          return const SizedBox.shrink();
+        }
+
         // Only show if there's a current article
         if (!audioProvider.hasCurrentArticle || audioProvider.currentArticle == null) {
           return const SizedBox.shrink();

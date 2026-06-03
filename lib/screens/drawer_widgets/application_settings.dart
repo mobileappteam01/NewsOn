@@ -23,6 +23,7 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
     return Consumer<RemoteConfigProvider>(
       builder: (context, configProvider, child) {
         final config = configProvider.config;
+        final voiceEnabled = configProvider.isVoiceFeaturesEnabled;
         final theme = Theme.of(context);
 
         return Scaffold(
@@ -79,28 +80,30 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                       ),
                     ),
                   ),
-                  _divider(),
-                  _buildSettingItem(
-                    title: LocalizationHelper.newsReadingSettings(context),
-                    theme: theme,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NewsReadingSettings(),
+                  if (voiceEnabled) ...[
+                    _divider(),
+                    _buildSettingItem(
+                      title: LocalizationHelper.newsReadingSettings(context),
+                      theme: theme,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NewsReadingSettings(),
+                        ),
                       ),
                     ),
-                  ),
-                  _divider(),
-                  _buildSettingItem(
-                    title: LocalizationHelper.backgroundMusic(context),
-                    theme: theme,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BackgroundMusicSettings(),
+                    _divider(),
+                    _buildSettingItem(
+                      title: LocalizationHelper.backgroundMusic(context),
+                      theme: theme,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BackgroundMusicSettings(),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

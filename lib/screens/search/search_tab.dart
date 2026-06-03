@@ -27,12 +27,15 @@ class SearchTab extends StatefulWidget {
 
 class _SearchTabState extends State<SearchTab>
     with AutomaticKeepAliveClientMixin {
+  bool _isVoiceSearchEnabled(RemoteConfigModel config) =>
+      config.enableVoiceFeatures && config.enableVoiceSearch;
+
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<String> _recentSearches = [];
   Timer? _debounceTimer;
 
-  // Voice search (controlled by Remote Config: enableVoiceSearch)
+  // Voice search (Remote Config: enable_voice_features + enable_voice_search)
   final VoiceSearchService _voiceSearchService = VoiceSearchService();
   bool _isVoiceSearchInitialized = false;
   bool _isInitializingVoiceSearch = false;
@@ -47,7 +50,8 @@ class _SearchTabState extends State<SearchTab>
     // Listen to scroll for pagination
     _scrollController.addListener(_onScroll);
     // Initialize voice search only when Remote Config enables it
-    if (context.read<RemoteConfigProvider>().config.enableVoiceSearch) {
+    final remoteConfig = context.read<RemoteConfigProvider>().config;
+    if (_isVoiceSearchEnabled(remoteConfig)) {
       _initializeVoiceSearch();
     }
     // Listen for language changes
@@ -492,7 +496,7 @@ class _SearchTabState extends State<SearchTab>
                     ),
 
                     // Voice search status with enhanced feedback (only when feature is enabled)
-                    if (remoteConfig.enableVoiceSearch &&
+                    if (_isVoiceSearchEnabled(remoteConfig) &&
                         (_isListening ||
                             _voiceSearchText.isNotEmpty ||
                             _voiceSearchError.isNotEmpty))
@@ -738,7 +742,7 @@ class _SearchTabState extends State<SearchTab>
   /// Builds suffix icons for the search field: voice search (when enabled by Remote Config) and clear.
   Widget _buildSearchSuffixIcons(RemoteConfigModel remoteConfig) {
     // Lazy-init voice search when Remote Config enables it after app load (e.g. after config refresh)
-    if (remoteConfig.enableVoiceSearch &&
+    if (_isVoiceSearchEnabled(remoteConfig) &&
         !_isVoiceSearchInitialized &&
         !_isInitializingVoiceSearch) {
       _isInitializingVoiceSearch = true;
@@ -752,7 +756,7 @@ class _SearchTabState extends State<SearchTab>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (remoteConfig.enableVoiceSearch && _isVoiceSearchInitialized)
+        if (_isVoiceSearchEnabled(remoteConfig) && _isVoiceSearchInitialized)
           IconButton(
             icon: _isListening
                 ? Container(

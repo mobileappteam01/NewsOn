@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../core/utils/voice_features.dart';
 import '../data/models/remote_config_model.dart';
 import '../data/services/news_image_cache_service.dart';
 import '../data/services/remote_config_service.dart';
@@ -15,6 +16,12 @@ class RemoteConfigProvider extends ChangeNotifier {
 
   RemoteConfigModel get config => _config;
   bool get isInitialized => _isInitialized;
+  bool get isVoiceFeaturesEnabled => _config.enableVoiceFeatures;
+
+  void _applyConfig(RemoteConfigModel config) {
+    _config = config;
+    VoiceFeatures.applyFromConfig(config);
+  }
 
   /// Update app icon from Realtime Database
   /// Creates a new config instance with the updated app icon
@@ -23,7 +30,7 @@ class RemoteConfigProvider extends ChangeNotifier {
       // Create a new config with updated app icon using fromJson for easier copying
       final currentJson = _config.toJson();
       currentJson['appIcon'] = appIconUrl;
-      _config = RemoteConfigModel.fromJson(currentJson);
+      _applyConfig(RemoteConfigModel.fromJson(currentJson));
       notifyListeners();
       debugPrint('✅ App icon updated in RemoteConfigProvider: $appIconUrl');
     }
@@ -37,7 +44,7 @@ class RemoteConfigProvider extends ChangeNotifier {
       try {
         final cachedConfig = StorageService.getRemoteConfigCache();
         if (cachedConfig != null && cachedConfig.appName.isNotEmpty) {
-          _config = cachedConfig;
+          _applyConfig(cachedConfig);
           _isInitialized = true;
           notifyListeners(); // Notify immediately with cached data
           debugPrint('📦 RemoteConfigProvider initialized with cached data');
@@ -48,21 +55,21 @@ class RemoteConfigProvider extends ChangeNotifier {
         } else {
           // No cached data, use defaults from RemoteConfigService
           debugPrint('📦 No cached Remote Config found, using defaults');
-          _config = RemoteConfigModel(); // Use default model
+          _applyConfig(RemoteConfigModel()); // Use default model
           _isInitialized = true;
           notifyListeners(); // Notify with defaults immediately
         }
       } catch (cacheError) {
         debugPrint('⚠️ Error loading cached Remote Config: $cacheError');
         // Use defaults if cache fails
-        _config = RemoteConfigModel();
+        _applyConfig(RemoteConfigModel());
         _isInitialized = true;
         notifyListeners();
       }
 
       // Step 2: Try to initialize and fetch new data (works offline with Firebase defaults)
       await _remoteConfigService.initialize();
-      _config = _remoteConfigService.getConfig();
+      _applyConfig(_remoteConfigService.getConfig());
       _isInitialized = true;
       unawaited(NewsImageCacheService.instance.prefetchRemoteConfig(_config));
       notifyListeners(); // Notify again with fresh data (if fetched) or defaults
@@ -73,12 +80,12 @@ class RemoteConfigProvider extends ChangeNotifier {
       try {
         final cachedConfig = StorageService.getRemoteConfigCache();
         if (cachedConfig != null) {
-          _config = cachedConfig;
+          _applyConfig(cachedConfig);
         } else {
-          _config = RemoteConfigModel(); // Use default model
+          _applyConfig(RemoteConfigModel()); // Use default model
         }
       } catch (cacheError) {
-        _config = RemoteConfigModel(); // Use default model as last resort
+        _applyConfig(RemoteConfigModel()); // Use default model as last resort
       }
       _isInitialized = true;
       notifyListeners(); // Always notify so UI can render
@@ -91,7 +98,7 @@ class RemoteConfigProvider extends ChangeNotifier {
     try {
       final updated = await _remoteConfigService.fetchConfig();
       if (updated) {
-        _config = _remoteConfigService.getConfig();
+        _applyConfig(_remoteConfigService.getConfig());
         notifyListeners();
       }
     } catch (e) {
@@ -109,7 +116,7 @@ class RemoteConfigProvider extends ChangeNotifier {
     try {
       final updated = await _remoteConfigService.forceFetchConfig();
       if (updated) {
-        _config = _remoteConfigService.getConfig();
+        _applyConfig(_remoteConfigService.getConfig());
         notifyListeners();
         print('✅ UI updated with new Remote Config values');
       }

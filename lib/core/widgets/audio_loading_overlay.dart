@@ -12,7 +12,7 @@ class AudioLoadingOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AudioPlayerProvider, RemoteConfigProvider>(
       builder: (context, audioProvider, configProvider, child) {
-        if (!audioProvider.isLoading) {
+        if (!configProvider.isVoiceFeaturesEnabled || !audioProvider.isLoading) {
           return const SizedBox.shrink();
         }
 

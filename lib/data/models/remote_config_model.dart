@@ -105,6 +105,9 @@ class RemoteConfigModel {
   /// Voice search in search tab. When false, voice search button is hidden (feature not yet released).
   final bool enableVoiceSearch;
 
+  /// Master switch for all voice/audio: listen buttons, players, background music settings, etc.
+  final bool enableVoiceFeatures;
+
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -202,6 +205,7 @@ class RemoteConfigModel {
     // Drawer Contents
     this.drawerMenu = const [],
     this.enableVoiceSearch = false,
+    this.enableVoiceFeatures = true,
   });
 
   // Helper method to convert hex string to Color
@@ -332,6 +336,7 @@ class RemoteConfigModel {
       'appIcon': appIcon,
       'drawerMenu': drawerMenu,
       'enableVoiceSearch': enableVoiceSearch,
+      'enableVoiceFeatures': enableVoiceFeatures,
     };
   }
 
@@ -431,7 +436,22 @@ class RemoteConfigModel {
       appIcon: json['appIcon'] as String?,
       drawerMenu: json['drawerMenu'] as List<dynamic>? ?? const [],
       enableVoiceSearch: json['enableVoiceSearch'] as bool? ?? false,
+      enableVoiceFeatures: _parseBool(
+        json['enableVoiceFeatures'],
+        defaultValue: true,
+      ),
     );
+  }
+
+  static bool _parseBool(dynamic value, {required bool defaultValue}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return defaultValue;
   }
 
   /// Get the appropriate app name logo based on the current theme brightness

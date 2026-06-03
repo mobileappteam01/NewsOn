@@ -10,6 +10,7 @@ import '../data/services/background_music_service.dart';
 import '../data/services/news_audio_cache_service.dart';
 import '../data/services/storage_service.dart';
 import '../core/constants/app_constants.dart';
+import '../core/utils/voice_features.dart';
 import '../main.dart';
 
 /// Audio Player Provider - Manages ElevenLabs audio playback with Spotify-like features
@@ -323,6 +324,8 @@ class AudioPlayerProvider with ChangeNotifier {
 
   /// Play article using ElevenLabs TTS (legacy method - kept for backward compatibility)
   Future<void> playArticle(NewsArticle article) async {
+    if (!VoiceFeatures.isEnabled) return;
+
     // Check if article has audio URLs - if yes, use URL playback
     if (article.titleAudioUrl != null && article.titleAudioUrl!.isNotEmpty) {
       // Play from title audio URL (for home screen)
@@ -403,6 +406,8 @@ class AudioPlayerProvider with ChangeNotifier {
     bool playTitle = true,
     String category = 'date',
   }) async {
+    if (!VoiceFeatures.isEnabled) return;
+
     if (articles.isEmpty) {
       debugPrint('⚠️ Cannot set empty playlist');
       return;
@@ -450,6 +455,8 @@ class AudioPlayerProvider with ChangeNotifier {
     String? forceMode,
     String category = 'date',
   }) async {
+    if (!VoiceFeatures.isEnabled) return;
+
     try {
       // If same article is playing and same mode, just resume
       if (_currentArticle != null &&

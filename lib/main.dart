@@ -153,20 +153,22 @@ void main() async {
     }),
   ]);
 
-  // Pre-initialize background music (fetch URL from Firebase) so first article gets BG
-  BackgroundMusicService().ensureInitialized().catchError((e) {
-    debugPrint('⚠️ Background music pre-init failed: $e');
-    return null;
-  });
+  if (remoteConfigProvider.isVoiceFeaturesEnabled) {
+    // Pre-initialize background music (fetch URL from Firebase) so first article gets BG
+    BackgroundMusicService().ensureInitialized().catchError((e) {
+      debugPrint('⚠️ Background music pre-init failed: $e');
+      return null;
+    });
 
-  // Prefetch audio for previously cached news lists (offline listen after one online session)
-  unawaited(
-    NewsAudioCacheService.instance
-        .prefetchAllStoredNewsCaches()
-        .catchError((e) {
-      debugPrint('⚠️ News audio cache prefetch at startup: $e');
-    }),
-  );
+    // Prefetch audio for previously cached news lists (offline listen after one online session)
+    unawaited(
+      NewsAudioCacheService.instance
+          .prefetchAllStoredNewsCaches()
+          .catchError((e) {
+        debugPrint('⚠️ News audio cache prefetch at startup: $e');
+      }),
+    );
+  }
 
   // ... fcm logic moved to Future.wait ...
 
@@ -268,71 +270,121 @@ class NewsOnApp extends StatelessWidget {
         ),
       ],
       child: _DeepLinkBridge(
-        child: _CompletedNewsBridge(
-          child:
-              Consumer3<ThemeProvider, LanguageProvider, RemoteConfigProvider>(
-            builder: (
-              context,
-              themeProvider,
-              languageProvider,
-              configProvider,
-              child,
-            ) {
-              // Get the locale, but fall back to English for AppLocalizations if not supported
-              final requestedLocale = languageProvider.locale;
+        child: _VoiceFeaturesBridge(
+          child: _CompletedNewsBridge(
+            child: Consumer3<ThemeProvider, LanguageProvider,
+                RemoteConfigProvider>(
+              builder: (
+                context,
+                themeProvider,
+                languageProvider,
+                configProvider,
+                child,
+              ) {
+                // Get the locale, but fall back to English for AppLocalizations if not supported
+                final requestedLocale = languageProvider.locale;
 
-              // Check if the locale is supported by AppLocalizations (ARB files)
-              // Currently only 'en' and 'ta' have ARB files
-              final arbSupportedLocales = ['en', 'ta'];
-              final effectiveLocale =
-                  arbSupportedLocales.contains(requestedLocale.languageCode)
-                      ? requestedLocale
-                      : const Locale(
-                          'en',
-                        ); // Fallback to English for AppLocalizations
+                // Check if the locale is supported by AppLocalizations (ARB files)
+                // Currently only 'en' and 'ta' have ARB files
+                final arbSupportedLocales = ['en', 'ta'];
+                final effectiveLocale =
+                    arbSupportedLocales.contains(requestedLocale.languageCode)
+                        ? requestedLocale
+                        : const Locale(
+                            'en',
+                          ); // Fallback to English for AppLocalizations
 
-              return MaterialApp(
-                navigatorKey: appNavigatorKey,
-                title: configProvider.config.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.getLightTheme(configProvider.config),
-                darkTheme: AppTheme.getDarkTheme(configProvider.config),
-                themeMode: themeProvider.themeMode,
+                return MaterialApp(
+                  navigatorKey: appNavigatorKey,
+                  title: configProvider.config.appName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.getLightTheme(configProvider.config),
+                  darkTheme: AppTheme.getDarkTheme(configProvider.config),
+                  themeMode: themeProvider.themeMode,
 
-                // Localization configuration
-                // Use effectiveLocale for Flutter's built-in localization (ARB files)
-                // Dynamic translations are handled separately by DynamicLocalizationService
-                locale: effectiveLocale,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                // Only include locales that have ARB file support
-                supportedLocales: const [Locale('en'), Locale('ta')],
+                  // Localization configuration
+                  // Use effectiveLocale for Flutter's built-in localization (ARB files)
+                  // Dynamic translations are handled separately by DynamicLocalizationService
+                  locale: effectiveLocale,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  // Only include locales that have ARB file support
+                  supportedLocales: const [Locale('en'), Locale('ta')],
 
-                // Resolve locale - fall back to English if not supported by ARB
-                localeResolutionCallback: (locale, supportedLocales) {
-                  if (locale != null) {
-                    for (final supportedLocale in supportedLocales) {
-                      if (supportedLocale.languageCode == locale.languageCode) {
-                        return supportedLocale;
+                  // Resolve locale - fall back to English if not supported by ARB
+                  localeResolutionCallback: (locale, supportedLocales) {
+                    if (locale != null) {
+                      for (final supportedLocale in supportedLocales) {
+                        if (supportedLocale.languageCode ==
+                            locale.languageCode) {
+                          return supportedLocale;
+                        }
                       }
                     }
-                  }
-                  return const Locale('en'); // Default fallback
-                },
+                    return const Locale('en'); // Default fallback
+                  },
 
-                home: const SplashScreen(),
-                // home: CategorySelectionScreen(),
-              );
-            },
+                  home: const SplashScreen(),
+                  // home: CategorySelectionScreen(),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Stops active playback when Remote Config disables voice/audio features.
+class _VoiceFeaturesBridge extends StatefulWidget {
+  const _VoiceFeaturesBridge({required this.child});
+  final Widget child;
+
+  @override
+  State<_VoiceFeaturesBridge> createState() => _VoiceFeaturesBridgeState();
+}
+
+class _VoiceFeaturesBridgeState extends State<_VoiceFeaturesBridge> {
+  RemoteConfigProvider? _remoteConfigProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<RemoteConfigProvider>();
+    if (_remoteConfigProvider != provider) {
+      _remoteConfigProvider?.removeListener(_onRemoteConfigChanged);
+      _remoteConfigProvider = provider;
+      provider.addListener(_onRemoteConfigChanged);
+    }
+    _enforceVoiceFeaturesGate();
+  }
+
+  @override
+  void dispose() {
+    _remoteConfigProvider?.removeListener(_onRemoteConfigChanged);
+    super.dispose();
+  }
+
+  void _onRemoteConfigChanged() => _enforceVoiceFeaturesGate();
+
+  void _enforceVoiceFeaturesGate() {
+    if (!mounted) return;
+    if (context.read<RemoteConfigProvider>().isVoiceFeaturesEnabled) return;
+
+    final audio = context.read<AudioPlayerProvider>();
+    if (audio.hasCurrentArticle || audio.isPlaying || audio.isPaused) {
+      unawaited(audio.stop());
+    }
+    unawaited(BackgroundMusicService().stop());
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Processes pending share / deep links once [MaterialApp] has a navigator.

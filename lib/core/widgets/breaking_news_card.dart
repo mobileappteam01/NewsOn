@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
+import '../../providers/remote_config_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
 
@@ -26,6 +27,8 @@ class BreakingNewsCard extends StatelessWidget {
     final isPlaying = audioProvider.isArticlePlaying(article);
     final newsId = article.articleId ?? article.title;
     final isCompleted = completedProvider.isCompleted(newsId);
+    final voiceEnabled =
+        context.watch<RemoteConfigProvider>().isVoiceFeaturesEnabled;
 
     return GestureDetector(
       onTap: onTap,
@@ -157,6 +160,7 @@ class BreakingNewsCard extends StatelessWidget {
               ),
 
               // Play button overlay
+              if (voiceEnabled)
               Center(
                 child: Container(
                   decoration: BoxDecoration(

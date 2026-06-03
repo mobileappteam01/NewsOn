@@ -573,6 +573,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     ThemeData theme,
     AudioPlayerProvider audioProvider,
   ) {
+    final voiceEnabled =
+        context.watch<RemoteConfigProvider>().isVoiceFeaturesEnabled;
+    if (!voiceEnabled) {
+      return const SizedBox.shrink();
+    }
+
     final isCurrentArticle = audioProvider.currentArticle != null &&
         (audioProvider.currentArticle!.newsId ??
                 audioProvider.currentArticle!.articleId ??

@@ -123,6 +123,10 @@ class NewsGridView extends StatelessWidget {
   }
 
   showListenButton(RemoteConfigModel config, BuildContext context) {
+    if (!config.enableVoiceFeatures) {
+      return const SizedBox.shrink();
+    }
+
     final completedProvider = Provider.of<CompletedNewsProvider>(context);
     final newsId = newsDetails.articleId ?? newsDetails.title;
     final isNewsCompleted = completedProvider.isCompleted(newsId);
@@ -213,6 +217,10 @@ class NewsGridView extends StatelessWidget {
   }
 
   showRoundedListenButton(RemoteConfigModel config, BuildContext context) {
+    if (!config.enableVoiceFeatures) {
+      return const SizedBox.shrink();
+    }
+
     final completedProvider = Provider.of<CompletedNewsProvider>(context);
     final newsId = newsDetails.articleId ?? newsDetails.title;
     final isNewsCompleted = completedProvider.isCompleted(newsId);
@@ -299,6 +307,146 @@ class NewsGridView extends StatelessWidget {
     );
   }
 
+  /// Bottom action row for list items — full listen + icons, or a balanced save/share bar.
+  Widget _buildListActionRow(
+    RemoteConfigModel config,
+    BuildContext context,
+    ThemeData theme,
+  ) {
+    if (config.enableVoiceFeatures) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: showListenButton(config, context)),
+          const SizedBox(width: 10),
+          showCommonWidget(config, 'save', newsDetails, theme, context),
+          const SizedBox(width: 8),
+          showShareButton(theme),
+        ],
+      );
+    }
+
+    return _buildSaveShareActionBar(config, theme, context);
+  }
+
+  /// Segmented save / share bar when voice is off (list + card footers).
+  Widget _buildSaveShareActionBar(
+    RemoteConfigModel config,
+    ThemeData theme,
+    BuildContext context, {
+    bool onDarkBackground = false,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = onDarkBackground
+        ? Colors.white.withOpacity(0.35)
+        : (isDark ? Colors.white24 : Colors.black12);
+    final labelColor = onDarkBackground
+        ? Colors.white.withOpacity(0.95)
+        : theme.colorScheme.onSurface;
+    final dividerColor = onDarkBackground
+        ? Colors.white.withOpacity(0.25)
+        : theme.dividerColor.withOpacity(0.5);
+    final fillColor = onDarkBackground
+        ? Colors.white.withOpacity(0.12)
+        : config.primaryColorValue.withOpacity(isDark ? 0.12 : 0.06);
+
+    Widget actionCell({
+      required VoidCallback onTap,
+      required Widget icon,
+      required String label,
+    }) {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: FontManager.button.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget saveIcon;
+    if (onDarkBackground) {
+      saveIcon = Consumer<BookmarkProvider>(
+        builder: (context, bookmarkProvider, child) {
+          final isBookmarked = bookmarkProvider.isBookmarked(newsDetails);
+          return Icon(
+            isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+            color: isBookmarked ? const Color(0xFFFFD54F) : Colors.white,
+            size: 22,
+          );
+        },
+      );
+    } else {
+      saveIcon = showCommonWidget(
+        config,
+        'save',
+        newsDetails,
+        theme,
+        context,
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            actionCell(
+              onTap: () => onSaveTapped(),
+              icon: saveIcon,
+              label: LocalizationHelper.bookmark(context),
+            ),
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: dividerColor,
+            ),
+            actionCell(
+              onTap: () => onShareTapped(),
+              icon: Icon(
+                Icons.ios_share_rounded,
+                size: 22,
+                color: onDarkBackground
+                    ? Colors.white
+                    : theme.colorScheme.secondary,
+              ),
+              label: 'Share',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   showListView(
     RemoteConfigModel config,
     NewsArticle newsDetails,
@@ -352,21 +500,8 @@ class NewsGridView extends StatelessWidget {
                         theme,
                         context,
                       ),
-                      giveHeight(3),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          showListenButton(config, context),
-                          showCommonWidget(
-                            config,
-                            'save',
-                            newsDetails,
-                            theme,
-                            context,
-                          ),
-                          showShareButton(theme),
-                        ],
-                      ),
+                      giveHeight(6),
+                      _buildListActionRow(config, context, theme),
                     ],
                   ),
                 ),
@@ -453,28 +588,39 @@ class NewsGridView extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [showListenButton(config, context)],
-                    ),
+                    if (config.enableVoiceFeatures) ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [showListenButton(config, context)],
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      _buildSaveShareActionBar(
+                        config,
+                        theme,
+                        context,
+                        onDarkBackground: true,
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              // 🔖 Top-right bookmark
-              Positioned(
-                top: 12,
-                right: 12,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.bookmark_border,
-                    color: Colors.white,
-                    size: 24,
+              // 🔖 Top-right bookmark (listen layout only)
+              if (config.enableVoiceFeatures)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.bookmark_border,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    onPressed: () => onSaveTapped(),
                   ),
-                  onPressed: () => onSaveTapped(),
                 ),
-              ),
             ],
           ),
         ),
@@ -532,8 +678,10 @@ class NewsGridView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    showRoundedListenButton(config, context),
-                    const SizedBox(height: 14),
+                    if (config.enableVoiceFeatures) ...[
+                      showRoundedListenButton(config, context),
+                      const SizedBox(height: 14),
+                    ],
                     Text(
                       newsDetails.title,
                       style: FontManager.newsTitle.copyWith(
@@ -543,6 +691,15 @@ class NewsGridView extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (!config.enableVoiceFeatures) ...[
+                      const SizedBox(height: 12),
+                      _buildSaveShareActionBar(
+                        config,
+                        theme,
+                        context,
+                        onDarkBackground: true,
+                      ),
+                    ],
                   ],
                 ),
               ),

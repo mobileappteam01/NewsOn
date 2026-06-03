@@ -840,6 +840,9 @@ class _CategoriesTabState extends State<CategoriesTab>
     final newsId = article.articleId ?? article.title;
     final isNewsCompleted = completedProvider.isCompleted(newsId);
 
+    final voiceEnabled =
+        context.watch<RemoteConfigProvider>().isVoiceFeaturesEnabled;
+
     return Consumer<AudioPlayerProvider>(
       builder: (context, audioProvider, child) {
         final isCurrentArticle = audioProvider.currentArticle != null &&
@@ -993,55 +996,57 @@ class _CategoriesTabState extends State<CategoriesTab>
                 ),
 
                 // Right side - Play button
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: GestureDetector(
-                    onTap: () async {
-                      if (isCurrentArticle) {
-                        if (isPlaying) {
-                          audioProvider.pause();
+                if (voiceEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: GestureDetector(
+                      onTap: () async {
+                        if (isCurrentArticle) {
+                          if (isPlaying) {
+                            audioProvider.pause();
+                          } else {
+                            audioProvider.resume();
+                          }
                         } else {
-                          audioProvider.resume();
+                          // Start playing this article
+                          await _playArticle(article, audioProvider);
                         }
-                      } else {
-                        // Start playing this article
-                        await _playArticle(article, audioProvider);
-                      }
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: playButtonColor,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: playButtonColor.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: isLoading
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: playButtonColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: playButtonColor.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
+                                  ),
+                                )
+                              : Icon(
+                                  isPlaying ? Icons.pause : Icons.play_arrow,
+                                  color: Colors.white,
+                                  size: 20,
                                 ),
-                              )
-                            : Icon(
-                                isPlaying ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

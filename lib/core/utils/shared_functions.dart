@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/news_article.dart';
 import '../../data/services/background_music_service.dart';
 import '../../providers/remote_config_provider.dart';
+import 'voice_features.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
 import '../../core/utils/localization_helper.dart';
@@ -238,6 +239,10 @@ showListenButton(
   NewsArticle? article,
   bool isCompact = false,
 ]) {
+  if (!config.enableVoiceFeatures || !VoiceFeatures.isEnabled) {
+    return const SizedBox.shrink();
+  }
+
   return Builder(
     builder: (ctx) {
       final buildContext = context ?? ctx;
