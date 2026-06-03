@@ -109,16 +109,28 @@ class AudioMiniPlayer extends StatelessWidget {
                           ),
 
                           // Play/Pause button
-                          IconButton(
-                            icon: Icon(
-                              audioProvider.isPlaying
-                                  ? Icons.pause
-                                  : Icons.play_arrow,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                            onPressed: () => audioProvider.togglePlayPause(),
-                          ),
+                          audioProvider.isLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: Icon(
+                                    audioProvider.isPlaying
+                                        ? Icons.pause
+                                        : Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                  onPressed: () => audioProvider.togglePlayPause(),
+                                ),
 
                           // Stop button
                           IconButton(

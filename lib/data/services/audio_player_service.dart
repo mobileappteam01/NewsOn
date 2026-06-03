@@ -35,7 +35,7 @@ class AudioPlayerService {
     _initialize();
   }
 
-  /// Get the AudioPlayer instance from the handler or create fallback
+  /// Get the AudioPlayer instance from the handler
   AudioPlayer get _player {
     if (_audioPlayer != null) return _audioPlayer!;
     
@@ -47,8 +47,8 @@ class AudioPlayerService {
       return _audioPlayer!;
     }
     
-    // Fallback: create own player (shouldn't happen if properly initialized)
-    debugPrint('⚠️ AudioPlayerService: Creating fallback AudioPlayer');
+    // CRITICAL FALLBACK: this should never happen since init is awaited in main.dart
+    debugPrint('❌ CRITICAL ERROR: AudioBackgroundService.handler is null!');
     _audioPlayer = AudioPlayer();
     _setupStreamForwarding();
     return _audioPlayer!;
@@ -109,9 +109,24 @@ class AudioPlayerService {
   /// Play audio from bytes (Uint8List)
   Future<void> playFromBytes(Uint8List audioBytes) async {
     try {
-      // Save bytes to temporary file
       final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      
+      // Cleanup old temporary audio files to prevent storage leak
+      try {
+        final dir = Directory(tempDir.path);
+        final files = dir.listSync();
+        for (var file in files) {
+          if (file.path.contains('newson_tts_') && file.path.endsWith('.mp3')) {
+            try {
+              file.deleteSync();
+            } catch (_) {}
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to clean up old temp audio files: $e');
+      }
+
+      final tempFile = File('${tempDir.path}/newson_tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
       await tempFile.writeAsBytes(audioBytes);
       
       _currentAudioPath = tempFile.path;

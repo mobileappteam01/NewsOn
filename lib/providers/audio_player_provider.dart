@@ -160,20 +160,6 @@ class AudioPlayerProvider with ChangeNotifier {
         );
       }
 
-      // Position-based completion detection as fallback
-      // This handles cases where ProcessingState.completed doesn't fire
-      // Use a small buffer (500ms) to account for timing differences
-      if (_duration > Duration.zero &&
-          position.inMilliseconds >= (_duration.inMilliseconds - 500) &&
-          _isPlaying &&
-          !_hasCompleted &&
-          !_isAutoAdvancing) {
-        debugPrint(
-          '✅ [POSITION] Audio completed: position=${position.inSeconds}s >= duration=${_duration.inSeconds}s',
-        );
-        _handleAudioCompletion();
-      }
-
       notifyListeners();
     });
 
@@ -213,8 +199,7 @@ class AudioPlayerProvider with ChangeNotifier {
       final wasPaused = _isPaused;
 
       // Handle completion state - ensure UI updates properly
-      if (state.processingState == ProcessingState.completed &&
-          !state.playing) {
+      if (state.processingState == ProcessingState.completed) {
         debugPrint('✅ [STATE] ProcessingState.completed detected');
         _handleAudioCompletion();
       } else if (state.processingState == ProcessingState.idle &&

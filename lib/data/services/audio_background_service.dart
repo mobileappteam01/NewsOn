@@ -60,6 +60,16 @@ class AudioBackgroundService {
 
   /// Check if initialized
   static bool get isInitialized => _isInitialized;
+
+  /// Dispose the service and its handler
+  static Future<void> dispose() async {
+    if (_audioHandler != null) {
+      await _audioHandler!.dispose();
+      _audioHandler = null;
+    }
+    _isInitialized = false;
+    debugPrint('🗑️ AudioBackgroundService disposed');
+  }
 }
 
 /// Audio Handler for background playback
@@ -70,7 +80,7 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   // Stream subscriptions
   StreamSubscription<PlaybackEvent>? _playbackEventSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
-  StreamSubscription<int?>? _currentIndexSubscription;
+  StreamSubscription<bool>? _playingSubscription;
   StreamSubscription<SequenceState?>? _sequenceStateSubscription;
 
   // Current article for metadata
@@ -92,6 +102,12 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   void _initializeStreams() {
     // Transform playback events to audio_service PlaybackState
     _playbackEventSubscription = _player.playbackEventStream.listen((event) {
+      _broadcastState();
+    });
+
+    // CRITICAL: Listen to playing state changes to ensure Android lockscreen 
+    // updates play/pause icons and progress extrapolation correctly.
+    _playingSubscription = _player.playingStream.listen((playing) {
       _broadcastState();
     });
 
@@ -316,7 +332,7 @@ class NewsAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> dispose() async {
     await _playbackEventSubscription?.cancel();
     await _durationSubscription?.cancel();
-    await _currentIndexSubscription?.cancel();
+    await _playingSubscription?.cancel();
     await _sequenceStateSubscription?.cancel();
     await _player.dispose();
     debugPrint('🗑️ [AudioHandler] Disposed');

@@ -109,29 +109,15 @@ class BackgroundMusicService {
         }
         if (_isOperationCancelled(generation)) return;
 
-        // Brief wait for source to be ready (keep short so BG starts quickly)
-        await Future.delayed(const Duration(milliseconds: 150));
-        if (_isOperationCancelled(generation)) return;
-
-        // Start playback
+        // Start playback - play() handles buffering internally
         await _player.play();
         if (_isOperationCancelled(generation)) {
-          await _player.stop();
+          await _player.pause();
           return;
         }
         _isPlaying = true;
         _wasStartedThisSession = true;
         debugPrint('🎵 Background music started successfully');
-
-        // Brief verify (if we were stopped during this delay, treat as cancelled, don't throw)
-        await Future.delayed(const Duration(milliseconds: 100));
-        if (_isOperationCancelled(generation) || !_isPlaying) return;
-        if (!_player.playing) {
-          _isPlaying = false;
-          _wasStartedThisSession = false;
-          debugPrint('❌ Background music failed to start playing');
-          throw Exception('Background music failed to start');
-        }
       }
     } catch (e) {
       if (_isOperationCancelled(generation)) return;

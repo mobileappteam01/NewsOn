@@ -185,6 +185,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         _isLoadingMoreToday = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingMoreToday = false;
       });
@@ -250,6 +251,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         _isLoadingMoreCategory = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingMoreCategory = false;
       });
@@ -836,7 +838,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                               );
                             },
                             childCount: _allTodayNews.length +
-                                (_allTodayNews.length ~/ 4) +
+                                (_allTodayNews.length ~/ 10) +
                                 (_isLoadingMoreToday ? 1 : 0),
                           ),
                         ),
@@ -851,9 +853,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           vertical: 12,
                         ),
                         child: showHeadingText(
-                          _selectedCategory != 'All'
-                              ? _selectedCategory
-                              : _getDateHeadingText(_selectedDate),
+                          LocalizationHelper.flashNews(context),
                           theme,
                         ),
                       ),

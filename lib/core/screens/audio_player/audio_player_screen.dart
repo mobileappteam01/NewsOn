@@ -305,8 +305,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 final maxValue = duration.inMilliseconds > 0
                                     ? duration.inMilliseconds.toDouble()
                                     : 100.0;
+                                final activePosition = _isDragging ? _dragPosition : position;
                                 final currentValue = duration.inMilliseconds > 0
-                                    ? position.inMilliseconds.toDouble()
+                                    ? activePosition.inMilliseconds.toDouble()
                                     : 0.0;
                                 // Clamp value to ensure it's within bounds
                                 return currentValue.clamp(0.0, maxValue);
@@ -347,7 +348,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  audioProvider.formatDuration(position),
+                                  audioProvider.formatDuration(_isDragging ? _dragPosition : position),
                                   style: GoogleFonts.inter(
                                     color: Colors.grey[400],
                                     fontSize: 12,

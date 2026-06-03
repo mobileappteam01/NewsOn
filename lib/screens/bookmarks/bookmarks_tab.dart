@@ -279,6 +279,8 @@ class _BookmarksTabState extends State<BookmarksTab>
                                     final newStatus = await bookmarkProvider
                                         .toggleBookmark(article);
 
+                                    if (!mounted) return;
+
                                     // Update article status in NewsProvider lists
                                     final newsProvider =
                                         context.read<NewsProvider>();
