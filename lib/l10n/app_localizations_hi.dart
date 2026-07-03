@@ -71,6 +71,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String get headlines => 'सुर्खियां';
 
   @override
+  String get forYou => 'आपके लिए';
+
+  @override
+  String get pickedForYouSubtitle => 'आपकी रुचियों के आधार पर चुनी गई कहानियाँ';
+
+  @override
+  String get moreStoriesForYou => 'आपके लिए और कहानियाँ';
+
+  @override
+  String storiesCount(int count) {
+    return '$count कहानियाँ';
+  }
+
+  @override
+  String get shareNewsCuriousCta => '🔥 पूरी कहानी जानने के लिए अभी NewsOn पर टैप करें 👇';
+
+  @override
   String get newsFeed => 'समाचार फ़ीड';
 
   @override
@@ -433,4 +450,177 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get website => 'वेबसाइट';
+
+  @override
+  String get selectRegion => 'क्षेत्र चुनें';
+
+  @override
+  String get regionCountry => 'देश';
+
+  @override
+  String get regionState => 'राज्य';
+
+  @override
+  String get regionDistrict => 'जिला';
+
+  @override
+  String get selectOption => 'एक विकल्प चुनें';
+
+  @override
+  String get apply => 'लागू करें';
+
+  @override
+  String get reset => 'रीसेट';
+
+  @override
+  String get noNewsForRegion => 'चयनित क्षेत्र के लिए कोई समाचार उपलब्ध नहीं';
+
+  @override
+  String get selectRegionTooltip => 'क्षेत्र के अनुसार समाचार फ़िल्टर करें';
+
+  @override
+  String get noBookmarks => 'कोई बुकमार्क नहीं';
+
+  @override
+  String get bookmarksWillAppearHere => 'आपके द्वारा बुकमार्क किए गए लेख यहाँ दिखाई देंगे';
+
+  @override
+  String get errorLoadingBookmarks => 'बुकमार्क लोड करने में त्रुटि';
+
+  @override
+  String get clearBookmarksMessage => 'इससे सभी सहेजे गए लेख हट जाएंगे। यह क्रिया पूर्ववत नहीं की जा सकती।';
+
+  @override
+  String errorPlayingAudio(String error) {
+    return 'ऑडियो चलाने में त्रुटि: $error';
+  }
+
+  @override
+  String failedToPlayAudio(String error) {
+    return 'ऑडियो चलाने में विफल: $error';
+  }
+
+  @override
+  String get noBreakingNewsAvailable => 'कोई ताज़ा खबर उपलब्ध नहीं';
+
+  @override
+  String get noNewsForThisCategory => 'इस श्रेणी के लिए कोई समाचार उपलब्ध नहीं';
+
+  @override
+  String get recentSearches => 'हाल की खोजें';
+
+  @override
+  String get searchNewsHint => 'समाचार खोजें...';
+
+  @override
+  String get enterKeywordsToFindArticles => 'लेख खोजने के लिए कीवर्ड दर्ज करें';
+
+  @override
+  String get orTryVoiceSearch => 'या माइक्रोफ़ोन का उपयोग करके वॉइस खोज आज़माएं';
+
+  @override
+  String get tryDifferentKeywords => 'अलग कीवर्ड आज़माएं या अपनी वर्तनी जांचें';
+
+  @override
+  String sourceLabel(String source) {
+    return 'स्रोत: $source';
+  }
+
+  @override
+  String authorLabel(String author) {
+    return 'लेखक: $author';
+  }
+
+  @override
+  String publishedLabel(String date) {
+    return 'प्रकाशित: $date';
+  }
+
+  @override
+  String get justNow => 'अभी';
+
+  @override
+  String get selectAll => 'सभी चुनें';
+
+  @override
+  String get deselectAll => 'सभी अचयनित करें';
+
+  @override
+  String get updatePreferences => 'प्राथमिकताएं अपडेट करें';
+
+  @override
+  String categoriesSelectedCount(int selected, int total) {
+    return '$total में से $selected चयनित';
+  }
+
+  @override
+  String get agreeToTermsPrivacy => 'जारी रखकर, आप हमारी शर्तों और गोपनीयता नीति से सहमत होते हैं';
+
+  @override
+  String get tapToPlayArticle => 'लेख चलाने के लिए टैप करें';
+
+  @override
+  String get selectNewsLanguage => 'समाचार भाषा चुनें';
+
+  @override
+  String get selectAppLanguage => 'ऐप भाषा चुनें';
+
+  @override
+  String get submit => 'सबमिट करें';
+
+  @override
+  String get shareThisNews => 'यह समाचार साझा करें';
+
+  @override
+  String get shareThisNewsSubtitle => 'NewsOn वाले मित्र लेख को ऐप में खोल सकते हैं';
+
+  @override
+  String get generatingAudio => 'ऑडियो बन रहा है...';
+
+  @override
+  String get convertingTextToSpeech => 'ElevenLabs के साथ टेक्स्ट को स्पीच में बदला जा रहा है';
+
+  @override
+  String get sponsored => 'प्रायोजित';
+
+  @override
+  String get deleteAccount => 'खाता हटाएं';
+
+  @override
+  String get deleteAccountTitle => 'खाता हटाएं?';
+
+  @override
+  String get deleteAccountMessage => 'इससे आपका खाता और सभी संबंधित डेटा स्थायी रूप से हट जाएगा। यह क्रिया पूर्ववत नहीं की जा सकती।';
+
+  @override
+  String get delete => 'हटाएं';
+
+  @override
+  String get signInToReadSharedArticle => 'साझा किया गया लेख पढ़ने के लिए साइन इन करें';
+
+  @override
+  String get pleaseWaitSettingUp => 'कृपया प्रतीक्षा करें, हम सब कुछ सेट कर रहे हैं';
+
+  @override
+  String get signInWithApple => 'Apple से साइन इन करें';
+
+  @override
+  String get continueWithGoogle => 'Google के साथ जारी रखें';
+
+  @override
+  String get failedToLoadCategories => 'श्रेणियां लोड करने में विफल';
+
+  @override
+  String errorLoadingNews(String error) {
+    return 'समाचार लोड करने में त्रुटि: $error';
+  }
+
+  @override
+  String get playing => 'चल रहा है...';
+
+  @override
+  String get paused => 'रुका हुआ';
+
+  @override
+  String get voiceFeaturesUnavailable => 'वॉइस और ऑडियो सुविधाएं वर्तमान में अनुपलब्ध हैं।';
 }

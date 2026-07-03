@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/utils/localization_helper.dart';
 import '../../data/models/news_article.dart';
 import '../../data/services/news_share_service.dart';
 import '../../providers/remote_config_provider.dart';
@@ -46,13 +47,18 @@ void showNewsShareBottomSheet(BuildContext context, NewsArticle article) {
               const SizedBox(height: 16),
               ListTile(
                 leading: Icon(Icons.share_outlined, color: primary),
-                title: const Text('Share this news'),
-                subtitle: const Text(
-                  'Friends with NewsOn can open the article in the app',
+                title: Text(LocalizationHelper.shareThisNews(sheetContext)),
+                subtitle: Text(
+                  LocalizationHelper.shareThisNewsSubtitle(sheetContext),
                 ),
                 onTap: () async {
                   Navigator.pop(sheetContext);
-                  await NewsShareService.shareArticle(article);
+                  await NewsShareService.shareArticle(
+                    article,
+                    curiousCta: LocalizationHelper.shareNewsCuriousCta(
+                      sheetContext,
+                    ),
+                  );
                 },
               ),
             ],

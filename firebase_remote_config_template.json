@@ -177,9 +177,9 @@
     },
     "supported_languages": {
       "defaultValue": {
-        "value": "[{\"code\":\"en\",\"name\":\"English\",\"nativeName\":\"English\",\"isDefault\":true,\"isActive\":true},{\"code\":\"ta\",\"name\":\"Tamil\",\"nativeName\":\"தமிழ்\",\"isDefault\":false,\"isActive\":true},{\"code\":\"ml\",\"name\":\"Malayalam\",\"nativeName\":\"മലയാളം\",\"isDefault\":false,\"isActive\":false},{\"code\":\"kn\",\"name\":\"Kannada\",\"nativeName\":\"ಕನ್ನಡ\",\"isDefault\":false,\"isActive\":false}]"
+        "value": "[{\"code\":\"en\",\"name\":\"English\",\"nativeName\":\"English\",\"isDefault\":false,\"isActive\":true,\"flagEmoji\":\"🇺🇸\"},{\"code\":\"ta\",\"name\":\"Tamil\",\"nativeName\":\"தமிழ்\",\"isDefault\":true,\"isActive\":true,\"flagEmoji\":\"🇮🇳\"},{\"code\":\"hi\",\"name\":\"Hindi\",\"nativeName\":\"हिंदी\",\"isDefault\":false,\"isActive\":true,\"flagEmoji\":\"🇮🇳\"},{\"code\":\"ml\",\"name\":\"Malayalam\",\"nativeName\":\"മലയാളം\",\"isDefault\":false,\"isActive\":true,\"flagEmoji\":\"🇮🇳\"},{\"code\":\"te\",\"name\":\"Telugu\",\"nativeName\":\"తెలుగు\",\"isDefault\":false,\"isActive\":true,\"flagEmoji\":\"🇮🇳\"},{\"code\":\"kn\",\"name\":\"Kannada\",\"nativeName\":\"ಕನ್ನಡ\",\"isDefault\":false,\"isActive\":true,\"flagEmoji\":\"🇮🇳\"}]"
       },
-      "description": "List of supported languages for dynamic localization. Set isActive=false to hide a language from the selector.",
+      "description": "List of supported languages for dynamic localization and news language selection. Set isActive=false to hide from app language selector.",
       "valueType": "STRING"
     },
     "enable_voice_search": {
@@ -198,7 +198,7 @@
     },
     "language_version": {
       "defaultValue": {
-        "value": "1.0.2"
+        "value": "1.0.3"
       },
       "description": "Language version - increment to force app to re-download translations",
       "valueType": "STRING"

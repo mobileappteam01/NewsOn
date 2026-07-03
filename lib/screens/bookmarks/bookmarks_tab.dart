@@ -9,6 +9,7 @@ import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/news_card.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/banner_ad_widget.dart';
+import '../../data/services/ad_service.dart';
 import '../../providers/news_provider.dart';
 import '../../widgets/news_grid_views.dart';
 import '../../core/widgets/news_share_bottom_sheet.dart';
@@ -58,7 +59,10 @@ class _BookmarksTabState extends State<BookmarksTab>
             ),
         ],
       ),
-      bottomNavigationBar: const BannerAdContainer(),
+      bottomNavigationBar: AdService().policy.enabled &&
+              AdService().policy.bookmarksAnchorEnabled
+          ? const BannerAdContainer()
+          : null,
       body: Stack(
         children: [
           Column(
@@ -124,12 +128,14 @@ class _BookmarksTabState extends State<BookmarksTab>
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Error loading bookmarks',
+                                LocalizationHelper.errorLoadingBookmarks(
+                                    context),
                                 style: theme.textTheme.titleLarge,
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                bookmarkProvider.error ?? 'Unknown error',
+                                bookmarkProvider.error ??
+                                    LocalizationHelper.unknownError(context),
                                 style: theme.textTheme.bodyMedium,
                                 textAlign: TextAlign.center,
                               ),
@@ -138,7 +144,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                                 onPressed: () {
                                   bookmarkProvider.loadBookmarks(refresh: true);
                                 },
-                                child: const Text('Retry'),
+                                child: Text(LocalizationHelper.retry(context)),
                               ),
                             ],
                           ),
@@ -155,12 +161,13 @@ class _BookmarksTabState extends State<BookmarksTab>
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No Bookmarks',
+                                LocalizationHelper.noBookmarks(context),
                                 style: theme.textTheme.titleLarge,
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Articles you bookmark will appear here',
+                                LocalizationHelper.bookmarksWillAppearHere(
+                                    context),
                                 style: theme.textTheme.bodyMedium,
                               ),
                             ],
@@ -264,7 +271,8 @@ class _BookmarksTabState extends State<BookmarksTab>
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Error playing audio: $e',
+                                            LocalizationHelper.errorPlayingAudio(
+                                                context, e.toString()),
                                           ),
                                           backgroundColor: Colors.red,
                                         ),
@@ -296,8 +304,11 @@ class _BookmarksTabState extends State<BookmarksTab>
                                         SnackBar(
                                           content: Text(
                                             newStatus
-                                                ? 'Added to bookmarks'
-                                                : 'Removed from bookmarks',
+                                                ? LocalizationHelper
+                                                    .addedToBookmarks(context)
+                                                : LocalizationHelper
+                                                    .removedFromBookmarks(
+                                                        context),
                                           ),
                                           duration: const Duration(seconds: 1),
                                         ),
@@ -310,7 +321,8 @@ class _BookmarksTabState extends State<BookmarksTab>
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Error: ${e.toString()}',
+                                            LocalizationHelper.error(
+                                                context, e.toString()),
                                           ),
                                           duration: const Duration(seconds: 2),
                                         ),
@@ -357,8 +369,8 @@ class _BookmarksTabState extends State<BookmarksTab>
       builder:
           (context) => AlertDialog(
             title: Text(LocalizationHelper.clearAllBookmarks(context)),
-            content: const Text(
-              'This will remove all saved articles. This action cannot be undone.',
+            content: Text(
+              LocalizationHelper.clearBookmarksMessage(context),
             ),
             actions: [
               TextButton(
@@ -370,7 +382,9 @@ class _BookmarksTabState extends State<BookmarksTab>
                   provider.clearAllBookmarks();
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All bookmarks cleared')),
+                    SnackBar(
+                        content: Text(
+                            LocalizationHelper.allBookmarksCleared(context))),
                   );
                 },
                 child: Text(LocalizationHelper.clear(context)),

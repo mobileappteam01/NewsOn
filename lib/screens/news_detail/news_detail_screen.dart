@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:newson/core/utils/shared_functions.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/localization_helper.dart';
 import '../../data/services/news_share_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/news_article.dart';
@@ -17,6 +18,9 @@ import '../../providers/audio_player_provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
+import '../../data/services/interaction_service.dart';
+import '../../data/services/ad_service.dart';
+import '../../data/services/interstitial_ad_manager.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsArticle article;
@@ -40,6 +44,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   Timer? _stateSyncTimer;
   bool _didRefreshStateOnEnter = false;
 
+  final InteractionService _interactionService = InteractionService();
+  final Set<String> _trackedOpenKeys = {};
+  final Set<String> _trackedReadKeys = {};
+  DateTime? _articleVisibleSince;
+  int? _visibleArticleIndex;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +57,47 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     _loadTextSize();
     _initializePageView();
     _startStateSyncTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _trackVisibleArticle(_currentPageIndex);
+    });
+  }
+
+  String _articleTrackingKey(NewsArticle article) {
+    return article.newsId ?? article.articleId ?? article.title;
+  }
+
+  void _trackVisibleArticle(int index) {
+    if (index < 0 || index >= _articlesList.length) return;
+
+    final article = _articlesList[index];
+    final key = _articleTrackingKey(article);
+
+    if (_visibleArticleIndex != null &&
+        _visibleArticleIndex != index &&
+        _visibleArticleIndex! < _articlesList.length) {
+      _sendReadForArticle(_articlesList[_visibleArticleIndex!]);
+    }
+
+    _visibleArticleIndex = index;
+    _articleVisibleSince = DateTime.now();
+
+    if (!_trackedOpenKeys.contains(key)) {
+      _trackedOpenKeys.add(key);
+      unawaited(_interactionService.trackOpen(article));
+    }
+  }
+
+  void _sendReadForArticle(NewsArticle article) {
+    final key = _articleTrackingKey(article);
+    if (_trackedReadKeys.contains(key)) return;
+
+    final since = _articleVisibleSince;
+    final duration =
+        since != null ? DateTime.now().difference(since).inSeconds : 0;
+
+    _trackedReadKeys.add(key);
+    unawaited(_interactionService.trackRead(article, duration: duration));
   }
 
   /// Start periodic timer for state synchronization
@@ -142,6 +193,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     setState(() {
       _currentPageIndex = newIndex;
     });
+    _trackVisibleArticle(newIndex);
   }
 
   /// Check if audio has auto-advanced and sync PageView
@@ -198,12 +250,21 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     // still playing from mini player).
     if (!_didRefreshStateOnEnter) {
       _didRefreshStateOnEnter = true;
-      _audioProvider!.refreshState();
+      // Defer to after this frame: refreshState() calls notifyListeners(),
+      // which must not run during the build/dependency phase.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _audioProvider?.refreshState();
+      });
     }
   }
 
   @override
   void dispose() {
+    if (_visibleArticleIndex != null &&
+        _visibleArticleIndex! >= 0 &&
+        _visibleArticleIndex! < _articlesList.length) {
+      _sendReadForArticle(_articlesList[_visibleArticleIndex!]);
+    }
     WidgetsBinding.instance.removeObserver(this);
     _stateSyncTimer?.cancel();
     // Do NOT stop audio when leaving screen: playback continues so the user
@@ -293,76 +354,112 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     }
   }
 
+  Future<void> _leaveDetail() async {
+    if (_visibleArticleIndex != null &&
+        _visibleArticleIndex! >= 0 &&
+        _visibleArticleIndex! < _articlesList.length) {
+      _sendReadForArticle(_articlesList[_visibleArticleIndex!]);
+      InterstitialAdManager.instance.recordArticleEngaged();
+    }
+
+    if (!mounted) return;
+
+    if (!AdService().policy.enabled ||
+        !AdService().policy.interstitialEnabled) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final shown = await InterstitialAdManager.instance.tryShowOnNaturalBreak(
+      onDismissed: () {
+        if (mounted) Navigator.pop(context);
+      },
+    );
+    if (!shown && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Consumer<RemoteConfigProvider>(
-        builder: (context, configProvider, child) {
-          final config = configProvider.config;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _leaveDetail();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Consumer<RemoteConfigProvider>(
+          builder: (context, configProvider, child) {
+            final config = configProvider.config;
 
-          return Stack(
-            children: [
-              // PageView for swipeable navigation
-              NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  // Detect user scroll/swipe start
-                  if (notification is ScrollStartNotification) {
-                    if (notification.dragDetails != null) {
-                      // User initiated scroll (not programmatic)
-                      debugPrint('👆 User started swiping');
-                    }
-                  }
-                  return false;
-                },
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _articlesList.length,
-                  onPageChanged: (index) {
-                    if (index != _currentPageIndex) {
-                      // If we're animating (auto-advance triggered the animation), don't treat as user swipe
-                      if (_isAnimating) {
-                        debugPrint(
-                            '🔄 [AUTO-ADVANCE] Page animation completed: $index');
-                        setState(() {
-                          _currentPageIndex = index;
-                        });
-                        return;
-                      }
-
-                      // Check if this is auto-advance (audio provider index matches) or user swipe
-                      final audioProvider = context.read<AudioPlayerProvider>();
-                      final isAutoAdvance =
-                          audioProvider.currentPlaylistIndex == index &&
-                              (audioProvider.isPlaying ||
-                                  audioProvider.hasCurrentArticle) &&
-                              !audioProvider.playTitleMode;
-
-                      if (isAutoAdvance) {
-                        // Auto-advance - just update page index, don't stop audio
-                        debugPrint('🔄 [AUTO-ADVANCE] Page synced: $index');
-                        setState(() {
-                          _currentPageIndex = index;
-                        });
-                      } else {
-                        // User swipe - stop audio
-                        _onUserSwipe(index);
+            return Stack(
+              children: [
+                // PageView for swipeable navigation
+                NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    // Detect user scroll/swipe start
+                    if (notification is ScrollStartNotification) {
+                      if (notification.dragDetails != null) {
+                        // User initiated scroll (not programmatic)
+                        debugPrint('👆 User started swiping');
                       }
                     }
+                    return false;
                   },
-                  itemBuilder: (context, index) {
-                    final article = _articlesList[index];
-                    return _buildArticlePage(article, config, theme);
-                  },
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: _articlesList.length,
+                    onPageChanged: (index) {
+                      if (index != _currentPageIndex) {
+                        // If we're animating (auto-advance triggered the animation), don't treat as user swipe
+                        if (_isAnimating) {
+                          debugPrint(
+                              '🔄 [AUTO-ADVANCE] Page animation completed: $index');
+                          setState(() {
+                            _currentPageIndex = index;
+                          });
+                          _trackVisibleArticle(index);
+                          return;
+                        }
+
+                        // Check if this is auto-advance (audio provider index matches) or user swipe
+                        final audioProvider =
+                            context.read<AudioPlayerProvider>();
+                        final isAutoAdvance =
+                            audioProvider.currentPlaylistIndex == index &&
+                                (audioProvider.isPlaying ||
+                                    audioProvider.hasCurrentArticle) &&
+                                !audioProvider.playTitleMode;
+
+                        if (isAutoAdvance) {
+                          // Auto-advance - just update page index, don't stop audio
+                          debugPrint('🔄 [AUTO-ADVANCE] Page synced: $index');
+                          setState(() {
+                            _currentPageIndex = index;
+                          });
+                          _trackVisibleArticle(index);
+                        } else {
+                          // User swipe - stop audio
+                          _onUserSwipe(index);
+                        }
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      final article = _articlesList[index];
+                      return _buildArticlePage(article, config, theme);
+                    },
+                  ),
                 ),
-              ),
 
-              // Audio Loading Overlay
-              const AudioLoadingOverlay(),
-            ],
-          );
-        },
+                // Audio Loading Overlay
+                const AudioLoadingOverlay(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -399,6 +496,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                     height: 380,
                     width: double.infinity,
                     fit: BoxFit.cover,
+                    errorWidget: (context, url, error) => newsOnImageFallback(
+                        width: double.infinity, height: 380),
                   ),
 
                   // Gradient Overlay
@@ -423,7 +522,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                       child: Row(
                         children: [
                           InkWell(
-                            onTap: () => Navigator.pop(context),
+                            onTap: _leaveDetail,
                             borderRadius: BorderRadius.circular(25),
                             child: Container(
                               padding: const EdgeInsets.all(8),
@@ -438,12 +537,25 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                             ),
                           ),
                           giveWidth(12),
-                          showImage(
-                            config.getAppNameLogoForTheme(
-                                Theme.of(context).brightness),
-                            BoxFit.contain,
-                            height: 60,
-                            width: 80,
+                          // The header sits over a dark gradient + (possibly dark)
+                          // image, so always use the light logo variant and place
+                          // it on a translucent backdrop so it stays visible on
+                          // bright, dark, or failed/black images alike.
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: showImage(
+                              config.getAppNameLogoForTheme(Brightness.dark),
+                              BoxFit.contain,
+                              height: 52,
+                              width: 80,
+                            ),
                           ),
                           const Spacer(),
                         ],
@@ -479,7 +591,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Source: ${article.sourceName ?? 'NewsOn'}${(article.creator != null && article.creator!.isNotEmpty) ? ' | Author: ${article.creator![0]}' : ''}',
+                          '${LocalizationHelper.sourceLabel(context, article.sourceName ?? 'NewsOn')}${(article.creator != null && article.creator!.isNotEmpty) ? ' | ${LocalizationHelper.authorLabel(context, article.creator![0])}' : ''}',
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 13,
@@ -487,7 +599,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Published: ${article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())} (${_getTimeAgo(article)})',
+                          '${LocalizationHelper.publishedLabel(context, article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now()))} (${_getTimeAgo(article)})',
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -794,8 +906,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                           child: Center(
                             child: Text(
                               isCurrentArticle && isLoading
-                                  ? "Loading..."
-                                  : "Tap to play article",
+                                  ? LocalizationHelper.loading(context)
+                                  : LocalizationHelper.tapToPlayArticle(context),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
                                 fontSize: fontSize,
@@ -827,6 +939,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                           try {
                             final newStatus =
                                 await bookmarkProvider.toggleBookmark(article);
+                            if (newStatus) {
+                              unawaited(
+                                _interactionService.trackBookmark(article),
+                              );
+                            }
                             if (mounted) {
                               final newsProvider = Provider.of<NewsProvider>(
                                   context,
@@ -837,8 +954,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                                 SnackBar(
                                   content: Text(
                                     newStatus
-                                        ? 'Added to bookmarks'
-                                        : 'Removed from bookmarks',
+                                        ? LocalizationHelper.addedToBookmarks(
+                                            context)
+                                        : LocalizationHelper
+                                            .removedFromBookmarks(context),
                                   ),
                                   duration: const Duration(seconds: 1),
                                 ),
@@ -848,7 +967,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error: ${e.toString()}'),
+                                  content: Text(LocalizationHelper.error(
+                                      context, e.toString())),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );
@@ -885,7 +1005,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                   // Share button
                   GestureDetector(
                     onTap: () {
-                      NewsShareService.shareArticle(article);
+                      unawaited(_interactionService.trackShare(article));
+                      NewsShareService.shareArticle(
+                        article,
+                        curiousCta: LocalizationHelper.shareNewsCuriousCta(
+                          context,
+                        ),
+                      );
                     },
                     child: Container(
                       padding: EdgeInsets.all(isLargeScreen ? 10 : 8),
@@ -962,7 +1088,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to play audio: ${e.toString()}'),
+            content: Text(
+                LocalizationHelper.failedToPlayAudio(context, e.toString())),
             backgroundColor: Colors.red,
           ),
         );

@@ -27,6 +27,18 @@
   "bookmarks": "Marcadores",
   "search": "Buscar",
   "headlines": "Titulares",
+  "forYou": "Para ti",
+  "pickedForYouSubtitle": "Historias elegidas según tus intereses",
+  "moreStoriesForYou": "Más para ti",
+  "storiesCount": "{count} historias",
+  "@storiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareNewsCuriousCta": "🔥 ¿Qué pasó realmente? Léelo completo en NewsOn 👇",
   "newsFeed": "Feed de Noticias",
   "retry": "Reintentar",
   "noNewsAvailable": "No hay noticias disponibles",
@@ -109,5 +121,14 @@
   "contactSupportText": "Para soporte, consultas o comentarios sobre nuestro contenido, contáctenos.",
   "email": "Correo electrónico",
   "phone": "Teléfono",
-  "website": "Sitio web"
+  "website": "Sitio web",
+  "selectRegion": "Seleccionar región",
+  "regionCountry": "País",
+  "regionState": "Estado",
+  "regionDistrict": "Distrito",
+  "selectOption": "Seleccionar una opción",
+  "apply": "Aplicar",
+  "reset": "Restablecer",
+  "noNewsForRegion": "No hay noticias disponibles para la región seleccionada",
+  "selectRegionTooltip": "Filtrar noticias por región"
 }

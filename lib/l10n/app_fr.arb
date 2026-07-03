@@ -27,6 +27,18 @@
   "bookmarks": "Signets",
   "search": "Rechercher",
   "headlines": "Titres",
+  "forYou": "Pour vous",
+  "pickedForYouSubtitle": "Articles sélectionnés selon vos centres d'intérêt",
+  "moreStoriesForYou": "Plus pour vous",
+  "storiesCount": "{count} articles",
+  "@storiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareNewsCuriousCta": "🔥 La suite va vous surprendre — lisez tout sur NewsOn 👇",
   "newsFeed": "Fil d'actualité",
   "retry": "Réessayer",
   "noNewsAvailable": "Aucune actualité disponible",
@@ -109,5 +121,14 @@
   "contactSupportText": "Pour le support, les demandes ou les commentaires, veuillez nous contacter.",
   "email": "E-mail",
   "phone": "Téléphone",
-  "website": "Site Web"
+  "website": "Site Web",
+  "selectRegion": "Sélectionner une région",
+  "regionCountry": "Pays",
+  "regionState": "État",
+  "regionDistrict": "District",
+  "selectOption": "Sélectionner une option",
+  "apply": "Appliquer",
+  "reset": "Réinitialiser",
+  "noNewsForRegion": "Aucune actualité disponible pour la région sélectionnée",
+  "selectRegionTooltip": "Filtrer les actualités par région"
 }

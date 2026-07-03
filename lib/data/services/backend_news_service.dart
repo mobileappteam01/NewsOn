@@ -21,6 +21,23 @@ class BackendNewsService {
         languageCode.toLowerCase();
   }
 
+  static void appendRegionFilter(
+    Map<String, String> queryParameters, {
+    String? country,
+    String? state,
+    String? district,
+  }) {
+    if (country != null && country.trim().isNotEmpty) {
+      queryParameters['country'] = country.trim();
+    }
+    if (state != null && state.trim().isNotEmpty) {
+      queryParameters['state'] = state.trim();
+    }
+    if (district != null && district.trim().isNotEmpty) {
+      queryParameters['district'] = district.trim();
+    }
+  }
+
   /// Fetch breaking news from backend
   /// [language] - Language code (e.g., 'en', 'ta', 'hi')
   /// [limit] - Number of items to fetch (default: 10 for home page, 50 for View All)
@@ -29,6 +46,9 @@ class BackendNewsService {
     String? language,
     int limit = 10,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       debugPrint('📰 Fetching breaking news from backend...');
@@ -43,6 +63,12 @@ class BackendNewsService {
         'limit': limit.toString(),
         'page': page.toString(),
       };
+      appendRegionFilter(
+        queryParameters,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       // Get bearer token if user is logged in
       String? bearerToken;
@@ -80,6 +106,9 @@ class BackendNewsService {
     String? date,
     int limit = 5,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       debugPrint('📰 Fetching today\'s news from backend...');
@@ -95,6 +124,12 @@ class BackendNewsService {
         'limit': limit.toString(),
         'page': page.toString(),
       };
+      appendRegionFilter(
+        queryParameters,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       // Get bearer token if user is logged in
       String? bearerToken;
@@ -133,15 +168,19 @@ class BackendNewsService {
   Future<NewsResponse> fetchNewsByCategory({
     required String category,
     String? language,
+    String? date,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       debugPrint('📰 Fetching news by category from backend...');
       // Convert language code to full language name for backend API
       final languageName = _convertLanguageCodeToName(language);
       debugPrint(
-        '   Category: $category, Language Code: $language → Language Name: $languageName, Limit: $limit, Page: $page',
+        '   Category: $category, Language Code: $language → Language Name: $languageName, Date: $date, Limit: $limit, Page: $page',
       );
 
       // Build query parameters
@@ -150,9 +189,16 @@ class BackendNewsService {
         'category': category,
         if (languageName != null && languageName.isNotEmpty)
           'language': languageName,
+        if (date != null && date.isNotEmpty) 'date': date,
         'limit': limit.toString(),
         'page': page.toString(),
       };
+      appendRegionFilter(
+        queryParameters,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       // Get bearer token if user is logged in
       String? bearerToken;
@@ -193,6 +239,9 @@ class BackendNewsService {
     String? language,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       debugPrint('📰 Fetching news by multiple categories from backend...');
@@ -209,6 +258,14 @@ class BackendNewsService {
         'limit': limit.toString(),
         'page': page.toString(),
       };
+      final regionParams = <String, String>{};
+      appendRegionFilter(
+        regionParams,
+        country: country,
+        state: state,
+        district: district,
+      );
+      queryParameters.addAll(regionParams);
 
       // Get bearer token if user is logged in
       String? bearerToken;
@@ -249,6 +306,9 @@ class BackendNewsService {
     String? language,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       debugPrint('📰 Searching news from backend...');
@@ -266,6 +326,12 @@ class BackendNewsService {
         'limit': limit.toString(),
         'page': page.toString(),
       };
+      appendRegionFilter(
+        queryParameters,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       // Get bearer token if user is logged in
       String? bearerToken;

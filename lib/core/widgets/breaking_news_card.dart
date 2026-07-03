@@ -7,6 +7,7 @@ import '../../providers/completed_news_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/localization_helper.dart';
 
 /// Breaking news card with large image and play button overlay
 class BreakingNewsCard extends StatelessWidget {
@@ -130,7 +131,7 @@ class BreakingNewsCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              'Source: ${article.sourceName ?? 'NewsOn'}${(article.creator != null && article.creator!.isNotEmpty) ? ' | Author: ${article.creator![0]}' : ''}',
+                              '${LocalizationHelper.sourceLabel(context, article.sourceName ?? 'NewsOn')}${(article.creator != null && article.creator!.isNotEmpty) ? ' | ${LocalizationHelper.authorLabel(context, article.creator![0])}' : ''}',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 11,
@@ -146,7 +147,7 @@ class BreakingNewsCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Published: ${article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())}',
+                            LocalizationHelper.publishedLabel(context, article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now())),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
@@ -188,7 +189,9 @@ class BreakingNewsCard extends StatelessWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error playing audio: $e'),
+                                content: Text(
+                                    LocalizationHelper.errorPlayingAudio(
+                                        context, e.toString())),
                                 backgroundColor: Colors.red,
                               ),
                             );

@@ -189,9 +189,9 @@ class NewsGridView extends StatelessWidget {
                 Flexible(
                   child: Text(
                     isPlaying
-                        ? 'Playing...'
+                        ? LocalizationHelper.playing(context)
                         : isPaused
-                            ? 'Paused'
+                            ? LocalizationHelper.paused(context)
                             : LocalizationHelper.listen(context),
                     style: FontManager.button.copyWith(
                       color: Colors.white,
@@ -355,35 +355,17 @@ class NewsGridView extends StatelessWidget {
       required Widget icon,
       required String label,
     }) {
-      return Expanded(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  icon,
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: FontManager.button.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: labelColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon,
+            ],
           ),
         ),
       );
@@ -411,38 +393,26 @@ class NewsGridView extends StatelessWidget {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            actionCell(
-              onTap: () => onSaveTapped(),
-              icon: saveIcon,
-              label: LocalizationHelper.bookmark(context),
+    return IntrinsicHeight(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          actionCell(
+            onTap: () => onSaveTapped(),
+            icon: saveIcon,
+            label: LocalizationHelper.bookmark(context),
+          ),
+          actionCell(
+            onTap: () => onShareTapped(),
+            icon: Icon(
+              Icons.ios_share_rounded,
+              size: 22,
+              color:
+                  onDarkBackground ? Colors.white : theme.colorScheme.secondary,
             ),
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: dividerColor,
-            ),
-            actionCell(
-              onTap: () => onShareTapped(),
-              icon: Icon(
-                Icons.ios_share_rounded,
-                size: 22,
-                color: onDarkBackground
-                    ? Colors.white
-                    : theme.colorScheme.secondary,
-              ),
-              label: 'Share',
-            ),
-          ],
-        ),
+            label: 'Share',
+          ),
+        ],
       ),
     );
   }

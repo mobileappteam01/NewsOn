@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../data/models/news_article.dart';
 import '../data/models/news_response.dart';
 import '../data/models/category_model.dart';
+import '../data/models/region_model.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/connectivity_helper.dart';
 import '../data/repositories/news_repository.dart';
@@ -101,6 +102,7 @@ class NewsProvider with ChangeNotifier {
   String? _currentCategory;
   String? _currentQuery;
   DateTime? _selectedDate; // Selected date for archive news
+  SavedRegion _savedRegion = const SavedRegion();
 
   // Category API service
   final CategoryApiService _categoryApiService = CategoryApiService();
@@ -121,9 +123,28 @@ class NewsProvider with ChangeNotifier {
   String? get currentCategory => _currentCategory;
   String? get currentQuery => _currentQuery;
   DateTime? get selectedDate => _selectedDate;
+  SavedRegion get savedRegion => _savedRegion;
+  bool get hasRegionFilter => !_savedRegion.isEmpty;
 
   // Get repository for direct access (needed for View All pages with pagination)
   NewsRepository get repository => _repository;
+
+  Future<void> setSavedRegion(
+    SavedRegion region, {
+    bool clearFeeds = true,
+  }) async {
+    _savedRegion = region;
+    if (clearFeeds) {
+      _breakingNews = [];
+      _todayNews = [];
+      _categoryNews = [];
+      _articles = [];
+      _nextPage = null;
+    }
+    notifyListeners();
+  }
+
+  Future<void> clearSavedRegion() => setSavedRegion(const SavedRegion());
 
   /// Fetch breaking/top news
   /// [limit] - Number of items to fetch (default: 10 for home page, 50 for View All)
@@ -133,8 +154,8 @@ class NewsProvider with ChangeNotifier {
       _isLoading = true;
       _error = null;
 
-      // Step 1: Load from cache first (for instant offline display)
-      if (page == 1) {
+      // Step 1: Load from cache first (skip when region filter is active)
+      if (page == 1 && !hasRegionFilter) {
         final cachedNews = StorageService.getBreakingNewsCache();
         if (cachedNews.isNotEmpty) {
           _breakingNews = cachedNews;
@@ -155,6 +176,9 @@ class NewsProvider with ChangeNotifier {
           language: _currentLanguageCode,
           limit: limit,
           page: page,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
 
         if (response.results.isNotEmpty) {
@@ -235,6 +259,9 @@ class NewsProvider with ChangeNotifier {
         final response = await _repository.fetchNewsByCategory(
           category,
           language: _currentLanguageCode,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
         _articles = response.results;
         _nextPage = response.nextPage;
@@ -309,7 +336,11 @@ class NewsProvider with ChangeNotifier {
   /// Updates _categoryNews list (separate from _breakingNews)
   /// [categoryName] - Category name to filter by (e.g., 'lifestyle', 'sports')
   /// [limit] - Number of items to fetch (default: 10)
-  Future<void> fetchCategoryNews(String categoryName, {int limit = 10}) async {
+  Future<void> fetchCategoryNews(
+    String categoryName, {
+    int limit = 10,
+    DateTime? date,
+  }) async {
     if (_isLoadingCategoryNews) return;
 
     try {
@@ -317,14 +348,17 @@ class NewsProvider with ChangeNotifier {
       _currentCategory = categoryName;
       _error = null;
 
-      // Show last cached category/search articles immediately (offline-friendly)
-      final cachedArticles = StorageService.getArticlesCache();
-      if (cachedArticles.isNotEmpty) {
-        _categoryNews = cachedArticles;
-        notifyListeners();
-        debugPrint(
-          '📦 Loaded ${cachedArticles.length} articles from cache for category UI',
-        );
+      if (!hasRegionFilter) {
+        final cachedArticles = StorageService.getArticlesCache();
+        if (cachedArticles.isNotEmpty) {
+          _categoryNews = cachedArticles;
+          notifyListeners();
+          debugPrint(
+            '📦 Loaded ${cachedArticles.length} articles from cache for category UI',
+          );
+        } else {
+          notifyListeners();
+        }
       } else {
         notifyListeners();
       }
@@ -349,7 +383,11 @@ class NewsProvider with ChangeNotifier {
       final response = await _repository.fetchNewsByCategory(
         categoryName,
         language: _currentLanguageCode,
+        date: date != null ? _formatDate(date) : null,
         limit: limit,
+        country: _savedRegion.country,
+        state: _savedRegion.state,
+        district: _savedRegion.district,
       );
 
       _categoryNews = response.results;
@@ -408,6 +446,9 @@ class NewsProvider with ChangeNotifier {
           language: _currentLanguageCode,
           limit: 50,
           page: currentPage,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
       } else if (_currentCategory != null) {
         response = await _repository.fetchNewsByCategory(
@@ -415,12 +456,18 @@ class NewsProvider with ChangeNotifier {
           language: _currentLanguageCode,
           limit: 50,
           page: currentPage,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
       } else {
         response = await _repository.fetchBreakingNews(
           language: _currentLanguageCode,
           limit: 50,
           page: currentPage,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
       }
 
@@ -478,6 +525,9 @@ class NewsProvider with ChangeNotifier {
         final response = await _repository.searchNews(
           query,
           language: _currentLanguageCode,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
         _articles = response.results;
         _nextPage = response.nextPage;
@@ -615,8 +665,8 @@ class NewsProvider with ChangeNotifier {
       _error = null;
       _selectedDate = date ?? DateTime.now();
 
-      // Step 1: Load from cache first (for instant offline display)
-      if (page == 1) {
+      // Step 1: Load from cache first (skip when region filter is active)
+      if (page == 1 && !hasRegionFilter) {
         final cachedNews = StorageService.getTodayNewsCache();
         if (cachedNews.isNotEmpty) {
           _todayNews = cachedNews;
@@ -643,6 +693,9 @@ class NewsProvider with ChangeNotifier {
           language: _currentLanguageCode,
           limit: limit,
           page: page,
+          country: _savedRegion.country,
+          state: _savedRegion.state,
+          district: _savedRegion.district,
         );
 
         if (page == 1) {

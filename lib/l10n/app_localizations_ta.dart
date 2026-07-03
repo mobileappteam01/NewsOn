@@ -71,6 +71,23 @@ class AppLocalizationsTa extends AppLocalizations {
   String get headlines => 'தலைப்புகள்';
 
   @override
+  String get forYou => 'உங்களுக்காக';
+
+  @override
+  String get pickedForYouSubtitle => 'உங்கள் ஆர்வங்களின் அடிப்படையில் தேர்ந்தெடுக்கப்பட்ட கதைகள்';
+
+  @override
+  String get moreStoriesForYou => 'உங்களுக்கான மேலும் கதைகள்';
+
+  @override
+  String storiesCount(int count) {
+    return '$count கதைகள்';
+  }
+
+  @override
+  String get shareNewsCuriousCta => '🔥 இந்த செய்தியின் முழு உண்மை NewsOn-ல் — இப்போதே படியுங்கள் 👇';
+
+  @override
   String get newsFeed => 'செய்தி ஊட்டம்';
 
   @override
@@ -433,4 +450,177 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get website => 'இணையதளம்';
+
+  @override
+  String get selectRegion => 'பிராந்தியத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get regionCountry => 'நாடு';
+
+  @override
+  String get regionState => 'மாநிலம்';
+
+  @override
+  String get regionDistrict => 'மாவட்டம்';
+
+  @override
+  String get selectOption => 'ஒரு விருப்பத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get apply => 'பயன்படுத்து';
+
+  @override
+  String get reset => 'மீட்டமை';
+
+  @override
+  String get noNewsForRegion => 'தேர்ந்தெடுக்கப்பட்ட பிராந்தியத்திற்கு செய்திகள் இல்லை';
+
+  @override
+  String get selectRegionTooltip => 'பிராந்தியத்தின் அடிப்படையில் செய்திகளை வடிகட்டு';
+
+  @override
+  String get noBookmarks => 'புக்மார்க்குகள் இல்லை';
+
+  @override
+  String get bookmarksWillAppearHere => 'நீங்கள் புக்மார்க் செய்யும் கட்டுரைகள் இங்கே தோன்றும்';
+
+  @override
+  String get errorLoadingBookmarks => 'புக்மார்க்குகளை ஏற்றுவதில் பிழை';
+
+  @override
+  String get clearBookmarksMessage => 'இது சேமித்த அனைத்து கட்டுரைகளையும் நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
+
+  @override
+  String errorPlayingAudio(String error) {
+    return 'ஆடியோவை இயக்குவதில் பிழை: $error';
+  }
+
+  @override
+  String failedToPlayAudio(String error) {
+    return 'ஆடியோவை இயக்க முடியவில்லை: $error';
+  }
+
+  @override
+  String get noBreakingNewsAvailable => 'முக்கியச் செய்திகள் எதுவும் இல்லை';
+
+  @override
+  String get noNewsForThisCategory => 'இந்தப் பிரிவுக்கு செய்திகள் எதுவும் இல்லை';
+
+  @override
+  String get recentSearches => 'சமீபத்திய தேடல்கள்';
+
+  @override
+  String get searchNewsHint => 'செய்திகளைத் தேடு...';
+
+  @override
+  String get enterKeywordsToFindArticles => 'கட்டுரைகளைக் கண்டறிய முக்கிய வார்த்தைகளை உள்ளிடவும்';
+
+  @override
+  String get orTryVoiceSearch => 'அல்லது மைக்ரோஃபோனைப் பயன்படுத்தி குரல் தேடலை முயற்சிக்கவும்';
+
+  @override
+  String get tryDifferentKeywords => 'வேறு முக்கிய வார்த்தைகளை முயற்சிக்கவும் அல்லது எழுத்துப்பிழையைச் சரிபார்க்கவும்';
+
+  @override
+  String sourceLabel(String source) {
+    return 'ஆதாரம்: $source';
+  }
+
+  @override
+  String authorLabel(String author) {
+    return 'எழுதியவர்: $author';
+  }
+
+  @override
+  String publishedLabel(String date) {
+    return 'வெளியிடப்பட்டது: $date';
+  }
+
+  @override
+  String get justNow => 'இப்போதே';
+
+  @override
+  String get selectAll => 'அனைத்தையும் தேர்ந்தெடு';
+
+  @override
+  String get deselectAll => 'அனைத்தையும் நீக்கு';
+
+  @override
+  String get updatePreferences => 'விருப்பங்களைப் புதுப்பி';
+
+  @override
+  String categoriesSelectedCount(int selected, int total) {
+    return '$total இல் $selected தேர்ந்தெடுக்கப்பட்டது';
+  }
+
+  @override
+  String get agreeToTermsPrivacy => 'தொடர்வதன் மூலம், எங்கள் விதிமுறைகள் & தனியுரிமைக் கொள்கையை ஏற்கிறீர்கள்';
+
+  @override
+  String get tapToPlayArticle => 'கட்டுரையை இயக்க தட்டவும்';
+
+  @override
+  String get selectNewsLanguage => 'செய்தி மொழியைத் தேர்ந்தெடு';
+
+  @override
+  String get selectAppLanguage => 'ஆப் மொழியைத் தேர்ந்தெடு';
+
+  @override
+  String get submit => 'சமர்ப்பி';
+
+  @override
+  String get shareThisNews => 'இந்தச் செய்தியைப் பகிர்';
+
+  @override
+  String get shareThisNewsSubtitle => 'NewsOn உள்ள நண்பர்கள் கட்டுரையை ஆப்பில் திறக்க முடியும்';
+
+  @override
+  String get generatingAudio => 'ஆடியோ உருவாக்கப்படுகிறது...';
+
+  @override
+  String get convertingTextToSpeech => 'ElevenLabs மூலம் உரையைப் பேச்சாக மாற்றுகிறது';
+
+  @override
+  String get sponsored => 'விளம்பரம்';
+
+  @override
+  String get deleteAccount => 'கணக்கை நீக்கு';
+
+  @override
+  String get deleteAccountTitle => 'கணக்கை நீக்கவா?';
+
+  @override
+  String get deleteAccountMessage => 'இது உங்கள் கணக்கையும் அதனுடன் தொடர்புடைய அனைத்து தரவையும் நிரந்தரமாக நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
+
+  @override
+  String get delete => 'நீக்கு';
+
+  @override
+  String get signInToReadSharedArticle => 'பகிரப்பட்ட கட்டுரையைப் படிக்க உள்நுழையவும்';
+
+  @override
+  String get pleaseWaitSettingUp => 'அமைக்கும் வரை சிறிது காத்திருக்கவும்';
+
+  @override
+  String get signInWithApple => 'ஆப்பிள் மூலம் உள்நுழையவும்';
+
+  @override
+  String get continueWithGoogle => 'Google உடன் தொடரவும்';
+
+  @override
+  String get failedToLoadCategories => 'பிரிவுகளை ஏற்ற முடியவில்லை';
+
+  @override
+  String errorLoadingNews(String error) {
+    return 'செய்திகளை ஏற்றுவதில் பிழை: $error';
+  }
+
+  @override
+  String get playing => 'இயக்குகிறது...';
+
+  @override
+  String get paused => 'இடைநிறுத்தப்பட்டது';
+
+  @override
+  String get voiceFeaturesUnavailable => 'குரல் மற்றும் ஆடியோ அம்சங்கள் தற்போது கிடைக்கவில்லை.';
 }

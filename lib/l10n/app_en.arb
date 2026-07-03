@@ -85,6 +85,31 @@
   "@headlines": {
     "description": "Bottom navigation headlines label"
   },
+  "forYou": "For You",
+  "@forYou": {
+    "description": "Bottom navigation For You personalized feed label"
+  },
+  "pickedForYouSubtitle": "Stories picked from your interests",
+  "@pickedForYouSubtitle": {
+    "description": "For You feed header subtitle"
+  },
+  "moreStoriesForYou": "More for you",
+  "@moreStoriesForYou": {
+    "description": "Section title below featured mosaic on For You tab"
+  },
+  "storiesCount": "{count} stories",
+  "@storiesCount": {
+    "description": "Number of stories in For You feed",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareNewsCuriousCta": "🔥 Wait — there's more to this story. Tap to read on NewsOn 👇",
+  "@shareNewsCuriousCta": {
+    "description": "Catchy line before deep link when sharing a news article"
+  },
   "newsFeed": "News Feed",
   "@newsFeed": {
     "description": "News feed tab title"
@@ -535,5 +560,158 @@
   "contactSupportText": "For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.",
   "email": "Email",
   "phone": "Phone",
-  "website": "Website"
+  "website": "Website",
+  "selectRegion": "Select Region",
+  "@selectRegion": {
+    "description": "Region filter bottom sheet title"
+  },
+  "regionCountry": "Country",
+  "@regionCountry": {
+    "description": "Country dropdown label"
+  },
+  "regionState": "State",
+  "@regionState": {
+    "description": "State dropdown label"
+  },
+  "regionDistrict": "District",
+  "@regionDistrict": {
+    "description": "District dropdown label"
+  },
+  "selectOption": "Select an option",
+  "@selectOption": {
+    "description": "Dropdown placeholder"
+  },
+  "apply": "Apply",
+  "@apply": {
+    "description": "Apply button"
+  },
+  "reset": "Reset",
+  "@reset": {
+    "description": "Reset button"
+  },
+  "noNewsForRegion": "No news available for selected region",
+  "@noNewsForRegion": {
+    "description": "Empty state when region filter returns no news"
+  },
+  "selectRegionTooltip": "Filter news by region",
+  "@selectRegionTooltip": {
+    "description": "Globe icon tooltip"
+  },
+  "noBookmarks": "No Bookmarks",
+  "@noBookmarks": {},
+  "bookmarksWillAppearHere": "Articles you bookmark will appear here",
+  "@bookmarksWillAppearHere": {},
+  "errorLoadingBookmarks": "Error loading bookmarks",
+  "@errorLoadingBookmarks": {},
+  "clearBookmarksMessage": "This will remove all saved articles. This action cannot be undone.",
+  "@clearBookmarksMessage": {},
+  "errorPlayingAudio": "Error playing audio: {error}",
+  "@errorPlayingAudio": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "failedToPlayAudio": "Failed to play audio: {error}",
+  "@failedToPlayAudio": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "noBreakingNewsAvailable": "No breaking news available",
+  "@noBreakingNewsAvailable": {},
+  "noNewsForThisCategory": "No news available for this category",
+  "@noNewsForThisCategory": {},
+  "recentSearches": "Recent Searches",
+  "@recentSearches": {},
+  "searchNewsHint": "Search news...",
+  "@searchNewsHint": {},
+  "enterKeywordsToFindArticles": "Enter keywords to find articles",
+  "@enterKeywordsToFindArticles": {},
+  "orTryVoiceSearch": "Or try voice search using the microphone",
+  "@orTryVoiceSearch": {},
+  "tryDifferentKeywords": "Try different keywords or check your spelling",
+  "@tryDifferentKeywords": {},
+  "sourceLabel": "Source: {source}",
+  "@sourceLabel": {
+    "placeholders": {
+      "source": { "type": "String" }
+    }
+  },
+  "authorLabel": "Author: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": { "type": "String" }
+    }
+  },
+  "publishedLabel": "Published: {date}",
+  "@publishedLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "justNow": "Just now",
+  "@justNow": {},
+  "selectAll": "Select All",
+  "@selectAll": {},
+  "deselectAll": "Deselect All",
+  "@deselectAll": {},
+  "updatePreferences": "Update Preferences",
+  "@updatePreferences": {},
+  "categoriesSelectedCount": "{selected} of {total} selected",
+  "@categoriesSelectedCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "agreeToTermsPrivacy": "By continuing, you agree to our Terms & Privacy Policy",
+  "@agreeToTermsPrivacy": {},
+  "tapToPlayArticle": "Tap to play article",
+  "@tapToPlayArticle": {},
+  "selectNewsLanguage": "Select News Language",
+  "@selectNewsLanguage": {},
+  "selectAppLanguage": "Select App Language",
+  "@selectAppLanguage": {},
+  "submit": "Submit",
+  "@submit": {},
+  "shareThisNews": "Share this news",
+  "@shareThisNews": {},
+  "shareThisNewsSubtitle": "Friends with NewsOn can open the article in the app",
+  "@shareThisNewsSubtitle": {},
+  "generatingAudio": "Generating Audio...",
+  "@generatingAudio": {},
+  "convertingTextToSpeech": "Converting text to speech with ElevenLabs",
+  "@convertingTextToSpeech": {},
+  "sponsored": "Sponsored",
+  "@sponsored": {},
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {},
+  "deleteAccountTitle": "Delete account?",
+  "@deleteAccountTitle": {},
+  "deleteAccountMessage": "This will permanently delete your account and all associated data. This action cannot be undone.",
+  "@deleteAccountMessage": {},
+  "delete": "Delete",
+  "@delete": {},
+  "signInToReadSharedArticle": "Sign in to read the shared article",
+  "@signInToReadSharedArticle": {},
+  "pleaseWaitSettingUp": "Please wait while we set things up",
+  "@pleaseWaitSettingUp": {},
+  "signInWithApple": "Sign in with Apple",
+  "@signInWithApple": {},
+  "continueWithGoogle": "Continue with Google",
+  "@continueWithGoogle": {},
+  "failedToLoadCategories": "Failed to load categories",
+  "@failedToLoadCategories": {},
+  "errorLoadingNews": "Error loading news: {error}",
+  "@errorLoadingNews": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "playing": "Playing...",
+  "@playing": {},
+  "paused": "Paused",
+  "@paused": {},
+  "voiceFeaturesUnavailable": "Voice and audio features are currently unavailable.",
+  "@voiceFeaturesUnavailable": {}
 }

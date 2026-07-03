@@ -1,16 +1,78 @@
 import 'package:newson/data/services/api_service.dart';
 
+/// Parsed result from auth sign-up / sign-in endpoint.
+class AuthSignUpResult {
+  const AuthSignUpResult({
+    required this.success,
+    required this.message,
+    this.token,
+    this.userData,
+    this.isNewUser = false,
+  });
+
+  final bool success;
+  final String message;
+  final String? token;
+  final Map<String, dynamic>? userData;
+  final bool isNewUser;
+
+  factory AuthSignUpResult.fromSignUpResponse(SignUpResponse response) {
+    if (!response.success) {
+      return AuthSignUpResult(
+        success: false,
+        message: response.message,
+      );
+    }
+
+    if (response.data is! Map<String, dynamic>) {
+      return const AuthSignUpResult(
+        success: false,
+        message: 'Invalid response format',
+      );
+    }
+
+    final data = response.data as Map<String, dynamic>;
+    final token = data['token'] as String?;
+    final userData = data['data'] is Map<String, dynamic>
+        ? data['data'] as Map<String, dynamic>
+        : data['data'] is Map
+            ? Map<String, dynamic>.from(data['data'] as Map)
+            : null;
+
+    final rawNewUser = data['newUser'];
+    final isNewUser = rawNewUser == true ||
+        rawNewUser == 1 ||
+        rawNewUser?.toString().toLowerCase() == 'true';
+
+    if (token == null || token.isEmpty || userData == null) {
+      return AuthSignUpResult(
+        success: false,
+        message: 'Invalid response: missing token or user data',
+        isNewUser: isNewUser,
+      );
+    }
+
+    return AuthSignUpResult(
+      success: true,
+      message: data['message']?.toString() ?? response.message,
+      token: token,
+      userData: userData,
+      isNewUser: isNewUser,
+    );
+  }
+}
+
 /// Auth API Service for handling authentication-related API calls
 class AuthApiService {
   final ApiService _apiService = ApiService();
 
-  /// Sign up user after Google Sign-In and category selection
-  /// Maps Google Sign-In account data to the required API request body
+  /// Sign up / sign in user after OAuth (Google / Apple).
+  /// [categoryIds] may be empty on first auth; new users select categories later.
   Future<SignUpResponse> signUp({
     required Map<String, dynamic> googleAccountData,
     required String nickName,
     String? fcmToken,
-    required List<String> categoryIds, // Array of category IDs
+    List<String> categoryIds = const [],
   }) async {
     try {
       // Extract user details from Google account data
@@ -25,12 +87,11 @@ class AuthApiService {
 
       // Prepare request body
       final requestBody = {
-        'nickName':
-            nickName.isNotEmpty
-                ? nickName
-                : (firstName.isNotEmpty
-                    ? firstName
-                    : (email.isNotEmpty ? email.split('@').first : 'User')),
+        'nickName': nickName.isNotEmpty
+            ? nickName
+            : (firstName.isNotEmpty
+                ? firstName
+                : (email.isNotEmpty ? email.split('@').first : 'User')),
         'email': email,
         'firstName': firstName,
         'secondName': secondName,
@@ -54,10 +115,9 @@ class AuthApiService {
         return SignUpResponse(
           success: true,
           data: response.data,
-          message:
-              response.data is Map
-                  ? (response.data['message'] ?? 'Sign up successful')
-                  : 'Sign up successful',
+          message: response.data is Map
+              ? (response.data['message'] ?? 'Sign up successful')
+              : 'Sign up successful',
         );
       } else {
         return SignUpResponse(
@@ -93,10 +153,9 @@ class AuthApiService {
         return SignInResponse(
           success: true,
           data: response.data,
-          message:
-              response.data is Map
-                  ? (response.data['message'] ?? 'Sign in successful')
-                  : 'Sign in successful',
+          message: response.data is Map
+              ? (response.data['message'] ?? 'Sign in successful')
+              : 'Sign in successful',
         );
       } else {
         return SignInResponse(

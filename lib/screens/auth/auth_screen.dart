@@ -5,14 +5,17 @@ import 'package:newson/core/utils/localization_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/remote_config_provider.dart';
+import '../../core/utils/auth_navigation_helper.dart';
+import '../../data/services/api_service.dart';
+import '../../data/services/auth_api_service.dart';
 import '../../data/services/deep_link_service.dart';
+import '../../data/services/fcm_service.dart';
 import '../../data/services/google_auth_service.dart';
 import '../../data/services/apple_auth_service.dart';
 import '../../data/services/user_service.dart';
 import '../home/home_screen.dart';
 import '../../widgets/google_signin_button.dart';
 import '../../widgets/apple_signin_button.dart';
-import '../onboarding/onboarding_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -26,6 +29,8 @@ class _AuthScreenState extends State<AuthScreen>
   final GoogleAuthService _googleAuthService = GoogleAuthService();
   final AppleAuthService _appleAuthService = AppleAuthService();
   final UserService _userService = UserService();
+  final AuthApiService _authApiService = AuthApiService();
+  final FcmService _fcmService = FcmService();
   bool _isLoading = false;
   late String _loadingMessage;
   late AnimationController _loadingAnimationController;
@@ -76,6 +81,61 @@ class _AuthScreenState extends State<AuthScreen>
     super.dispose();
   }
 
+  Future<void> _completeOAuthSignIn(
+    Map<String, dynamic> accountData,
+  ) async {
+    await _userService.saveTempGoogleAccount(accountData);
+
+    final apiService = ApiService();
+    if (!apiService.isInitialized) {
+      await apiService.initialize();
+    }
+
+    final displayName = accountData['displayName'] as String? ?? '';
+    final nameParts = displayName.split(' ');
+    final defaultNickName = nameParts.isNotEmpty ? nameParts.first : '';
+
+    if (mounted) {
+      setState(
+        () => _loadingMessage = LocalizationHelper.welcome(context),
+      );
+    }
+
+    final fcmToken = await _fcmService.getToken();
+    final signUpResponse = await _authApiService.signUp(
+      googleAccountData: accountData,
+      nickName: defaultNickName,
+      fcmToken: fcmToken,
+      categoryIds: const [],
+    );
+
+    final result = AuthSignUpResult.fromSignUpResponse(signUpResponse);
+    if (!result.success) {
+      throw Exception(result.message);
+    }
+
+    await _userService.saveUserData(
+      token: result.token!,
+      userData: result.userData!,
+    );
+
+    if (!result.isNewUser) {
+      await _userService.clearTempGoogleAccount();
+    }
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+    navigateAfterOAuthAuth(context, isNewUser: result.isNewUser);
+  }
+
+  bool _isSignInCancelled(Object error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('cancel') ||
+        errorString.contains('cancelled') ||
+        errorString.contains('sign_in_canceled');
+  }
+
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isLoading = true;
@@ -97,7 +157,7 @@ class _AuthScreenState extends State<AuthScreen>
         return;
       }
 
-      // Step 2: Store Google account data temporarily (for sign-up later)
+      // Step 2: Authenticate with backend and route by newUser flag
       final googleAccountData = {
         'displayName': account.displayName ?? '',
         'email': account.email,
@@ -105,40 +165,22 @@ class _AuthScreenState extends State<AuthScreen>
         'photoUrl': account.photoUrl,
         'authProvider': 'google',
       };
-      await _userService.saveTempGoogleAccount(googleAccountData);
 
-      if (mounted) {
-        setState(() => _loadingMessage = LocalizationHelper.welcome(context));
-
-        // Small delay to show "Welcome!" message
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          // Navigate to onboarding screen (sign-up will happen after category selection)
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-          );
-        }
-      }
+      await _completeOAuthSignIn(googleAccountData);
     } catch (e) {
       // Only show error for actual errors, not cancellations
       if (mounted) {
         setState(() => _isLoading = false);
 
-        // Check if it's a cancellation error
-        final errorString = e.toString().toLowerCase();
-        if (errorString.contains('cancel') ||
-            errorString.contains('cancelled') ||
-            errorString.contains('sign_in_canceled')) {
-          // User cancelled - don't show error
+        if (_isSignInCancelled(e)) {
           return;
         }
 
-        // Show error for actual failures
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ ${LocalizationHelper.signInFailed(context, e.toString())}'),
+            content: Text(
+              '❌ ${LocalizationHelper.signInFailed(context, e.toString())}',
+            ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -169,51 +211,29 @@ class _AuthScreenState extends State<AuthScreen>
       // Step 2: Extract user data from Apple credential
       final appleUserData = _appleAuthService.extractUserData(credential);
 
-      // Step 3: Store Apple account data temporarily (for sign-up later)
-      // Note: Apple only provides email/name on FIRST sign-in
-      // We need to handle the case where email might be null on subsequent logins
+      // Step 3: Authenticate with backend and route by newUser flag
       final accountData = {
-        'displayName': appleUserData['displayName'] ?? 
-                       appleUserData['givenName'] ?? 
-                       'Apple User',
-        'email': appleUserData['email'] ?? 
-                 '${credential.userIdentifier}@privaterelay.appleid.com',
+        'displayName': appleUserData['displayName'] ??
+            appleUserData['givenName'] ??
+            'Apple User',
+        'email': appleUserData['email'] ??
+            '${credential.userIdentifier}@privaterelay.appleid.com',
         'id': credential.userIdentifier,
-        'photoUrl': null, // Apple doesn't provide photo
+        'photoUrl': null,
         'authProvider': 'apple',
         'identityToken': appleUserData['identityToken'],
         'authorizationCode': appleUserData['authorizationCode'],
       };
-      await _userService.saveTempGoogleAccount(accountData);
 
-      if (mounted) {
-        setState(() => _loadingMessage = LocalizationHelper.welcome(context));
-
-        // Small delay to show "Welcome!" message
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          // Navigate to onboarding screen (sign-up will happen after category selection)
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-          );
-        }
-      }
+      await _completeOAuthSignIn(accountData);
     } catch (e) {
-      // Only show error for actual errors, not cancellations
       if (mounted) {
         setState(() => _isLoading = false);
 
-        // Check if it's a cancellation error
-        final errorString = e.toString().toLowerCase();
-        if (errorString.contains('cancel') ||
-            errorString.contains('cancelled')) {
-          // User cancelled - don't show error
+        if (_isSignInCancelled(e)) {
           return;
         }
 
-        // Show error for actual failures
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Apple Sign-In failed: ${e.toString()}'),
@@ -256,7 +276,8 @@ class _AuthScreenState extends State<AuthScreen>
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Sign in to read the shared article',
+                                LocalizationHelper.signInToReadSharedArticle(
+                                    context),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
@@ -335,7 +356,7 @@ class _AuthScreenState extends State<AuthScreen>
                       ],
                       giveHeight(16),
                       Text(
-                        'By continuing, you agree to our Terms & Privacy Policy',
+                        LocalizationHelper.agreeToTermsPrivacy(context),
                         style: GoogleFonts.roboto(
                           fontSize: 12,
                           color: theme.colorScheme.tertiary,
@@ -475,7 +496,8 @@ class _AuthScreenState extends State<AuthScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: Text(
-                                  'Please wait while we set things up',
+                                  LocalizationHelper.pleaseWaitSettingUp(
+                                      context),
                                   style: GoogleFonts.roboto(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w400,

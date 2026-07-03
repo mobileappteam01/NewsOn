@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:newson/core/utils/shared_functions.dart';
-import 'package:newson/core/widgets/ad_cache_manager.dart';
+import 'data/services/interstitial_ad_manager.dart';
 import 'package:newson/l10n/app_localizations.dart';
 import 'package:newson/screens/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +24,9 @@ import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/dynamic_language_provider.dart';
 import 'providers/remote_config_provider.dart';
+import 'providers/region_provider.dart';
 import 'providers/completed_news_provider.dart';
+import 'providers/for_you_provider.dart';
 import 'data/services/dynamic_localization_service.dart';
 import 'data/services/dynamic_icon_service.dart';
 import 'data/services/audio_background_service.dart';
@@ -137,10 +139,11 @@ void main() async {
 
   // Initialize dependent services that don't block app start
   Future.wait([
-    AdService().initialize().catchError((e) {
+    AdService().initialize().then((_) {
+      InterstitialAdManager.instance.preload();
+    }).catchError((e) {
       debugPrint("❌ Failed to initialize Ad Service: $e");
     }),
-    AdCacheManager.instance.preloadMediumAds(),
     ApiService().initialize().catchError((e) {
       debugPrint("❌ Failed to initialize API Service: $e");
     }),
@@ -243,7 +246,9 @@ class NewsOnApp extends StatelessWidget {
             return previous;
           },
         ),
+        ChangeNotifierProvider(create: (_) => RegionProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => ForYouProvider()),
         ChangeNotifierProvider(create: (_) => CompletedNewsProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
         // Audio Player Provider - Get API key from Firebase
@@ -281,18 +286,16 @@ class NewsOnApp extends StatelessWidget {
                 configProvider,
                 child,
               ) {
-                // Get the locale, but fall back to English for AppLocalizations if not supported
+                // Selected app language (UI). ARB-backed locales resolve directly;
+                // others (e.g. Malayalam/Telugu/Kannada) use DynamicLocalizationService
+                // via LocalizationHelper and fall back to English for Material widgets.
                 final requestedLocale = languageProvider.locale;
 
-                // Check if the locale is supported by AppLocalizations (ARB files)
-                // Currently only 'en' and 'ta' have ARB files
-                final arbSupportedLocales = ['en', 'ta'];
+                final isArbSupported = AppLocalizations.supportedLocales.any(
+                  (l) => l.languageCode == requestedLocale.languageCode,
+                );
                 final effectiveLocale =
-                    arbSupportedLocales.contains(requestedLocale.languageCode)
-                        ? requestedLocale
-                        : const Locale(
-                            'en',
-                          ); // Fallback to English for AppLocalizations
+                    isArbSupported ? requestedLocale : const Locale('en');
 
                 return MaterialApp(
                   navigatorKey: appNavigatorKey,
@@ -312,8 +315,8 @@ class NewsOnApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
-                  // Only include locales that have ARB file support
-                  supportedLocales: const [Locale('en'), Locale('ta')],
+                  // All locales that ship with ARB files (en, es, fr, hi, ta)
+                  supportedLocales: AppLocalizations.supportedLocales,
 
                   // Resolve locale - fall back to English if not supported by ARB
                   localeResolutionCallback: (locale, supportedLocales) {

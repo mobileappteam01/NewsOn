@@ -53,17 +53,35 @@ giveWidth(int value) {
   return SizedBox(width: value.toDouble());
 }
 
+/// Bundled NewsOn logo, shown whenever a news image is missing or fails to load.
+const String kNewsOnLogoAsset = 'assets/images/newson.png';
+
+/// Branded fallback shown instead of a broken/gallery icon for news images.
+Widget newsOnImageFallback({double? width, double? height}) {
+  return Container(
+    width: width ?? double.infinity,
+    height: height ?? 250,
+    color: Colors.grey.shade100,
+    alignment: Alignment.center,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Image.asset(
+        kNewsOnLogoAsset,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.image_not_supported,
+          color: Colors.grey.shade400,
+          size: 40,
+        ),
+      ),
+    ),
+  );
+}
+
 Widget showImage(String? url, BoxFit fit, {double? height, double? width}) {
   // Handle empty or null URLs
   if (url == null || url.isEmpty || url.trim().isEmpty) {
-    return Container(
-      width: width ?? double.infinity,
-      height: height ?? 250,
-      color: Colors.grey.shade200,
-      child: const Center(
-        child: Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
-      ),
-    );
+    return newsOnImageFallback(width: width, height: height);
   }
 
   return Consumer<RemoteConfigProvider>(
@@ -83,17 +101,9 @@ Widget showImage(String? url, BoxFit fit, {double? height, double? width}) {
             color: Colors.grey.shade300,
           ),
         ),
-        errorWidget: (context, url, error) => Container(
+        errorWidget: (context, url, error) => newsOnImageFallback(
           width: width ?? MediaQuery.of(context).size.width,
           height: height ?? 250,
-          color: Colors.grey.shade200,
-          child: const Center(
-            child: Icon(
-              Icons.image_not_supported,
-              color: Colors.grey,
-              size: 48,
-            ),
-          ),
         ),
       );
     },

@@ -4,6 +4,7 @@ import '../../providers/language_provider.dart';
 import '../../providers/dynamic_language_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../utils/shared_functions.dart';
+import '../utils/localization_helper.dart';
 
 /// Whether the dialog is selecting app language (UI) or news language (content only).
 enum LanguageSelectorType {
@@ -60,11 +61,14 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
         final config = configProvider.config;
         final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
         
-        // Use dynamic active languages if available, otherwise fall back to static list
-        // Only show languages with isActive=true
-        final languageNames = dynamicProvider.isInitialized && dynamicProvider.activeLanguages.isNotEmpty
-            ? dynamicProvider.languageNames
-            : languageProvider.languageNames;
+        // App UI languages: Firebase dynamic list (or static fallback).
+        // News languages: dedicated list (English, Tamil, Hindi, Malayalam, Telugu, Kannada).
+        final languageNames = _isNews
+            ? languageProvider.newsLanguageNames
+            : (dynamicProvider.isInitialized &&
+                    dynamicProvider.activeLanguages.isNotEmpty
+                ? dynamicProvider.languageNames
+                : languageProvider.languageNames);
 
         if (_selectedLanguage == null) {
           if (_isNews) {
@@ -106,7 +110,9 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                       ),
 
                       Text(
-                        _isNews ? 'Select News Language' : 'Select App Language',
+                        _isNews
+                            ? LocalizationHelper.selectNewsLanguage(context)
+                            : LocalizationHelper.selectAppLanguage(context),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -122,15 +128,15 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                   ),
                 ),
 
-                // Loading indicator if dynamic provider is loading
-                if (dynamicProvider.isLoading)
+                // Loading indicator (app language waits for Firebase; news list is local)
+                if (!_isNews && dynamicProvider.isLoading)
                   const Padding(
                     padding: EdgeInsets.all(20),
                     child: CircularProgressIndicator(),
                   ),
 
                 // Language List
-                if (!dynamicProvider.isLoading)
+                if (_isNews || !dynamicProvider.isLoading)
                   Flexible(
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -140,11 +146,22 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                         final languageName = languageNames[index];
                         final isSelected = languageName == _selectedLanguage;
                         
-                        // Get native name if using dynamic provider (only from active languages)
                         String displayName = languageName;
-                        if (dynamicProvider.isInitialized && dynamicProvider.activeLanguages.isNotEmpty) {
-                          final lang = dynamicProvider.activeLanguages[index];
-                          displayName = '${lang.name} (${lang.nativeName})';
+                        if (_isNews) {
+                          final nativeName =
+                              languageProvider.nativeNameForNewsLanguage(
+                            languageName,
+                          );
+                          displayName = '$languageName ($nativeName)';
+                        } else if (dynamicProvider.isInitialized &&
+                            dynamicProvider.activeLanguages.isNotEmpty) {
+                          final matches = dynamicProvider.activeLanguages
+                              .where((l) => l.name == languageName)
+                              .toList();
+                          if (matches.isNotEmpty) {
+                            final lang = matches.first;
+                            displayName = '${lang.name} (${lang.nativeName})';
+                          }
                         }
 
                         return InkWell(
@@ -223,9 +240,9 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.grey),
+                        child: Text(
+                          LocalizationHelper.cancel(context),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -277,9 +294,9 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Submit',
-                          style: TextStyle(
+                        child: Text(
+                          LocalizationHelper.submit(context),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),

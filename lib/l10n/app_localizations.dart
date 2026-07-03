@@ -221,6 +221,36 @@ abstract class AppLocalizations {
   /// **'Headlines'**
   String get headlines;
 
+  /// Bottom navigation For You personalized feed label
+  ///
+  /// In en, this message translates to:
+  /// **'For You'**
+  String get forYou;
+
+  /// For You feed header subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Stories picked from your interests'**
+  String get pickedForYouSubtitle;
+
+  /// Section title below featured mosaic on For You tab
+  ///
+  /// In en, this message translates to:
+  /// **'More for you'**
+  String get moreStoriesForYou;
+
+  /// Number of stories in For You feed
+  ///
+  /// In en, this message translates to:
+  /// **'{count} stories'**
+  String storiesCount(int count);
+
+  /// Catchy line before deep link when sharing a news article
+  ///
+  /// In en, this message translates to:
+  /// **'🔥 Wait — there\'s more to this story. Tap to read on NewsOn 👇'**
+  String get shareNewsCuriousCta;
+
   /// News feed tab title
   ///
   /// In en, this message translates to:
@@ -940,6 +970,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Website'**
   String get website;
+
+  /// Region filter bottom sheet title
+  ///
+  /// In en, this message translates to:
+  /// **'Select Region'**
+  String get selectRegion;
+
+  /// Country dropdown label
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get regionCountry;
+
+  /// State dropdown label
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get regionState;
+
+  /// District dropdown label
+  ///
+  /// In en, this message translates to:
+  /// **'District'**
+  String get regionDistrict;
+
+  /// Dropdown placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Select an option'**
+  String get selectOption;
+
+  /// Apply button
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
+
+  /// Reset button
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// Empty state when region filter returns no news
+  ///
+  /// In en, this message translates to:
+  /// **'No news available for selected region'**
+  String get noNewsForRegion;
+
+  /// Globe icon tooltip
+  ///
+  /// In en, this message translates to:
+  /// **'Filter news by region'**
+  String get selectRegionTooltip;
+
+  /// No description provided for @noBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'No Bookmarks'**
+  String get noBookmarks;
+
+  /// No description provided for @bookmarksWillAppearHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Articles you bookmark will appear here'**
+  String get bookmarksWillAppearHere;
+
+  /// No description provided for @errorLoadingBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading bookmarks'**
+  String get errorLoadingBookmarks;
+
+  /// No description provided for @clearBookmarksMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove all saved articles. This action cannot be undone.'**
+  String get clearBookmarksMessage;
+
+  /// No description provided for @errorPlayingAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Error playing audio: {error}'**
+  String errorPlayingAudio(String error);
+
+  /// No description provided for @failedToPlayAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to play audio: {error}'**
+  String failedToPlayAudio(String error);
+
+  /// No description provided for @noBreakingNewsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No breaking news available'**
+  String get noBreakingNewsAvailable;
+
+  /// No description provided for @noNewsForThisCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'No news available for this category'**
+  String get noNewsForThisCategory;
+
+  /// No description provided for @recentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Searches'**
+  String get recentSearches;
+
+  /// No description provided for @searchNewsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search news...'**
+  String get searchNewsHint;
+
+  /// No description provided for @enterKeywordsToFindArticles.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter keywords to find articles'**
+  String get enterKeywordsToFindArticles;
+
+  /// No description provided for @orTryVoiceSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Or try voice search using the microphone'**
+  String get orTryVoiceSearch;
+
+  /// No description provided for @tryDifferentKeywords.
+  ///
+  /// In en, this message translates to:
+  /// **'Try different keywords or check your spelling'**
+  String get tryDifferentKeywords;
+
+  /// No description provided for @sourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String sourceLabel(String source);
+
+  /// No description provided for @authorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Author: {author}'**
+  String authorLabel(String author);
+
+  /// No description provided for @publishedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Published: {date}'**
+  String publishedLabel(String date);
+
+  /// No description provided for @justNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get justNow;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get selectAll;
+
+  /// No description provided for @deselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect All'**
+  String get deselectAll;
+
+  /// No description provided for @updatePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Preferences'**
+  String get updatePreferences;
+
+  /// No description provided for @categoriesSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{selected} of {total} selected'**
+  String categoriesSelectedCount(int selected, int total);
+
+  /// No description provided for @agreeToTermsPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing, you agree to our Terms & Privacy Policy'**
+  String get agreeToTermsPrivacy;
+
+  /// No description provided for @tapToPlayArticle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to play article'**
+  String get tapToPlayArticle;
+
+  /// No description provided for @selectNewsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select News Language'**
+  String get selectNewsLanguage;
+
+  /// No description provided for @selectAppLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select App Language'**
+  String get selectAppLanguage;
+
+  /// No description provided for @submit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get submit;
+
+  /// No description provided for @shareThisNews.
+  ///
+  /// In en, this message translates to:
+  /// **'Share this news'**
+  String get shareThisNews;
+
+  /// No description provided for @shareThisNewsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends with NewsOn can open the article in the app'**
+  String get shareThisNewsSubtitle;
+
+  /// No description provided for @generatingAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating Audio...'**
+  String get generatingAudio;
+
+  /// No description provided for @convertingTextToSpeech.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting text to speech with ElevenLabs'**
+  String get convertingTextToSpeech;
+
+  /// No description provided for @sponsored.
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsored'**
+  String get sponsored;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete your account and all associated data. This action cannot be undone.'**
+  String get deleteAccountMessage;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @signInToReadSharedArticle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to read the shared article'**
+  String get signInToReadSharedArticle;
+
+  /// No description provided for @pleaseWaitSettingUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait while we set things up'**
+  String get pleaseWaitSettingUp;
+
+  /// No description provided for @signInWithApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Apple'**
+  String get signInWithApple;
+
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @failedToLoadCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load categories'**
+  String get failedToLoadCategories;
+
+  /// No description provided for @errorLoadingNews.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading news: {error}'**
+  String errorLoadingNews(String error);
+
+  /// No description provided for @playing.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing...'**
+  String get playing;
+
+  /// No description provided for @paused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get paused;
+
+  /// No description provided for @voiceFeaturesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice and audio features are currently unavailable.'**
+  String get voiceFeaturesUnavailable;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

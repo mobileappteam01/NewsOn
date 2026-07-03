@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/deep_link_constants.dart';
+import '../../core/utils/localization_helper.dart';
 import '../models/news_article.dart';
 
 /// Builds share text + deep link and opens the system share sheet.
@@ -14,7 +15,11 @@ class NewsShareService {
     return null;
   }
 
-  static String buildShareText(NewsArticle article) {
+  /// Title, short description, catchy CTA, and app deep link only.
+  static String buildShareText(
+    NewsArticle article, {
+    String? curiousCta,
+  }) {
     final id = articleIdFor(article);
     final buffer = StringBuffer();
 
@@ -28,40 +33,32 @@ class NewsShareService {
       );
     }
 
-    buffer.writeln();
     if (id != null) {
+      final cta = curiousCta ?? LocalizationHelper.shareNewsCuriousCtaFallback();
       final httpsLink = DeepLinkConstants.buildHttpsDeepLink(id);
-      // Primary tap target — opens the app when installed (App Link / deep link).
-      buffer.writeln('Read in NewsOn:');
+      buffer.writeln();
+      buffer.writeln(cta);
       buffer.writeln(httpsLink.toString());
-      buffer.writeln();
-      buffer.writeln('Don\'t have NewsOn? Install:');
-      buffer.writeln(DeepLinkConstants.playStoreUrl);
-    } else {
-      buffer.writeln('Get NewsOn:');
-      buffer.writeln(DeepLinkConstants.playStoreUrl);
-    }
-
-    if (article.link != null && article.link!.trim().isNotEmpty) {
-      buffer.writeln();
-      buffer.writeln('Source:');
-      buffer.writeln(article.link!.trim());
     }
 
     return buffer.toString().trim();
   }
 
-  static Future<void> shareArticle(NewsArticle article) async {
+  static Future<void> shareArticle(
+    NewsArticle article, {
+    String? curiousCta,
+  }) async {
     final id = articleIdFor(article);
     if (id == null) {
       debugPrint('⚠️ Cannot share: article has no articleId');
       await Share.share(
-        '${article.title}\n\n${article.link ?? ''}\n\n${DeepLinkConstants.playStoreUrl}',
+        buildShareText(article, curiousCta: curiousCta),
+        subject: article.title,
       );
       return;
     }
 
-    final text = buildShareText(article);
+    final text = buildShareText(article, curiousCta: curiousCta);
     final httpsUri = DeepLinkConstants.buildHttpsDeepLink(id);
 
     await Share.share(

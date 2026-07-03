@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/remote_config_provider.dart';
+import '../utils/localization_helper.dart';
 
 /// Beautiful loading overlay that appears when ElevenLabs API is generating audio
 class AudioLoadingOverlay extends StatelessWidget {
@@ -110,7 +111,7 @@ class AudioLoadingOverlay extends StatelessWidget {
 
                   // Loading text
                   Text(
-                    'Generating Audio...',
+                    LocalizationHelper.generatingAudio(context),
                     style: GoogleFonts.playfairDisplay(
                       color: isDark ? Colors.white : Colors.black87,
                       fontSize: 22,
@@ -155,7 +156,7 @@ class AudioLoadingOverlay extends StatelessWidget {
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Converting text to speech with ElevenLabs',
+                          LocalizationHelper.convertingTextToSpeech(context),
                           style: GoogleFonts.inter(
                             color: isDark ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 12,

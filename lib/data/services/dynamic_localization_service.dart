@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/language_model.dart';
+import '../../core/constants/news_language_constants.dart';
 
 /// Service for managing dynamic localization from Firebase
 /// 
@@ -156,23 +157,12 @@ class DynamicLocalizationService {
 
   /// Use default languages when Firebase is unavailable
   void _useDefaultLanguages() {
-    _supportedLanguages = [
-      LanguageModel(
-        code: 'en',
-        name: 'English',
-        nativeName: 'English',
-        isDefault: false,
-        flagEmoji: '🇺🇸',
-      ),
-      LanguageModel(
-        code: 'ta',
-        name: 'Tamil',
-        nativeName: 'தமிழ்',
-        isDefault: true,
-        flagEmoji: '🇮🇳',
-      ),
-    ];
-    debugPrint('📦 Using default languages: ${_supportedLanguages.map((l) => l.code).toList()}');
+    _supportedLanguages = List<LanguageModel>.from(
+      NewsLanguageConstants.languages,
+    );
+    debugPrint(
+      '📦 Using default languages: ${_supportedLanguages.map((l) => l.code).toList()}',
+    );
   }
 
   /// Save languages to SharedPreferences cache

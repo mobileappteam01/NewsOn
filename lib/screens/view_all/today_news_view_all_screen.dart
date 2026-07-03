@@ -9,6 +9,7 @@ import '../news_detail/news_detail_screen.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/news_share_bottom_sheet.dart';
+import '../../core/utils/localization_helper.dart';
 
 /// View All screen for Today's News with pagination
 class TodayNewsViewAllScreen extends StatefulWidget {
@@ -126,7 +127,8 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading news: $e'),
+            content:
+                Text(LocalizationHelper.errorLoadingNews(context, e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -172,8 +174,8 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                       child: Text(
                         widget.selectedCategory != null &&
                                 widget.selectedCategory!.isNotEmpty
-                            ? 'No news available for this category'
-                            : 'No news available for this date',
+                            ? LocalizationHelper.noNewsForThisCategory(context)
+                            : LocalizationHelper.noNewsForDate(context),
                         style: TextStyle(color: theme.colorScheme.secondary),
                       ),
                     )
@@ -228,7 +230,9 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Error playing audio: $e'),
+                                      content: Text(
+                                          LocalizationHelper.errorPlayingAudio(
+                                              context, e.toString())),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -251,8 +255,10 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                                     SnackBar(
                                       content: Text(
                                         newStatus
-                                            ? 'Added to bookmarks'
-                                            : 'Removed from bookmarks',
+                                            ? LocalizationHelper
+                                                .addedToBookmarks(context)
+                                            : LocalizationHelper
+                                                .removedFromBookmarks(context),
                                       ),
                                       duration: const Duration(seconds: 1),
                                     ),
@@ -262,7 +268,8 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Error: ${e.toString()}'),
+                                      content: Text(LocalizationHelper.error(
+                                          context, e.toString())),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );

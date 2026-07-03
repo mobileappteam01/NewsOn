@@ -13,12 +13,14 @@ import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
 import '../../data/services/app_update_service.dart';
 import '../../core/widgets/app_drawer.dart';
+import '../../core/widgets/anchor_banner_ad.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 import '../../core/widgets/app_update_dialog.dart';
+import '../../data/services/ad_service.dart';
 import '../../data/services/deep_link_service.dart';
 import '../home/tabs/news_feed_tab_new.dart';
-import '../categories/categories_tab.dart';
+import 'tabs/for_you_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
 import '../search/search_tab.dart';
 
@@ -176,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     selectedCategories: widget.selectedCategories,
                     newsList: newsList,
                   ),
-                  const CategoriesTab(),
+                  const ForYouTab(),
                   const BookmarksTab(),
                   const SearchTab(),
                 ],
@@ -265,10 +267,24 @@ class _HomeScreenState extends State<HomeScreen> {
               //   ),
             ],
           ),
-          bottomNavigationBar: _buildBottomBar(theme, config),
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_showHomeAnchorBanner())
+                const AnchorBannerAd(),
+              _buildBottomBar(theme, config),
+            ],
+          ),
         );
       },
     );
+  }
+
+  bool _showHomeAnchorBanner() {
+    final policy = AdService().policy;
+    if (!policy.enabled || !policy.anchorBannerEnabled) return false;
+    // Bookmarks tab uses its own bottom banner.
+    return _currentIndex != 2;
   }
 
   Widget _buildBottomBar(ThemeData theme, RemoteConfigModel config) {
@@ -319,14 +335,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Expanded(
                         child: _buildBottomNavItem(
-                          Image.network(
-                            config.headlineImg,
-                            height: 24,
+                          Icon(
+                            Icons.auto_awesome_outlined,
                             color: _currentIndex == 1
                                 ? config.primaryColorValue
                                 : theme.colorScheme.secondary,
                           ),
-                          LocalizationHelper.headlines(context),
+                          LocalizationHelper.forYou(context),
                           onTap: () => setState(() => _currentIndex = 1),
                           isSelected: _currentIndex == 1,
                         ),

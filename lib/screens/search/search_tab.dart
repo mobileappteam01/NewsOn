@@ -8,6 +8,9 @@ import '../../providers/language_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/utils/ad_placement_helper.dart';
+import '../../core/widgets/inline_feed_ad.dart';
+import '../../data/services/ad_service.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../data/models/remote_config_model.dart';
 import '../../providers/remote_config_provider.dart';
@@ -468,7 +471,7 @@ class _SearchTabState extends State<SearchTab>
                       controller: _searchController,
                       autofocus: false,
                       decoration: InputDecoration(
-                        hintText: 'Search news...',
+                        hintText: LocalizationHelper.searchNewsHint(context),
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: _buildSearchSuffixIcons(remoteConfig),
                         border: OutlineInputBorder(
@@ -809,7 +812,7 @@ class _SearchTabState extends State<SearchTab>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Searches',
+                  LocalizationHelper.recentSearches(context),
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -821,7 +824,7 @@ class _SearchTabState extends State<SearchTab>
                     });
                   },
                   child: Text(
-                    'Clear',
+                    LocalizationHelper.clear(context),
                     style: TextStyle(color: config.primaryColorValue),
                   ),
                 ),
@@ -870,7 +873,7 @@ class _SearchTabState extends State<SearchTab>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Enter keywords to find articles',
+                    LocalizationHelper.enterKeywordsToFindArticles(context),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
@@ -878,7 +881,7 @@ class _SearchTabState extends State<SearchTab>
                   if (_isVoiceSearchInitialized) ...[
                     const SizedBox(height: 16),
                     Text(
-                      'Or try voice search using the microphone',
+                      LocalizationHelper.orTryVoiceSearch(context),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: config.primaryColorValue,
                         fontWeight: FontWeight.w500,
@@ -907,14 +910,15 @@ class _SearchTabState extends State<SearchTab>
             Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              'Error',
+              LocalizationHelper.somethingWentWrong(context),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              newsProvider.error ?? 'An error occurred',
+              newsProvider.error ??
+                  LocalizationHelper.somethingWentWrong(context),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
             ),
@@ -929,7 +933,7 @@ class _SearchTabState extends State<SearchTab>
                 }
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(LocalizationHelper.retry(context)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: config.primaryColorValue,
                 foregroundColor: Colors.white,
@@ -959,14 +963,14 @@ class _SearchTabState extends State<SearchTab>
             ),
             const SizedBox(height: 16),
             Text(
-              'No results found',
+              LocalizationHelper.noResultsFound(context),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Try different keywords or check your spelling',
+              LocalizationHelper.tryDifferentKeywords(context),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -976,6 +980,16 @@ class _SearchTabState extends State<SearchTab>
         ),
       ),
     );
+  }
+
+  int _searchListItemCount(NewsProvider newsProvider) {
+    final count = newsProvider.articles.length;
+    final policy = AdService().policy;
+    final withAds = AdPlacementHelper.shouldShowInlineAds(policy) &&
+        policy.searchInlineEnabled;
+    final feed =
+        withAds ? AdPlacementHelper.totalItemCount(count) : count;
+    return feed + (newsProvider.isLoadingMore ? 1 : 0);
   }
 
   Widget _buildSearchResults(
@@ -1025,20 +1039,45 @@ class _SearchTabState extends State<SearchTab>
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
-            itemCount: newsProvider.articles.length +
-                (newsProvider.isLoadingMore ? 1 : 0),
+            itemCount: _searchListItemCount(newsProvider),
             itemBuilder: (context, index) {
-              // Show loading indicator at the end when loading more
-              if (index == newsProvider.articles.length) {
+              final articleCount = newsProvider.articles.length;
+              final feedItems = AdPlacementHelper.shouldShowInlineAds(
+                    AdService().policy,
+                  ) &&
+                  AdService().policy.searchInlineEnabled
+                  ? AdPlacementHelper.totalItemCount(articleCount)
+                  : articleCount;
+
+              if (index >= feedItems) {
                 return const Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
 
-              final article = newsProvider.articles[index];
+              final adsOn = AdPlacementHelper.shouldShowInlineAds(
+                    AdService().policy,
+                  ) &&
+                  AdService().policy.searchInlineEnabled;
+
+              if (adsOn && AdPlacementHelper.isAdSlot(index)) {
+                return InlineFeedAd(
+                  slotIndex: AdPlacementHelper.adSlotIndex(index),
+                );
+              }
+
+              final articleIndex = adsOn
+                  ? AdPlacementHelper.articleIndexForListIndex(index)
+                  : index;
+
+              if (articleIndex >= articleCount) {
+                return const SizedBox.shrink();
+              }
+
+              final article = newsProvider.articles[articleIndex];
               return NewsGridView(
-                key: ValueKey('today_${article.articleId ?? index}'),
+                key: ValueKey('search_${article.articleId ?? articleIndex}'),
                 type: 'listview',
                 newsDetails: article,
                 onListenTapped: () async {
@@ -1072,7 +1111,8 @@ class _SearchTabState extends State<SearchTab>
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error playing audio: $e'),
+                          content: Text(LocalizationHelper.errorPlayingAudio(
+                              context, e.toString())),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -1098,8 +1138,9 @@ class _SearchTabState extends State<SearchTab>
                         SnackBar(
                           content: Text(
                             newStatus
-                                ? 'Added to bookmarks'
-                                : 'Removed from bookmarks',
+                                ? LocalizationHelper.addedToBookmarks(context)
+                                : LocalizationHelper.removedFromBookmarks(
+                                    context),
                           ),
                           duration: const Duration(seconds: 1),
                         ),
@@ -1109,7 +1150,8 @@ class _SearchTabState extends State<SearchTab>
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error: ${e.toString()}'),
+                          content: Text(
+                              LocalizationHelper.error(context, e.toString())),
                           duration: const Duration(seconds: 2),
                         ),
                       );

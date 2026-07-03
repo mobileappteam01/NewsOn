@@ -211,6 +211,56 @@ class LocalizationHelper {
         key: 'headlines');
   }
 
+  /// Personalized For You tab label
+  static String forYou(BuildContext context) {
+    return _getString(context, (l10n) => l10n.forYou, 'For You', key: 'forYou');
+  }
+
+  static String pickedForYouSubtitle(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.pickedForYouSubtitle,
+      'Stories picked from your interests',
+      key: 'pickedForYouSubtitle',
+    );
+  }
+
+  static String moreStoriesForYou(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.moreStoriesForYou,
+      'More for you',
+      key: 'moreStoriesForYou',
+    );
+  }
+
+  static String storiesCount(BuildContext context, int count) {
+    return _getString(
+      context,
+      (l10n) => l10n.storiesCount(count),
+      '$count stories',
+      key: 'storiesCount',
+    );
+  }
+
+  /// Catchy share CTA shown before the NewsOn deep link.
+  static String shareNewsCuriousCta(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.shareNewsCuriousCta,
+      '🔥 Wait — there\'s more to this story. Tap to read on NewsOn 👇',
+      key: 'shareNewsCuriousCta',
+    );
+  }
+
+  /// Share CTA without [BuildContext] (uses dynamic localization / English).
+  static String shareNewsCuriousCtaFallback() {
+    return _getDynamic(
+      'shareNewsCuriousCta',
+      '🔥 Wait — there\'s more to this story. Tap to read on NewsOn 👇',
+    );
+  }
+
   /// Get localized string for news feed
   static String newsFeed(BuildContext context) {
     return _getString(context, (l10n) => l10n.newsFeed, 'News Feed',
@@ -1056,4 +1106,309 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.backgroundMusicDisabled,
         'Background music disabled', key: 'backgroundMusicDisabled');
   }
+
+  static String selectRegion(BuildContext context) {
+    return _getString(context, (l10n) => l10n.selectRegion, 'Select Region',
+        key: 'selectRegion');
+  }
+
+  static String regionCountry(BuildContext context) {
+    return _getString(context, (l10n) => l10n.regionCountry, 'Country',
+        key: 'regionCountry');
+  }
+
+  static String regionState(BuildContext context) {
+    return _getString(context, (l10n) => l10n.regionState, 'State',
+        key: 'regionState');
+  }
+
+  static String regionDistrict(BuildContext context) {
+    return _getString(context, (l10n) => l10n.regionDistrict, 'District',
+        key: 'regionDistrict');
+  }
+
+  static String selectOption(BuildContext context) {
+    return _getString(context, (l10n) => l10n.selectOption, 'Select an option',
+        key: 'selectOption');
+  }
+
+  static String apply(BuildContext context) {
+    return _getString(context, (l10n) => l10n.apply, 'Apply', key: 'apply');
+  }
+
+  static String reset(BuildContext context) {
+    return _getString(context, (l10n) => l10n.reset, 'Reset', key: 'reset');
+  }
+
+  static String noNewsForRegion(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.noNewsForRegion,
+      'No news available for selected region',
+      key: 'noNewsForRegion',
+    );
+  }
+
+  static String selectRegionTooltip(BuildContext context) {
+    return _getString(
+      context,
+      (l10n) => l10n.selectRegionTooltip,
+      'Filter news by region',
+      key: 'selectRegionTooltip',
+    );
+  }
+
+  static String noBookmarks(BuildContext context) => _getString(
+      context, (l10n) => l10n.noBookmarks, 'No Bookmarks', key: 'noBookmarks');
+
+  static String bookmarksWillAppearHere(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.bookmarksWillAppearHere,
+      'Articles you bookmark will appear here',
+      key: 'bookmarksWillAppearHere');
+
+  static String errorLoadingBookmarks(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.errorLoadingBookmarks,
+      'Error loading bookmarks',
+      key: 'errorLoadingBookmarks');
+
+  static String clearBookmarksMessage(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.clearBookmarksMessage,
+      'This will remove all saved articles. This action cannot be undone.',
+      key: 'clearBookmarksMessage');
+
+  static String errorPlayingAudio(BuildContext context, String error) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.errorPlayingAudio(error);
+      } catch (_) {}
+    }
+    return 'Error playing audio: $error';
+  }
+
+  static String failedToPlayAudio(BuildContext context, String error) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.failedToPlayAudio(error);
+      } catch (_) {}
+    }
+    return 'Failed to play audio: $error';
+  }
+
+  static String noBreakingNewsAvailable(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.noBreakingNewsAvailable,
+      'No breaking news available',
+      key: 'noBreakingNewsAvailable');
+
+  static String noNewsForThisCategory(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.noNewsForThisCategory,
+      'No news available for this category',
+      key: 'noNewsForThisCategory');
+
+  static String recentSearches(BuildContext context) => _getString(context,
+      (l10n) => l10n.recentSearches, 'Recent Searches', key: 'recentSearches');
+
+  static String searchNewsHint(BuildContext context) => _getString(context,
+      (l10n) => l10n.searchNewsHint, 'Search news...', key: 'searchNewsHint');
+
+  static String enterKeywordsToFindArticles(BuildContext context) =>
+      _getString(
+          context,
+          (l10n) => l10n.enterKeywordsToFindArticles,
+          'Enter keywords to find articles',
+          key: 'enterKeywordsToFindArticles');
+
+  static String orTryVoiceSearch(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.orTryVoiceSearch,
+      'Or try voice search using the microphone',
+      key: 'orTryVoiceSearch');
+
+  static String tryDifferentKeywords(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.tryDifferentKeywords,
+      'Try different keywords or check your spelling',
+      key: 'tryDifferentKeywords');
+
+  static String sourceLabel(BuildContext context, String source) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.sourceLabel(source);
+      } catch (_) {}
+    }
+    return 'Source: $source';
+  }
+
+  static String authorLabel(BuildContext context, String author) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.authorLabel(author);
+      } catch (_) {}
+    }
+    return 'Author: $author';
+  }
+
+  static String publishedLabel(BuildContext context, String date) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.publishedLabel(date);
+      } catch (_) {}
+    }
+    return 'Published: $date';
+  }
+
+  static String justNow(BuildContext context) =>
+      _getString(context, (l10n) => l10n.justNow, 'Just now', key: 'justNow');
+
+  static String selectAll(BuildContext context) => _getString(
+      context, (l10n) => l10n.selectAll, 'Select All', key: 'selectAll');
+
+  static String deselectAll(BuildContext context) => _getString(
+      context, (l10n) => l10n.deselectAll, 'Deselect All', key: 'deselectAll');
+
+  static String updatePreferences(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.updatePreferences,
+      'Update Preferences',
+      key: 'updatePreferences');
+
+  static String categoriesSelectedCount(
+      BuildContext context, int selected, int total) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.categoriesSelectedCount(selected, total);
+      } catch (_) {}
+    }
+    return '$selected of $total selected';
+  }
+
+  static String agreeToTermsPrivacy(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.agreeToTermsPrivacy,
+      'By continuing, you agree to our Terms & Privacy Policy',
+      key: 'agreeToTermsPrivacy');
+
+  static String tapToPlayArticle(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.tapToPlayArticle,
+      'Tap to play article',
+      key: 'tapToPlayArticle');
+
+  static String selectNewsLanguage(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.selectNewsLanguage,
+      'Select News Language',
+      key: 'selectNewsLanguage');
+
+  static String selectAppLanguage(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.selectAppLanguage,
+      'Select App Language',
+      key: 'selectAppLanguage');
+
+  static String submit(BuildContext context) =>
+      _getString(context, (l10n) => l10n.submit, 'Submit', key: 'submit');
+
+  static String shareThisNews(BuildContext context) => _getString(context,
+      (l10n) => l10n.shareThisNews, 'Share this news', key: 'shareThisNews');
+
+  static String shareThisNewsSubtitle(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.shareThisNewsSubtitle,
+      'Friends with NewsOn can open the article in the app',
+      key: 'shareThisNewsSubtitle');
+
+  static String generatingAudio(BuildContext context) => _getString(context,
+      (l10n) => l10n.generatingAudio, 'Generating Audio...',
+      key: 'generatingAudio');
+
+  static String convertingTextToSpeech(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.convertingTextToSpeech,
+      'Converting text to speech with ElevenLabs',
+      key: 'convertingTextToSpeech');
+
+  static String sponsored(BuildContext context) =>
+      _getString(context, (l10n) => l10n.sponsored, 'Sponsored',
+          key: 'sponsored');
+
+  static String deleteAccount(BuildContext context) => _getString(context,
+      (l10n) => l10n.deleteAccount, 'Delete Account', key: 'deleteAccount');
+
+  static String deleteAccountTitle(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.deleteAccountTitle,
+      'Delete account?',
+      key: 'deleteAccountTitle');
+
+  static String deleteAccountMessage(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.deleteAccountMessage,
+      'This will permanently delete your account and all associated data. This action cannot be undone.',
+      key: 'deleteAccountMessage');
+
+  static String delete(BuildContext context) =>
+      _getString(context, (l10n) => l10n.delete, 'Delete', key: 'delete');
+
+  static String signInToReadSharedArticle(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.signInToReadSharedArticle,
+      'Sign in to read the shared article',
+      key: 'signInToReadSharedArticle');
+
+  static String pleaseWaitSettingUp(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.pleaseWaitSettingUp,
+      'Please wait while we set things up',
+      key: 'pleaseWaitSettingUp');
+
+  static String signInWithApple(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.signInWithApple,
+      'Sign in with Apple',
+      key: 'signInWithApple');
+
+  static String continueWithGoogle(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.continueWithGoogle,
+      'Continue with Google',
+      key: 'continueWithGoogle');
+
+  static String failedToLoadCategories(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.failedToLoadCategories,
+      'Failed to load categories',
+      key: 'failedToLoadCategories');
+
+  static String errorLoadingNews(BuildContext context, String error) {
+    final l10n = of(context);
+    if (l10n != null) {
+      try {
+        return l10n.errorLoadingNews(error);
+      } catch (_) {}
+    }
+    return 'Error loading news: $error';
+  }
+
+  static String playing(BuildContext context) =>
+      _getString(context, (l10n) => l10n.playing, 'Playing...', key: 'playing');
+
+  static String paused(BuildContext context) =>
+      _getString(context, (l10n) => l10n.paused, 'Paused', key: 'paused');
+
+  static String voiceFeaturesUnavailable(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.voiceFeaturesUnavailable,
+      'Voice and audio features are currently unavailable.',
+      key: 'voiceFeaturesUnavailable');
 }

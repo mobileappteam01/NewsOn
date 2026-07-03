@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/news_language_constants.dart';
 import '../data/services/storage_service.dart';
 import '../data/services/dynamic_localization_service.dart';
 
@@ -17,6 +18,36 @@ class LanguageProvider extends ChangeNotifier {
     'English': const Locale('en'),
     'Tamil': const Locale('ta'),
   };
+
+  /// Languages for news API requests (includes Indian regional languages).
+  Map<String, Locale> get newsLanguages {
+    final Map<String, Locale> languages =
+        Map<String, Locale>.from(NewsLanguageConstants.localeMap);
+
+    final dynamicService = DynamicLocalizationService();
+    for (final lang in dynamicService.activeLanguages) {
+      languages[lang.name] = Locale(lang.code);
+    }
+
+    return languages;
+  }
+
+  List<String> get newsLanguageNames => newsLanguages.keys.toList();
+
+  String nativeNameForNewsLanguage(String languageName) {
+    final fromConstants = NewsLanguageConstants.findByName(languageName);
+    if (fromConstants != null) return fromConstants.nativeName;
+
+    final dynamicService = DynamicLocalizationService();
+    final dynamicLang = dynamicService.getLanguageByCode(
+      newsLanguages[languageName]?.languageCode ?? '',
+    );
+    if (dynamicLang != null && dynamicLang.nativeName.isNotEmpty) {
+      return dynamicLang.nativeName;
+    }
+
+    return languageName;
+  }
 
   /// Get supported languages - combines base + dynamic active languages
   Map<String, Locale> get supportedLanguages {
@@ -105,17 +136,17 @@ class LanguageProvider extends ChangeNotifier {
 
   /// Set news language only (affects news API fetch). Does not change app UI language.
   Future<void> setNewsLanguage(String languageName) async {
-    if (supportedLanguages.containsKey(languageName)) {
-      final code = supportedLanguages[languageName]!.languageCode;
+    if (newsLanguages.containsKey(languageName)) {
+      final code = newsLanguages[languageName]!.languageCode;
       await setNewsLanguageByCode(code);
     } else {
       debugPrint('⚠️ Unsupported news language: $languageName');
     }
   }
 
-  /// Set news language by code (e.g. 'en', 'ta').
+  /// Set news language by code (e.g. 'en', 'ta', 'hi').
   Future<void> setNewsLanguageByCode(String code) async {
-    final isSupported = supportedLanguages.values
+    final isSupported = newsLanguages.values
         .any((loc) => loc.languageCode == code);
     if (isSupported) {
       _newsLanguageCode = code;
@@ -131,10 +162,10 @@ class LanguageProvider extends ChangeNotifier {
   String get newsLanguageName => _getLanguageNameFromCode(_newsLanguageCode);
 
   String _getLanguageNameFromCode(String code) {
-    for (final entry in supportedLanguages.entries) {
+    for (final entry in newsLanguages.entries) {
       if (entry.value.languageCode == code) return entry.key;
     }
-    return 'Tamil';
+    return NewsLanguageConstants.languageNameForCode(code);
   }
 
   /// Get locale from language name

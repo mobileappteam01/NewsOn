@@ -1097,7 +1097,8 @@ class _CategoriesTabState extends State<CategoriesTab>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to play audio: ${e.toString()}'),
+            content: Text(
+                LocalizationHelper.failedToPlayAudio(context, e.toString())),
             backgroundColor: Colors.red,
           ),
         );

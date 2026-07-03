@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../data/services/ad_service.dart';
+import 'ad_labeled_slot.dart';
 
 class BannerAdWidget extends StatefulWidget {
   final AdSize adSize;
@@ -36,11 +37,13 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
       await adService.initialize();
     }
 
+    if (!adService.policy.enabled) return;
+
     _loadBannerAd();
   }
 
   void _loadBannerAd() {
-    if (_isLoading) return;
+    if (_isLoading || !AdService().policy.enabled) return;
 
     setState(() {
       _isLoading = true;
@@ -105,15 +108,19 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isAdLoaded || _bannerAd == null) {
+    if (!AdService().policy.enabled || !_isAdLoaded || _bannerAd == null) {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      alignment: Alignment.center,
-      width: _bannerAd!.size.width.toDouble(),
-      height: _bannerAd!.size.height.toDouble(),
-      child: AdWidget(ad: _bannerAd!),
+    return AdLabeledSlot(
+      margin: EdgeInsets.zero,
+      child: Center(
+        child: SizedBox(
+          width: _bannerAd!.size.width.toDouble(),
+          height: _bannerAd!.size.height.toDouble(),
+          child: AdWidget(ad: _bannerAd!),
+        ),
+      ),
     );
   }
 }
@@ -131,10 +138,11 @@ class BannerAdContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!AdService().policy.enabled) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
-      margin: const EdgeInsets.symmetric(
-        vertical: 12,
-      ),
       color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         top: false,

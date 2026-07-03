@@ -9,6 +9,7 @@ import '../../data/models/remote_config_model.dart';
 import '../../data/services/storage_service.dart';
 import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../core/utils/localization_helper.dart';
 import '../welcome/welcome_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -149,10 +150,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 16),
                 _BottomCta(
                   red: red,
-                  label:
-                      _index == onBoardingContent.length - 1
-                          ? 'Get started'
-                          : 'Continue',
+                  label: _index == onBoardingContent.length - 1
+                      ? LocalizationHelper.getStarted(context)
+                      : LocalizationHelper.continueText(context),
                   onTap: _next,
                 ),
                 const SizedBox(height: 16),
@@ -167,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   TextButton(
                     onPressed: onBoardingContent.isNotEmpty ? _skip : null,
                     child: Text(
-                      'Skip',
+                      LocalizationHelper.skip(context),
                       style: TextStyle(color: red, fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -386,10 +386,10 @@ class _NameField extends StatelessWidget {
             child: TextField(
               controller: controller,
               style: TextStyle(color: Colors.black),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Enter your nick name',
-                hintStyle: TextStyle(
+                hintText: LocalizationHelper.enterYourName(context),
+                hintStyle: const TextStyle(
                   color: Colors.black54,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

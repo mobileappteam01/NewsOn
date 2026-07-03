@@ -90,7 +90,7 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
                     ),
                     giveHeight(24),
                     Text(
-                      'Voice and audio features are currently unavailable.',
+                      LocalizationHelper.voiceFeaturesUnavailable(context),
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         color: theme.colorScheme.secondary,

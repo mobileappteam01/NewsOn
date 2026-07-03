@@ -71,6 +71,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get headlines => 'Titulares';
 
   @override
+  String get forYou => 'Para ti';
+
+  @override
+  String get pickedForYouSubtitle => 'Historias elegidas según tus intereses';
+
+  @override
+  String get moreStoriesForYou => 'Más para ti';
+
+  @override
+  String storiesCount(int count) {
+    return '$count historias';
+  }
+
+  @override
+  String get shareNewsCuriousCta => '🔥 ¿Qué pasó realmente? Léelo completo en NewsOn 👇';
+
+  @override
   String get newsFeed => 'Feed de Noticias';
 
   @override
@@ -433,4 +450,177 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get website => 'Sitio web';
+
+  @override
+  String get selectRegion => 'Seleccionar región';
+
+  @override
+  String get regionCountry => 'País';
+
+  @override
+  String get regionState => 'Estado';
+
+  @override
+  String get regionDistrict => 'Distrito';
+
+  @override
+  String get selectOption => 'Seleccionar una opción';
+
+  @override
+  String get apply => 'Aplicar';
+
+  @override
+  String get reset => 'Restablecer';
+
+  @override
+  String get noNewsForRegion => 'No hay noticias disponibles para la región seleccionada';
+
+  @override
+  String get selectRegionTooltip => 'Filtrar noticias por región';
+
+  @override
+  String get noBookmarks => 'No Bookmarks';
+
+  @override
+  String get bookmarksWillAppearHere => 'Articles you bookmark will appear here';
+
+  @override
+  String get errorLoadingBookmarks => 'Error loading bookmarks';
+
+  @override
+  String get clearBookmarksMessage => 'This will remove all saved articles. This action cannot be undone.';
+
+  @override
+  String errorPlayingAudio(String error) {
+    return 'Error playing audio: $error';
+  }
+
+  @override
+  String failedToPlayAudio(String error) {
+    return 'Failed to play audio: $error';
+  }
+
+  @override
+  String get noBreakingNewsAvailable => 'No breaking news available';
+
+  @override
+  String get noNewsForThisCategory => 'No news available for this category';
+
+  @override
+  String get recentSearches => 'Recent Searches';
+
+  @override
+  String get searchNewsHint => 'Search news...';
+
+  @override
+  String get enterKeywordsToFindArticles => 'Enter keywords to find articles';
+
+  @override
+  String get orTryVoiceSearch => 'Or try voice search using the microphone';
+
+  @override
+  String get tryDifferentKeywords => 'Try different keywords or check your spelling';
+
+  @override
+  String sourceLabel(String source) {
+    return 'Source: $source';
+  }
+
+  @override
+  String authorLabel(String author) {
+    return 'Author: $author';
+  }
+
+  @override
+  String publishedLabel(String date) {
+    return 'Published: $date';
+  }
+
+  @override
+  String get justNow => 'Just now';
+
+  @override
+  String get selectAll => 'Select All';
+
+  @override
+  String get deselectAll => 'Deselect All';
+
+  @override
+  String get updatePreferences => 'Update Preferences';
+
+  @override
+  String categoriesSelectedCount(int selected, int total) {
+    return '$selected of $total selected';
+  }
+
+  @override
+  String get agreeToTermsPrivacy => 'By continuing, you agree to our Terms & Privacy Policy';
+
+  @override
+  String get tapToPlayArticle => 'Tap to play article';
+
+  @override
+  String get selectNewsLanguage => 'Select News Language';
+
+  @override
+  String get selectAppLanguage => 'Select App Language';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get shareThisNews => 'Share this news';
+
+  @override
+  String get shareThisNewsSubtitle => 'Friends with NewsOn can open the article in the app';
+
+  @override
+  String get generatingAudio => 'Generating Audio...';
+
+  @override
+  String get convertingTextToSpeech => 'Converting text to speech with ElevenLabs';
+
+  @override
+  String get sponsored => 'Sponsored';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountTitle => 'Delete account?';
+
+  @override
+  String get deleteAccountMessage => 'This will permanently delete your account and all associated data. This action cannot be undone.';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get signInToReadSharedArticle => 'Sign in to read the shared article';
+
+  @override
+  String get pleaseWaitSettingUp => 'Please wait while we set things up';
+
+  @override
+  String get signInWithApple => 'Sign in with Apple';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get failedToLoadCategories => 'Failed to load categories';
+
+  @override
+  String errorLoadingNews(String error) {
+    return 'Error loading news: $error';
+  }
+
+  @override
+  String get playing => 'Playing...';
+
+  @override
+  String get paused => 'Paused';
+
+  @override
+  String get voiceFeaturesUnavailable => 'Voice and audio features are currently unavailable.';
 }

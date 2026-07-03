@@ -95,7 +95,7 @@ class _BackgroundMusicSettingsState extends State<BackgroundMusicSettings> {
                     ),
                     giveHeight(16),
                     Text(
-                      'Voice and audio features are currently unavailable.',
+                      LocalizationHelper.voiceFeaturesUnavailable(context),
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         color: theme.colorScheme.secondary,

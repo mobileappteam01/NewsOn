@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import '../../core/constants/news_language_constants.dart';
 import '../models/remote_config_model.dart';
 import '../services/storage_service.dart';
 
@@ -209,11 +210,8 @@ class RemoteConfigService {
       // Dynamic Localization - Supported Languages
       // Add new languages here or update via Firebase Console
       // Set isActive=false to hide a language from the selector
-      'supported_languages': jsonEncode([
-        {'code': 'en', 'name': 'English', 'nativeName': 'English', 'isDefault': false, 'isActive': true, 'flagEmoji': '🇺🇸'},
-        {'code': 'ta', 'name': 'Tamil', 'nativeName': 'தமிழ்', 'isDefault': true, 'isActive': true, 'flagEmoji': '🇮🇳'},
-      ]),
-      'language_version': '1.0.0',
+      'supported_languages': jsonEncode(NewsLanguageConstants.toRemoteConfigJson()),
+      'language_version': '1.0.3',
 
       // Feature flags
       'enable_voice_search': false,

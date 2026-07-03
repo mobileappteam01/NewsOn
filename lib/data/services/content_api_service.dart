@@ -8,11 +8,16 @@ class ContentApiService {
 
   /// Get all content (Terms & Conditions and Privacy Policy)
   /// Returns the active content if available
-  Future<ContentResponse> getAllContents() async {
+  /// [language] - Optional language code (e.g. 'en', 'ta', 'hi') so the backend
+  /// can return localized content matching the selected app language.
+  Future<ContentResponse> getAllContents({String? language}) async {
     try {
       final response = await _apiService.get(
         'app', // Module name in Firestore apiEndPoints collection
         'termsAndConditions', // Endpoint key in the app document
+        queryParameters: (language != null && language.isNotEmpty)
+            ? {'language': language}
+            : null,
       );
 
       if (response.success) {
@@ -50,9 +55,9 @@ class ContentApiService {
   }
 
   /// Get Terms and Conditions
-  Future<String?> getTermsAndConditions() async {
+  Future<String?> getTermsAndConditions({String? language}) async {
     try {
-      final response = await getAllContents();
+      final response = await getAllContents(language: language);
       if (response.success && response.activeContent != null) {
         return response.activeContent!.termsAndCondition;
       }
@@ -64,9 +69,9 @@ class ContentApiService {
   }
 
   /// Get Privacy Policy
-  Future<String?> getPrivacyPolicy() async {
+  Future<String?> getPrivacyPolicy({String? language}) async {
     try {
-      final response = await getAllContents();
+      final response = await getAllContents(language: language);
       if (response.success && response.activeContent != null) {
         return response.activeContent!.privacyPolicy;
       }

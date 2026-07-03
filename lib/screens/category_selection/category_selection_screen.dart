@@ -7,9 +7,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/widgets/category_card.dart';
 import '../../core/widgets/category_shimmer.dart';
 import '../../data/models/category_model.dart';
-import '../../data/services/auth_api_service.dart';
 import '../../data/services/category_api_service.dart';
-import '../../data/services/fcm_service.dart';
 import '../../data/services/storage_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
@@ -32,9 +30,7 @@ class CategorySelectionScreen extends StatefulWidget {
 class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   final Set<String> _selectedCategoryIds = {}; // Store category IDs
   final CategoryApiService _categoryApiService = CategoryApiService();
-  final AuthApiService _authApiService = AuthApiService();
   final UserService _userService = UserService();
-  final FcmService _fcmService = FcmService();
   final ProfileService _profileService = ProfileService();
 
   List<CategoryModel> _categories = [];
@@ -60,7 +56,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   /// Check if some (but not all) categories are selected
   bool get _isSomeSelected {
     if (_categories.isEmpty) return false;
-    final selectedCount = _categories.where((cat) => _selectedCategoryIds.contains(cat.id)).length;
+    final selectedCount = _categories
+        .where((cat) => _selectedCategoryIds.contains(cat.id))
+        .length;
     return selectedCount > 0 && selectedCount < _categories.length;
   }
 
@@ -201,13 +199,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
       if (response.success && mounted) {
         setState(() {
           // Only add new categories that aren't already in the list
-          final newCategories =
-              response.categories
-                  .where(
-                    (cat) =>
-                        !_categories.any((existing) => existing.id == cat.id),
-                  )
-                  .toList();
+          final newCategories = response.categories
+              .where(
+                (cat) => !_categories.any((existing) => existing.id == cat.id),
+              )
+              .toList();
 
           _categories.addAll(newCategories);
           _isLoadingMore = false;
@@ -259,11 +255,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           final userCategories = userData['category'] as List?;
           if (userCategories != null && userCategories.isNotEmpty) {
             // Filter out null values and convert to String IDs
-            final categoryIds =
-                userCategories
-                    .where((id) => id != null)
-                    .map((id) => id.toString())
-                    .toList();
+            final categoryIds = userCategories
+                .where((id) => id != null)
+                .map((id) => id.toString())
+                .toList();
 
             debugPrint('📦 User has existing categories: $categoryIds');
 
@@ -286,17 +281,16 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const CircularProgressIndicator(),
-            ),
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(16),
           ),
+          child: const CircularProgressIndicator(),
+        ),
+      ),
     );
 
     try {
@@ -323,10 +317,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           email: userData['email']?.toString() ?? '',
           firstName: userData['firstName']?.toString() ?? '',
           secondName: userData['secondName']?.toString() ?? '',
-          personalDetails:
-              userData['personalDetails'] is Map
-                  ? userData['personalDetails'] as Map
-                  : null,
+          personalDetails: userData['personalDetails'] is Map
+              ? userData['personalDetails'] as Map
+              : null,
           mobileNumber: userData['mobileNumber']?.toString(),
           city: userData['city']?.toString(),
           pincode: userData['pincode']?.toString(),
@@ -360,79 +353,56 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           }
         }
       } else {
-        // New user flow - Sign up
-        // Step 1: Get nickname from onboarding (stored in StorageService)
-        final nickName =
-            StorageService.getSetting(AppConstants.userNameKey) as String? ??
-            '';
-
-        // Step 2: Get Google account data (stored temporarily)
-        final googleAccountData = _userService.getTempGoogleAccount();
-        if (googleAccountData == null) {
-          throw Exception(
-            'Google account data not found. Please sign in again.',
-          );
+        // New user flow — account already created at sign-in; save categories.
+        final userData = _userService.getUserData();
+        if (userData == null) {
+          throw Exception('User data not found. Please sign in again.');
         }
 
-        // Step 3: Get FCM token
-        final fcmToken = await _fcmService.getToken();
+        final nickName =
+            StorageService.getSetting(AppConstants.userNameKey) as String? ??
+                userData['nickName']?.toString() ??
+                '';
 
-        // Step 4: Call Sign-Up API
-        final signUpResponse = await _authApiService.signUp(
-          googleAccountData: googleAccountData,
+        final updateResponse = await _profileService.updateProfile(
           nickName: nickName,
-          fcmToken: fcmToken,
-          categoryIds: selectedCategoryIds,
+          email: userData['email']?.toString() ?? '',
+          firstName: userData['firstName']?.toString() ?? '',
+          secondName: userData['secondName']?.toString() ?? '',
+          personalDetails: userData['personalDetails'] is Map
+              ? userData['personalDetails'] as Map
+              : null,
+          mobileNumber: userData['mobileNumber']?.toString(),
+          city: userData['city']?.toString(),
+          pincode: userData['pincode']?.toString(),
+          country: userData['country']?.toString(),
+          category: selectedCategoryIds,
         );
 
         if (mounted) {
           Navigator.of(context).pop(); // Close loading dialog
 
-          if (signUpResponse.success) {
-            // Extract token and user data from response
-            final responseData = signUpResponse.data as Map<String, dynamic>?;
+          if (updateResponse.success) {
+            await _userService.clearTempGoogleAccount();
 
-            if (responseData != null) {
-              final token = responseData['token'] as String?;
-              final userData = responseData['data'] as Map<String, dynamic>?;
+            final selectedCategoryNames = _categories
+                .where((cat) => _selectedCategoryIds.contains(cat.id))
+                .map((cat) => cat.categoryName)
+                .toList();
 
-              if (token != null && userData != null) {
-                // Save user data and token
-                await _userService.saveUserData(
-                  token: token,
-                  userData: userData,
-                );
-
-                // Clear temporary Google account data
-                await _userService.clearTempGoogleAccount();
-
-                // Get selected category names for HomeScreen
-                final selectedCategoryNames =
-                    _categories
-                        .where((cat) => _selectedCategoryIds.contains(cat.id))
-                        .map((cat) => cat.categoryName)
-                        .toList();
-
-                // Navigate to home screen
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder:
-                        (context) => HomeScreen(
-                          selectedCategories: selectedCategoryNames,
-                        ),
-                  ),
-                );
-              } else {
-                throw Exception('Invalid response: missing token or user data');
-              }
-            } else {
-              throw Exception('Invalid response format');
-            }
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(
+                  selectedCategories: selectedCategoryNames,
+                ),
+              ),
+            );
           } else {
-            // Sign-up failed
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('⚠️ ${signUpResponse.message}'),
+                content: Text(
+                  '⚠️ ${updateResponse.error ?? 'Failed to save categories'}',
+                ),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 3),
               ),
@@ -464,7 +434,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              'Failed to load categories',
+              LocalizationHelper.failedToLoadCategories(context),
               style: GoogleFonts.roboto(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -474,7 +444,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage ?? 'Unknown error',
+              _errorMessage ?? LocalizationHelper.unknownError(context),
               style: GoogleFonts.roboto(
                 fontSize: 14,
                 color: theme.colorScheme.tertiary,
@@ -547,7 +517,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                             children: [
                               // Selection count
                               Text(
-                                '${_selectedCategoryIds.length} of ${_categories.length} selected',
+                                LocalizationHelper.categoriesSelectedCount(
+                                    context,
+                                    _selectedCategoryIds.length,
+                                    _categories.length),
                                 style: GoogleFonts.roboto(
                                   color: theme.colorScheme.tertiary,
                                   fontSize: 14,
@@ -565,7 +538,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _isAllSelected
-                                        ? config.primaryColorValue.withOpacity(0.1)
+                                        ? config.primaryColorValue
+                                            .withOpacity(0.1)
                                         : config.primaryColorValue,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
@@ -580,7 +554,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                         _isAllSelected
                                             ? Icons.deselect
                                             : _isSomeSelected
-                                                ? Icons.indeterminate_check_box_outlined
+                                                ? Icons
+                                                    .indeterminate_check_box_outlined
                                                 : Icons.select_all,
                                         size: 18,
                                         color: _isAllSelected
@@ -589,7 +564,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _isAllSelected ? 'Deselect All' : 'Select All',
+                                        _isAllSelected
+                                            ? LocalizationHelper.deselectAll(
+                                                context)
+                                            : LocalizationHelper.selectAll(
+                                                context),
                                         style: GoogleFonts.roboto(
                                           color: _isAllSelected
                                               ? config.primaryColorValue
@@ -611,72 +590,73 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
 
                 // Categories Grid or Loading/Error State
                 Expanded(
-                  child:
-                      _isLoading
-                          ? const CategoryShimmer()
-                          : _errorMessage != null && _categories.isEmpty
+                  child: _isLoading
+                      ? const CategoryShimmer()
+                      : _errorMessage != null && _categories.isEmpty
                           ? _buildErrorState(theme, config)
                           : GridView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.all(
-                              AppConstants.defaultPadding,
-                            ),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: AppConstants.defaultPadding,
-                                  mainAxisSpacing: AppConstants.defaultPadding,
-                                  childAspectRatio: 1.2,
-                                ),
-                            itemCount:
-                                _categories.length + (_isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              // Show loading indicator at the bottom when loading more
-                              if (index == _categories.length) {
-                                return const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(
+                                AppConstants.defaultPadding,
+                              ),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: AppConstants.defaultPadding,
+                                mainAxisSpacing: AppConstants.defaultPadding,
+                                childAspectRatio: 1.2,
+                              ),
+                              itemCount:
+                                  _categories.length + (_isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                // Show loading indicator at the bottom when loading more
+                                if (index == _categories.length) {
+                                  return const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+
+                                final category = _categories[index];
+                                final isSelected =
+                                    _selectedCategoryIds.contains(
+                                  category.id,
                                 );
-                              }
 
-                              final category = _categories[index];
-                              final isSelected = _selectedCategoryIds.contains(
-                                category.id,
-                              );
-
-                              return CategoryCard(
-                                category: category.categoryName,
-                                imageUrl: category.imageUrl,
-                                isSelected: isSelected,
-                                index: index,
-                                onTap: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      _selectedCategoryIds.remove(category.id);
-                                    } else {
-                                      _selectedCategoryIds.add(category.id);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
+                                return CategoryCard(
+                                  category: category.categoryName,
+                                  imageUrl: category.imageUrl,
+                                  isSelected: isSelected,
+                                  index: index,
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedCategoryIds
+                                            .remove(category.id);
+                                      } else {
+                                        _selectedCategoryIds.add(category.id);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
                 ),
 
                 // Continue/Update Preferences Button
                 _BottomCta(
                   red: config.primaryColorValue,
-                  label:
-                      widget.isFromSideMenu ? 'Update Preferences' : 'Continue',
-                  onTap:
-                      _selectedCategoryIds.isEmpty
-                          ? null
-                          : () async {
-                            // Call selectCategories API before navigating
-                            await _selectCategories();
-                          },
+                  label: widget.isFromSideMenu
+                      ? LocalizationHelper.updatePreferences(context)
+                      : LocalizationHelper.continueText(context),
+                  onTap: _selectedCategoryIds.isEmpty
+                      ? null
+                      : () async {
+                          // Call selectCategories API before navigating
+                          await _selectCategories();
+                        },
                 ),
                 // Padding(
                 //   padding: const EdgeInsets.all(AppConstants.largePadding),

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import '../core/utils/localization_helper.dart';
 
 /// Apple Sign In Button Widget
 /// Only displays on iOS/macOS platforms
@@ -41,7 +42,7 @@ class AppleSignInButton extends StatelessWidget {
             : SignInWithAppleButtonStyle.black,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         height: 56,
-        text: 'Sign in with Apple',
+        text: LocalizationHelper.signInWithApple(context),
       ),
     );
   }
@@ -118,7 +119,7 @@ class CustomAppleSignInButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Sign in with Apple',
+                    LocalizationHelper.signInWithApple(context),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

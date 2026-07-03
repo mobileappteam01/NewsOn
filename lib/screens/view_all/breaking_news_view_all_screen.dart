@@ -9,6 +9,7 @@ import '../news_detail/news_detail_screen.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../core/widgets/news_share_bottom_sheet.dart';
+import '../../core/utils/localization_helper.dart';
 
 /// View All screen for Breaking News with pagination
 class BreakingNewsViewAllScreen extends StatefulWidget {
@@ -98,7 +99,8 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading news: $e'),
+            content:
+                Text(LocalizationHelper.errorLoadingNews(context, e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -119,7 +121,7 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Breaking News'),
+        title: Text(LocalizationHelper.breakingNews(context)),
         backgroundColor: theme.scaffoldBackgroundColor,
       ),
       body: Stack(
@@ -129,7 +131,7 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
           : _allBreakingNews.isEmpty
               ? Center(
                   child: Text(
-                    'No breaking news available',
+                    LocalizationHelper.noBreakingNewsAvailable(context),
                     style: TextStyle(color: theme.colorScheme.secondary),
                   ),
                 )
@@ -174,7 +176,9 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error playing audio: $e'),
+                                  content: Text(
+                                      LocalizationHelper.errorPlayingAudio(
+                                          context, e.toString())),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -194,8 +198,10 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                                 SnackBar(
                                   content: Text(
                                     newStatus
-                                        ? 'Added to bookmarks'
-                                        : 'Removed from bookmarks',
+                                        ? LocalizationHelper.addedToBookmarks(
+                                            context)
+                                        : LocalizationHelper
+                                            .removedFromBookmarks(context),
                                   ),
                                   duration: const Duration(seconds: 1),
                                 ),
@@ -205,7 +211,8 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error: ${e.toString()}'),
+                                  content: Text(LocalizationHelper.error(
+                                      context, e.toString())),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );

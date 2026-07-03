@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/utils/localization_helper.dart';
 
 class GoogleSignInButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -84,7 +85,7 @@ class GoogleSignInButton extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Continue with Google',
+                        LocalizationHelper.continueWithGoogle(context),
                         style: GoogleFonts.roboto(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,

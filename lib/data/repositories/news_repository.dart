@@ -77,15 +77,23 @@ class NewsRepository {
   Future<NewsResponse> fetchNewsByCategory(
     String category, {
     String? language,
+    String? date,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       final response = await _backendService.fetchNewsByCategory(
         category: category,
         language: language,
+        date: date,
         limit: limit,
         page: page,
+        country: country,
+        state: state,
+        district: district,
       );
 
       // Update bookmark status for fetched articles
@@ -130,6 +138,9 @@ class NewsRepository {
     String? language,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       final response = await _backendService.fetchNewsByCategories(
@@ -137,6 +148,9 @@ class NewsRepository {
         language: language,
         limit: limit,
         page: page,
+        country: country,
+        state: state,
+        district: district,
       );
 
       // Update bookmark status for fetched articles
@@ -173,6 +187,9 @@ class NewsRepository {
     String? language,
     int limit = 50,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       final response = await _backendService.searchNews(
@@ -180,6 +197,9 @@ class NewsRepository {
         language: language,
         limit: limit,
         page: page,
+        country: country,
+        state: state,
+        district: district,
       );
 
       // Update bookmark status for fetched articles
@@ -214,12 +234,18 @@ class NewsRepository {
     String? language,
     int limit = 10,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       final response = await _backendService.fetchBreakingNews(
         language: language,
         limit: limit,
         page: page,
+        country: country,
+        state: state,
+        district: district,
       );
 
       // Update bookmark status for fetched articles
@@ -264,6 +290,9 @@ class NewsRepository {
     String? language,
     int limit = 5,
     int page = 1,
+    String? country,
+    String? state,
+    String? district,
   }) async {
     try {
       final response = await _backendService.fetchTodayNews(
@@ -271,6 +300,9 @@ class NewsRepository {
         language: language,
         limit: limit,
         page: page,
+        country: country,
+        state: state,
+        district: district,
       );
 
       // Update bookmark status for fetched articles

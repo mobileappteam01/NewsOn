@@ -7,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../providers/language_provider.dart';
 import '../../data/services/content_api_service.dart';
 import '../../data/models/remote_config_model.dart';
 
@@ -22,11 +23,23 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
   String? _htmlContent;
   bool _isLoading = true;
   String? _error;
+  String? _loadedLanguageCode;
 
   @override
   void initState() {
     super.initState();
     _loadContent();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload localized content whenever the selected app language changes.
+    final currentLanguage =
+        Provider.of<LanguageProvider>(context).locale.languageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != currentLanguage) {
+      _loadContent();
+    }
   }
 
   Future<void> _loadContent() async {
@@ -35,8 +48,12 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
       _error = null;
     });
 
+    final languageCode = context.read<LanguageProvider>().locale.languageCode;
+    _loadedLanguageCode = languageCode;
+
     try {
-      final content = await _contentApiService.getPrivacyPolicy();
+      final content =
+          await _contentApiService.getPrivacyPolicy(language: languageCode);
       if (mounted) {
         setState(() {
           _htmlContent = content;

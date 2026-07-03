@@ -7,7 +7,9 @@ import 'package:shimmer/shimmer.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:newson/screens/news_detail/news_detail_screen.dart';
 import 'package:provider/provider.dart';
-import '../../../core/widgets/inline_medium_ad_widget.dart';
+import '../../../core/utils/ad_placement_helper.dart';
+import '../../../core/widgets/inline_feed_ad.dart';
+import '../../../data/services/ad_service.dart';
 import '../../../providers/news_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../../providers/language_provider.dart';
@@ -19,6 +21,8 @@ import '../../../core/utils/localization_helper.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/services/font_manager.dart';
 import '../../../core/widgets/language_selector_dialog.dart';
+import '../../../core/widgets/region_selector_bottom_sheet.dart';
+import '../../../providers/region_provider.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
@@ -27,8 +31,6 @@ import '../../../data/services/storage_service.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import '../../../core/widgets/banner_ad_widget.dart';
 
 class NewsFeedTabNew extends StatefulWidget {
   final List<String> selectedCategories;
@@ -71,6 +73,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   List<NewsArticle> _allCategoryNews = [];
 
+  String? _lastNewsLanguageCode;
+
   @override
   void initState() {
     super.initState();
@@ -80,15 +84,27 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     _scrollController.addListener(_onScrollPagination);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (mounted) {
-        final newsProvider = context.read<NewsProvider>();
+      if (!mounted) return;
 
-        await newsProvider.fetchCategories();
+      final languageProvider = context.read<LanguageProvider>();
+      _lastNewsLanguageCode = languageProvider.getApiLanguageCode();
+      languageProvider.addListener(_onNewsLanguageChanged);
 
-        await newsProvider.fetchBreakingNews(limit: 10);
+      final newsProvider = context.read<NewsProvider>();
+      final regionProvider = context.read<RegionProvider>();
 
-        await _loadInitialTodayNews();
+      await regionProvider.initialize();
+      if (regionProvider.hasAppliedRegion) {
+        await newsProvider.setSavedRegion(regionProvider.appliedRegion);
+        setState(() {
+          _allTodayNews = [];
+          _allCategoryNews = [];
+        });
       }
+
+      await newsProvider.fetchCategories();
+      await newsProvider.fetchBreakingNews(limit: 10);
+      await _loadInitialTodayNews();
     });
   }
 
@@ -119,7 +135,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     }
   }
 
-  Future<void> _loadInitialTodayNews() async {
+  Future<void> _loadInitialTodayNews({bool allowCacheFallback = true}) async {
+    // Today's cache is only valid for the current calendar day.
+    final canUseCache = allowCacheFallback && _isViewingToday;
     try {
       final newsProvider = context.read<NewsProvider>();
 
@@ -133,14 +151,25 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
       final results = newsProvider.todayNews;
       setState(() {
-        _allTodayNews =
-            results.isNotEmpty ? results : StorageService.getTodayNewsCache();
+        _allTodayNews = results.isNotEmpty
+            ? results
+            : (newsProvider.hasRegionFilter || !canUseCache
+                ? <NewsArticle>[]
+                : StorageService.getTodayNewsCache());
         _todayNewsPage = 1;
         _hasMoreTodayNews = _allTodayNews.length == _newsLimit;
       });
     } catch (e) {
       debugPrint('⚠️ _loadInitialTodayNews: $e');
       if (!mounted) return;
+      final newsProvider = context.read<NewsProvider>();
+      if (newsProvider.hasRegionFilter || !canUseCache) {
+        setState(() {
+          _allTodayNews = [];
+          _hasMoreTodayNews = false;
+        });
+        return;
+      }
       final cached = StorageService.getTodayNewsCache();
       if (cached.isNotEmpty) {
         setState(() {
@@ -169,11 +198,15 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       final dateString =
           '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
+      final region = newsProvider.savedRegion;
       final response = await newsProvider.repository.fetchTodayNews(
         date: dateString,
         language: language,
         limit: _newsLimit,
         page: nextPage,
+        country: region.country,
+        state: region.state,
+        district: region.district,
       );
 
       if (!mounted) return;
@@ -192,24 +225,53 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     }
   }
 
-  Future<void> _loadInitialCategoryNews(String category) async {
+  /// True when the selected date is the current calendar day.
+  bool get _isViewingToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+  }
+
+  Future<void> _loadInitialCategoryNews(
+    String category, {
+    bool allowCacheFallback = true,
+  }) async {
+    // Cached category articles are not date-specific, so only fall back to
+    // them when the user is viewing today's feed.
+    final canUseCache = allowCacheFallback && _isViewingToday;
     try {
       final newsProvider = context.read<NewsProvider>();
 
-      await newsProvider.fetchCategoryNews(category, limit: _newsLimit);
+      await newsProvider.fetchCategoryNews(
+        category,
+        limit: _newsLimit,
+        date: _selectedDate,
+      );
 
       if (!mounted) return;
 
       final results = newsProvider.categoryNews;
       setState(() {
-        _allCategoryNews =
-            results.isNotEmpty ? results : StorageService.getArticlesCache();
+        _allCategoryNews = results.isNotEmpty
+            ? results
+            : (newsProvider.hasRegionFilter || !canUseCache
+                ? <NewsArticle>[]
+                : StorageService.getArticlesCache());
         _categoryNewsPage = 1;
         _hasMoreCategoryNews = _allCategoryNews.length == _newsLimit;
       });
     } catch (e) {
       debugPrint('⚠️ _loadInitialCategoryNews: $e');
       if (!mounted) return;
+      final newsProvider = context.read<NewsProvider>();
+      if (newsProvider.hasRegionFilter || !canUseCache) {
+        setState(() {
+          _allCategoryNews = [];
+          _hasMoreCategoryNews = false;
+        });
+        return;
+      }
       final cached = StorageService.getArticlesCache();
       if (cached.isNotEmpty) {
         setState(() {
@@ -235,11 +297,19 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
       final nextPage = _categoryNewsPage + 1;
 
+      final dateString =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+      final region = newsProvider.savedRegion;
       final response = await newsProvider.repository.fetchNewsByCategory(
         _selectedCategory.toLowerCase(),
         language: language,
+        date: dateString,
         limit: _newsLimit,
         page: nextPage,
+        country: region.country,
+        state: region.state,
+        district: region.district,
       );
 
       if (!mounted) return;
@@ -260,10 +330,72 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   @override
   void dispose() {
+    try {
+      context.read<LanguageProvider>().removeListener(_onNewsLanguageChanged);
+    } catch (_) {}
     _scrollController.dispose();
     _breakingNewsController.dispose();
     _flashNewsController.dispose();
     super.dispose();
+  }
+
+  void _onNewsLanguageChanged() {
+    final languageProvider = context.read<LanguageProvider>();
+    final newCode = languageProvider.getApiLanguageCode();
+    if (newCode == _lastNewsLanguageCode) return;
+    _lastNewsLanguageCode = newCode;
+    _reloadFeedContent(allowCacheFallback: false);
+  }
+
+  /// Clears local lists and refetches breaking + today/category news.
+  Future<void> _reloadFeedContent({bool allowCacheFallback = true}) async {
+    if (!mounted) return;
+
+    setState(() {
+      _allTodayNews = [];
+      _allCategoryNews = [];
+      _todayNewsPage = 1;
+      _categoryNewsPage = 1;
+      _hasMoreTodayNews = true;
+      _hasMoreCategoryNews = true;
+    });
+
+    _scrollToTop();
+
+    final newsProvider = context.read<NewsProvider>();
+    await newsProvider.fetchBreakingNews(limit: 10);
+
+    if (!mounted) return;
+
+    if (_selectedCategory == 'All') {
+      await _loadInitialTodayNews(allowCacheFallback: allowCacheFallback);
+    } else {
+      await _loadInitialCategoryNews(
+        _selectedCategory.toLowerCase(),
+        allowCacheFallback: allowCacheFallback,
+      );
+    }
+  }
+
+  Future<void> _onRegionApplied() async {
+    final regionProvider = context.read<RegionProvider>();
+    final newsProvider = context.read<NewsProvider>();
+
+    await newsProvider.setSavedRegion(regionProvider.appliedRegion);
+    await _reloadFeedContent(allowCacheFallback: false);
+  }
+
+  Future<void> _onRegionReset() async {
+    final newsProvider = context.read<NewsProvider>();
+    await newsProvider.clearSavedRegion();
+    await _reloadFeedContent();
+  }
+
+  String _emptyFeedMessage(BuildContext context, NewsProvider newsProvider) {
+    if (newsProvider.hasRegionFilter) {
+      return LocalizationHelper.noNewsForRegion(context);
+    }
+    return LocalizationHelper.noNewsForDate(context);
   }
 
   /// Scroll to top of the page with smooth animation
@@ -344,7 +476,42 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                   Row(
                     children: [
                       _buildDatePicker(context),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
+                      Consumer<RegionProvider>(
+                        builder: (context, regionProvider, _) {
+                          return IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                            icon: Icon(
+                              Icons.public,
+                              size: 22,
+                              color: regionProvider.hasAppliedRegion
+                                  ? remoteConfig.primaryColorValue
+                                  : theme.colorScheme.onSurface,
+                            ),
+                            tooltip: LocalizationHelper.selectRegionTooltip(
+                              context,
+                            ),
+                            onPressed: () async {
+                              final regionProvider =
+                                  context.read<RegionProvider>();
+                              if (!regionProvider.isInitialized) {
+                                await regionProvider.initialize();
+                              }
+                              if (!context.mounted) return;
+                              showRegionSelectorBottomSheet(
+                                context,
+                                onApplied: _onRegionApplied,
+                                onReset: _onRegionReset,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
                       Consumer<LanguageProvider>(
                         builder: (context, languageProvider, _) {
                           return Tooltip(
@@ -457,10 +624,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
               child: RefreshIndicator(
                 key: const ValueKey('news_feed_refresh_indicator'),
                 onRefresh: () async {
-                  // Refresh breaking news
+                  // Refresh breaking news + the active view for the selected date
                   await newsProvider.fetchBreakingNews();
-                  // Refresh today's news
-                  await _loadInitialTodayNews();
+                  if (!mounted) return;
+                  if (_selectedCategory == 'All') {
+                    await _loadInitialTodayNews(allowCacheFallback: false);
+                  } else {
+                    await _loadInitialCategoryNews(
+                      _selectedCategory.toLowerCase(),
+                      allowCacheFallback: false,
+                    );
+                  }
                 },
                 child: CustomScrollView(
                   key: const PageStorageKey('news_feed_scroll_view'),
@@ -576,7 +750,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                             padding: const EdgeInsets.all(16.0),
                             child: Center(
                               child: Text(
-                                'No news available for ${_selectedCategory}',
+                                newsProvider.hasRegionFilter
+                                    ? LocalizationHelper.noNewsForRegion(
+                                        context)
+                                    : (_selectedCategory == 'All'
+                                        ? LocalizationHelper.noNewsForDate(
+                                            context)
+                                        : LocalizationHelper
+                                            .noNewsForThisCategory(context)),
                                 style: TextStyle(
                                   color: theme.colorScheme.secondary,
                                   fontSize: 14,
@@ -591,10 +772,32 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final article = _allCategoryNews[index];
+                                if (AdPlacementHelper.isAdSlot(index) &&
+                                    AdPlacementHelper.shouldShowInlineAds(
+                                      AdService().policy,
+                                    )) {
+                                  return InlineFeedAd(
+                                    slotIndex:
+                                        AdPlacementHelper.adSlotIndex(index),
+                                  );
+                                }
+
+                                final articleIndex =
+                                    AdPlacementHelper.shouldShowInlineAds(
+                                  AdService().policy,
+                                )
+                                        ? AdPlacementHelper
+                                            .articleIndexForListIndex(index)
+                                        : index;
+
+                                if (articleIndex >= _allCategoryNews.length) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final article = _allCategoryNews[articleIndex];
                                 return NewsGridView(
                                   key: ValueKey(
-                                    'category_${article.articleId ?? index}',
+                                    'category_${article.articleId ?? articleIndex}',
                                   ),
                                   type: 'listview',
                                   newsDetails: article,
@@ -641,7 +844,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Error playing audio: $e',
+                                              LocalizationHelper
+                                                  .errorPlayingAudio(
+                                                      context, e.toString()),
                                             ),
                                             backgroundColor: Colors.red,
                                           ),
@@ -671,8 +876,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           SnackBar(
                                             content: Text(
                                               newStatus
-                                                  ? 'Added to bookmarks'
-                                                  : 'Removed from bookmarks',
+                                                  ? LocalizationHelper
+                                                      .addedToBookmarks(context)
+                                                  : LocalizationHelper
+                                                      .removedFromBookmarks(
+                                                          context),
                                             ),
                                             duration: const Duration(
                                               seconds: 1,
@@ -687,7 +895,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Error: ${e.toString()}',
+                                              LocalizationHelper.error(context, e.toString()),
                                             ),
                                             duration: const Duration(
                                               seconds: 2,
@@ -712,8 +920,18 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   },
                                 );
                               },
-                              childCount: _allCategoryNews.length
-                                  .clamp(0, 10), // Limit to 10 on home page
+                              childCount: () {
+                                final capped =
+                                    _allCategoryNews.length.clamp(0, 10);
+                                if (AdPlacementHelper.shouldShowInlineAds(
+                                  AdService().policy,
+                                )) {
+                                  return AdPlacementHelper.totalItemCount(
+                                    capped,
+                                  );
+                                }
+                                return capped;
+                              }(),
                             ),
                           ),
                         )
@@ -740,7 +958,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           padding: const EdgeInsets.all(16.0),
                           child: Center(
                             child: Text(
-                              LocalizationHelper.noNewsForDate(context),
+                              _emptyFeedMessage(context, newsProvider),
                               style: TextStyle(
                                 color: theme.colorScheme.secondary,
                                 fontSize: 14,
@@ -755,11 +973,16 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final totalAds = _allTodayNews.length ~/ 10;
-                              final totalItems =
-                                  _allTodayNews.length + totalAds;
+                              final feedItems =
+                                  AdPlacementHelper.shouldShowInlineAds(
+                                AdService().policy,
+                              )
+                                      ? AdPlacementHelper.totalItemCount(
+                                          _allTodayNews.length,
+                                        )
+                                      : _allTodayNews.length;
 
-                              if (index >= totalItems) {
+                              if (index >= feedItems) {
                                 return _isLoadingMoreToday
                                     ? const Padding(
                                         padding: EdgeInsets.all(16),
@@ -767,25 +990,36 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           child: CircularProgressIndicator(),
                                         ),
                                       )
-                                    : const SizedBox();
+                                    : const SizedBox.shrink();
                               }
 
-                              // SHOW AD EVERY 4 NEWS
-                              if (index != 0 && index % 10 == 9) {
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  child: InlineMediumAdWidget(index: index),
+                              if (AdPlacementHelper.isAdSlot(index) &&
+                                  AdPlacementHelper.shouldShowInlineAds(
+                                    AdService().policy,
+                                  )) {
+                                return InlineFeedAd(
+                                  slotIndex:
+                                      AdPlacementHelper.adSlotIndex(index),
                                 );
                               }
 
-                              final actualIndex = index - (index ~/ 10);
+                              final articleIndex =
+                                  AdPlacementHelper.shouldShowInlineAds(
+                                AdService().policy,
+                              )
+                                      ? AdPlacementHelper
+                                          .articleIndexForListIndex(index)
+                                      : index;
 
-                              final article = _allTodayNews[actualIndex];
+                              if (articleIndex >= _allTodayNews.length) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final article = _allTodayNews[articleIndex];
 
                               return NewsGridView(
                                 key: ValueKey(
-                                  'today_${article.articleId ?? actualIndex}',
+                                  'today_${article.articleId ?? articleIndex}',
                                 ),
                                 type: 'listview',
                                 newsDetails: article,
@@ -837,8 +1071,13 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 },
                               );
                             },
-                            childCount: _allTodayNews.length +
-                                (_allTodayNews.length ~/ 10) +
+                            childCount: (AdPlacementHelper.shouldShowInlineAds(
+                                  AdService().policy,
+                                )
+                                    ? AdPlacementHelper.totalItemCount(
+                                        _allTodayNews.length,
+                                      )
+                                    : _allTodayNews.length) +
                                 (_isLoadingMoreToday ? 1 : 0),
                           ),
                         ),
@@ -915,7 +1154,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          'Error playing audio: $e',
+                                          LocalizationHelper.errorPlayingAudio(
+                                              context, e.toString()),
                                         ),
                                         backgroundColor: Colors.red,
                                       ),
@@ -943,8 +1183,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                       SnackBar(
                                         content: Text(
                                           newStatus
-                                              ? 'Added to bookmarks'
-                                              : 'Removed from bookmarks',
+                                              ? LocalizationHelper
+                                                  .addedToBookmarks(context)
+                                              : LocalizationHelper
+                                                  .removedFromBookmarks(
+                                                      context),
                                         ),
                                         duration: const Duration(seconds: 1),
                                       ),
@@ -954,7 +1197,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Error: ${e.toString()}'),
+                                        content: Text(LocalizationHelper.error(context, e.toString())),
                                         duration: const Duration(seconds: 2),
                                       ),
                                     );
@@ -1156,10 +1399,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       onPressed: isRefreshing
           ? null
           : () async {
-              // Refresh breaking news
+              // Refresh breaking news + the currently active view (today or category)
               await newsProvider.fetchBreakingNews();
-              // Refresh today's news
-              await _loadInitialTodayNews();
+              if (!mounted) return;
+              if (_selectedCategory == 'All') {
+                await _loadInitialTodayNews(allowCacheFallback: false);
+              } else {
+                await _loadInitialCategoryNews(
+                  _selectedCategory.toLowerCase(),
+                  allowCacheFallback: false,
+                );
+              }
             },
       backgroundColor: remoteConfig.primaryColorValue,
       child: isRefreshing
@@ -1317,8 +1567,12 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                             SnackBar(
                                               content: Text(
                                                 newStatus
-                                                    ? 'Added to bookmarks'
-                                                    : 'Removed from bookmarks',
+                                                    ? LocalizationHelper
+                                                        .addedToBookmarks(
+                                                            context)
+                                                    : LocalizationHelper
+                                                        .removedFromBookmarks(
+                                                            context),
                                               ),
                                               duration:
                                                   const Duration(seconds: 1),
@@ -1331,7 +1585,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                               .showSnackBar(
                                             SnackBar(
                                               content: Text(
-                                                  'Error: ${e.toString()}'),
+                                                  LocalizationHelper.error(context, e.toString())),
                                               duration:
                                                   const Duration(seconds: 2),
                                             ),
@@ -1427,7 +1681,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                           .showSnackBar(
                                         SnackBar(
                                           content:
-                                              Text('Error playing audio: $e'),
+                                              Text(LocalizationHelper
+                                                  .errorPlayingAudio(
+                                                      context, e.toString())),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -1458,31 +1714,13 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     final imageUrl = article.imageUrl ?? article.sourceIcon ?? '';
 
     if (imageUrl.isEmpty) {
-      return Container(
-        color: Colors.grey[300],
-        child: Center(
-          child: Icon(
-            Icons.image_not_supported,
-            size: 50,
-            color: Colors.grey[600],
-          ),
-        ),
-      );
+      return newsOnImageFallback();
     }
 
     return NewsImageCacheService.instance.cachedImage(
       url: imageUrl,
       fit: BoxFit.cover,
-      errorWidget: Container(
-        color: Colors.grey[300],
-        child: Center(
-          child: Icon(
-            Icons.image_not_supported,
-            size: 50,
-            color: Colors.grey[600],
-          ),
-        ),
-      ),
+      errorWidget: newsOnImageFallback(),
     );
   }
 
@@ -1644,11 +1882,16 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
           final normalizedDate =
               DateTime(picked.year, picked.month, picked.day);
           setState(() => _selectedDate = normalizedDate);
-          // Fetch news for the selected date
+          // Fetch news for the selected date — keep the active category in sync
           if (mounted) {
-            // context.read<NewsProvider>().fetchNewsByDate(normalizedDate);
-            _selectedDate = normalizedDate;
-            await _loadInitialTodayNews();
+            if (_selectedCategory == 'All') {
+              await _loadInitialTodayNews(allowCacheFallback: false);
+            } else {
+              await _loadInitialCategoryNews(
+                _selectedCategory.toLowerCase(),
+                allowCacheFallback: false,
+              );
+            }
           }
         }
       },

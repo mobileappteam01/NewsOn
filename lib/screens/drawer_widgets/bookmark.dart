@@ -109,12 +109,14 @@ class _BookMarkState extends State<BookMark> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Error loading bookmarks',
+                                  LocalizationHelper.errorLoadingBookmarks(
+                                      context),
                                   style: theme.textTheme.titleLarge,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  bookmarkProvider.error ?? 'Unknown error',
+                                  bookmarkProvider.error ??
+                                      LocalizationHelper.unknownError(context),
                                   style: theme.textTheme.bodyMedium,
                                   textAlign: TextAlign.center,
                                 ),
@@ -125,7 +127,7 @@ class _BookMarkState extends State<BookMark> {
                                       refresh: true,
                                     );
                                   },
-                                  child: const Text('Retry'),
+                                  child: Text(LocalizationHelper.retry(context)),
                                 ),
                               ],
                             ),
@@ -142,12 +144,13 @@ class _BookMarkState extends State<BookMark> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No Bookmarks',
+                                  LocalizationHelper.noBookmarks(context),
                                   style: theme.textTheme.titleLarge,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Articles you bookmark will appear here',
+                                  LocalizationHelper.bookmarksWillAppearHere(
+                                      context),
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ],

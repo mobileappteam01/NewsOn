@@ -951,9 +951,9 @@ class _AccountSettingsState extends State<AccountSettings> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Delete Account',
-                style: TextStyle(
+            : Text(
+                LocalizationHelper.deleteAccount(context),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1155,9 +1155,9 @@ class _AccountSettingsState extends State<AccountSettings> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Delete account?'),
-          content: const Text(
-            'This will permanently delete your account and all associated data. This action cannot be undone.',
+          title: Text(LocalizationHelper.deleteAccountTitle(context)),
+          content: Text(
+            LocalizationHelper.deleteAccountMessage(context),
           ),
           actions: [
             TextButton(
@@ -1166,9 +1166,9 @@ class _AccountSettingsState extends State<AccountSettings> {
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
+              child: Text(
+                LocalizationHelper.delete(context),
+                style: const TextStyle(color: Colors.red),
               ),
             ),
           ],

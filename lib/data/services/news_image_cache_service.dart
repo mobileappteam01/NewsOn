@@ -87,9 +87,18 @@ class NewsImageCacheService {
       errorWidget: (_, __, ___) =>
           errorWidget ??
           Container(
-            color: const Color(0xFFE0E0E0),
-            child: const Center(
-              child: Icon(Icons.image_not_supported, color: Colors.grey),
+            color: Colors.grey.shade100,
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Image.asset(
+                'assets/images/newson.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.image_not_supported,
+                  color: Colors.grey.shade400,
+                ),
+              ),
             ),
           ),
     );
