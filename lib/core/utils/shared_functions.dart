@@ -1,5 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, depend_on_referenced_packages
 
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -130,8 +132,8 @@ Future fetchDBCollection(String collectionName) async {
 
 showMatchVS(String teamA, String teamB, RemoteConfigModel config) {
   return Container(
-    margin: EdgeInsets.symmetric(horizontal: 12),
-    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     decoration: BoxDecoration(
       color: config.primaryColorValue,
       borderRadius: BorderRadius.circular(50),
@@ -151,7 +153,7 @@ showMatchVS(String teamA, String teamB, RemoteConfigModel config) {
         Container(
           height: 50,
           width: 50,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
           ),
@@ -256,9 +258,12 @@ showListenButton(
   return Builder(
     builder: (ctx) {
       final buildContext = context ?? ctx;
-      final completedProvider = Provider.of<CompletedNewsProvider>(buildContext, listen: true);
-      final newsId = article != null ? (article.articleId ?? article.title) : '';
-      final isNewsCompleted = newsId.isNotEmpty && completedProvider.isCompleted(newsId);
+      final completedProvider =
+          Provider.of<CompletedNewsProvider>(buildContext, listen: true);
+      final newsId =
+          article != null ? (article.articleId ?? article.title) : '';
+      final isNewsCompleted =
+          newsId.isNotEmpty && completedProvider.isCompleted(newsId);
 
       return Consumer<AudioPlayerProvider>(
         builder: (context, audioProvider, child) {
@@ -301,10 +306,9 @@ showListenButton(
                     SizedBox(
                       width: isCompact ? 12 : 15,
                       height: isCompact ? 12 : 15,
-                      child: CircularProgressIndicator(
+                      child: const CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor:
-                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   else if (isPlaying)
@@ -395,7 +399,7 @@ closeButton(Widget content, Function() onPressed) {
   return GestureDetector(
     onTap: () => onPressed(),
     child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       width: 100,
       decoration: BoxDecoration(
         color: config.primaryColorValue,
@@ -413,9 +417,14 @@ commonappBar(imgURL, Function() backPressed) {
         onPressed: () {
           backPressed();
         },
-        icon: Icon(Icons.arrow_back_ios),
+        icon: const Icon(Icons.arrow_back_ios),
       ),
-      showImage(imgURL, BoxFit.contain, height: 60, width: 80),
+      showImage(
+        imgURL,
+        BoxFit.contain,
+        height: 60,
+        width: 80,
+      ),
     ],
   );
 }
@@ -446,7 +455,12 @@ Future fetchDBData(String key) async {
       debugPrint("ℹ️ Firebase already initialized: $e");
     }
     final dbRef = FirebaseDatabase.instance.ref();
-    final snapshot = await dbRef.child(key).get();
+    final snapshot = await dbRef.child(key).get().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        throw TimeoutException('Firebase RTDB get($key) timed out');
+      },
+    );
     if (snapshot.exists) {
       final data = snapshot.value;
       debugPrint("$key has dataaa : $data");

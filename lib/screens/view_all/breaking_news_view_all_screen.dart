@@ -220,11 +220,11 @@ class _BreakingNewsViewAllScreenState extends State<BreakingNewsViewAllScreen> {
                           }
                         },
                         onNewsTapped: () {
-                          Navigator.push(
+                          NewsDetailScreen.open(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => NewsDetailScreen(article: article),
-                            ),
+                            article: article,
+                            articles: _allBreakingNews,
+                            initialIndex: index,
                           );
                         },
                         onShareTapped: () {

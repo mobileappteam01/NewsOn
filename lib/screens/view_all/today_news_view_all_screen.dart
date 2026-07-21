@@ -277,12 +277,11 @@ class _TodayNewsViewAllScreenState extends State<TodayNewsViewAllScreen> {
                               }
                             },
                             onNewsTapped: () {
-                              Navigator.push(
+                              NewsDetailScreen.open(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      NewsDetailScreen(article: article),
-                                ),
+                                article: article,
+                                articles: _allTodayNews,
+                                initialIndex: index,
                               );
                             },
                             onShareTapped: () {

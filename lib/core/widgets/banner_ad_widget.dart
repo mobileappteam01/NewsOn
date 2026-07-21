@@ -65,7 +65,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
             _isLoading = false;
           });
         },
-        onAdFailedToLoad: (ad, error) {
+        onAdFailedToLoad: (ad, error) async {
           debugPrint(
             '❌ Banner failed: ${error.message}',
           );
@@ -83,6 +83,10 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
             _isAdLoaded = false;
             _isLoading = false;
           });
+
+          if (await AdService().handleLoadFailure(error)) {
+            if (mounted && !_isAdLoaded) _loadBannerAd();
+          }
         },
         onAdImpression: (ad) {
           debugPrint('📢 Ad impression');

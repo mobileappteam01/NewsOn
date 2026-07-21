@@ -114,14 +114,14 @@
     },
     "app_name_logo": {
       "defaultValue": {
-        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FGroup%201171275636.png?alt=media&token=ccba16c2-6608-4775-9d8e-687fb482deab"
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FNews%20On%20light%20mode.png?alt=media&token=15df887b-31b1-42d3-8005-d80fe8d80ad1"
       },
       "description": "App Name Logo",
       "valueType": "STRING"
     },
     "dark_theme_app_name_logo": {
       "defaultValue": {
-        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2Fdark_theme.png?alt=media&token=653bbdf7-7b8f-4de0-9854-ab6ed19c2518"
+        "value": "https://firebasestorage.googleapis.com/v0/b/newson-dea6b.firebasestorage.app/o/appImages%2FNews%20On%20Dark%20mode.png?alt=media&token=a279d12b-56aa-40c4-8186-cadfa4291ba1"
       },
       "description": "App Name Logo",
       "valueType": "STRING"

@@ -100,7 +100,6 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                     ),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       showImage(
                         config.languageImg,
@@ -108,20 +107,29 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                         height: 20,
                         width: 30,
                       ),
-
-                      Text(
-                        _isNews
-                            ? LocalizationHelper.selectNewsLanguage(context)
-                            : LocalizationHelper.selectAppLanguage(context),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isNews
+                              ? LocalizationHelper.selectNewsLanguage(context)
+                              : LocalizationHelper.selectAppLanguage(context),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],

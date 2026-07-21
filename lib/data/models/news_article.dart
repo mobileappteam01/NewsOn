@@ -252,8 +252,8 @@ class NewsArticle {
       titleAudioUrl: json['title_audio_url'] as String?,
       descriptionAudioUrl: json['description_audio_url'] as String?,
       contentAudioUrl: json['content_audio_url'] as String?,
-      // newsId can come from _id (bookmark ID) or article_id (news article ID)
-      newsId: json['_id'] as String? ?? json['article_id'] as String?,
+      // Mongo `_id` for bookmark APIs. Never use article_id as newsId.
+      newsId: json['_id'] as String?,
     );
   }
 

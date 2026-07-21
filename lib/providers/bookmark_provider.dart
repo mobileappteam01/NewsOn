@@ -162,22 +162,42 @@ class BookmarkProvider with ChangeNotifier {
     await loadBookmarks(page: _currentPage + 1);
   }
 
+  /// Mongo `_id` required by bookmark APIs. Never send [articleId].
+  String? _bookmarkApiNewsId(NewsArticle article) {
+    final id = article.newsId?.trim();
+    if (id == null || id.isEmpty) return null;
+    return id;
+  }
+
   /// Check if article is bookmarked
   bool isBookmarked(NewsArticle article) {
-    final key = article.articleId ?? article.title;
-    return _bookmarks.any((a) => (a.articleId ?? a.title) == key);
+    final mongoId = article.newsId;
+    final articleKey = article.articleId ?? article.title;
+    return _bookmarks.any((a) {
+      if (mongoId != null &&
+          mongoId.isNotEmpty &&
+          a.newsId != null &&
+          a.newsId == mongoId) {
+        return true;
+      }
+      return (a.articleId ?? a.title) == articleKey;
+    });
   }
 
   /// Toggle bookmark (syncs with API)
   Future<bool> toggleBookmark(NewsArticle article) async {
     try {
       debugPrint("theee article detailsss : ${article.toJson()}");
-      // For API calls, use article_id (the actual news article ID), not _id (bookmark record ID)
-      // newsId might be _id from bookmark list, but we need article_id for the API
-      final newsId = article.newsId ?? article.articleId ?? article.title;
+      // Backend BookmarkModel.news is ObjectId → newsarticles._id only.
+      final newsId = _bookmarkApiNewsId(article);
+      if (newsId == null) {
+        throw Exception(
+          'Cannot bookmark: article has no Mongo _id (newsId). '
+          'Do not use article_id for bookmark APIs.',
+        );
+      }
 
-      debugPrint('🔖 ToggleBookmark - newsId: $newsId');
-      debugPrint('🔖 ToggleBookmark - article.newsId: ${article.newsId}');
+      debugPrint('🔖 ToggleBookmark - newsId (_id): $newsId');
       debugPrint('🔖 ToggleBookmark - article.articleId: ${article.articleId}');
       final currentlyBookmarked = isBookmarked(article);
 
@@ -271,23 +291,17 @@ class BookmarkProvider with ChangeNotifier {
   /// Remove bookmark
   Future<void> removeBookmark(NewsArticle article) async {
     try {
-      // For API calls, use article_id (the actual news article ID), not _id (bookmark record ID)
-      // newsId might be _id from bookmark list, but we need article_id for the API
-      final newsId = article.articleId ?? article.newsId ?? article.title;
-
-      debugPrint('🗑️ RemoveBookmark - newsId: $newsId');
-      debugPrint(
-        '🗑️ RemoveBookmark - article.newsId: ${article.newsId} (from _id)',
-      );
-      debugPrint(
-        '🗑️ RemoveBookmark - article.articleId: ${article.articleId} (actual news ID)',
-      );
-      debugPrint('🗑️ RemoveBookmark - article.title: ${article.title}');
-
-      // Validate newsId
-      if (newsId.isEmpty) {
-        throw Exception('newsId cannot be empty for removing bookmark');
+      final newsId = _bookmarkApiNewsId(article);
+      if (newsId == null || newsId.isEmpty) {
+        throw Exception(
+          'Cannot remove bookmark: article has no Mongo _id (newsId).',
+        );
       }
+
+      debugPrint('🗑️ RemoveBookmark - newsId (_id): $newsId');
+      debugPrint(
+        '🗑️ RemoveBookmark - article.articleId: ${article.articleId}',
+      );
 
       // Check if user is authenticated
       if (_userService.isLoggedIn) {

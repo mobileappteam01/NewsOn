@@ -23,6 +23,6 @@ void navigateAfterOAuthAuth(
   );
 
   if (DeepLinkService.instance.hasPendingArticle) {
-    DeepLinkService.instance.processPendingLink();
+    DeepLinkService.instance.processPendingLink(navigationReady: true);
   }
 }

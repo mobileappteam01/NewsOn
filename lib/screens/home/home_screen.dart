@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Initialize other providers
       await context.read<NewsProvider>().fetchBreakingNews();
-      DeepLinkService.instance.processPendingLink();
+      DeepLinkService.instance.processPendingLink(navigationReady: true);
       context.read<BookmarkProvider>().loadBookmarks();
       context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();

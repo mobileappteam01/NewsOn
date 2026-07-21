@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
+import 'news_article_image.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/completed_news_provider.dart';
@@ -44,26 +44,11 @@ class BreakingNewsCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // Background image
-              if (article.imageUrl != null)
-                CachedNetworkImage(
-                  imageUrl: article.imageUrl!,
-                  fit: BoxFit.cover,
-                  placeholder:
-                      (context, url) => Container(
-                        color: theme.colorScheme.surface,
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                  errorWidget:
-                      (context, url, error) => Container(
-                        color: theme.colorScheme.surface,
-                        child: const Icon(Icons.image_not_supported, size: 48),
-                      ),
-                )
-              else
-                Container(
-                  color: theme.colorScheme.surface,
-                  child: const Icon(Icons.article, size: 48),
-                ),
+              NewsArticleImage.fromArticle(
+                article,
+                fit: BoxFit.cover,
+                backgroundColor: theme.colorScheme.surface,
+              ),
 
               // Gradient overlay
               Container(

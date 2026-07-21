@@ -51,7 +51,7 @@ class _AuthScreenState extends State<AuthScreen>
             builder: (context) => const HomeScreen(selectedCategories: []),
           ),
         );
-        DeepLinkService.instance.processPendingLink();
+        DeepLinkService.instance.processPendingLink(navigationReady: true);
       }
     });
     _loadingMessage = ''; // Will be set when context is available

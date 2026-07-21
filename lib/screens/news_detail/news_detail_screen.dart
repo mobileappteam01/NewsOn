@@ -19,12 +19,60 @@ import '../../providers/news_provider.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 import '../../data/services/interaction_service.dart';
-import '../../data/services/ad_service.dart';
-import '../../data/services/interstitial_ad_manager.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsArticle article;
-  const NewsDetailScreen({super.key, required this.article});
+
+  /// Snapshot of the feed list the user was browsing (preserves swipe order).
+  final List<NewsArticle>? articles;
+
+  /// Index of [article] inside [articles].
+  final int? initialIndex;
+
+  const NewsDetailScreen({
+    super.key,
+    required this.article,
+    this.articles,
+    this.initialIndex,
+  });
+
+  /// Stable identity for matching the same story across lists.
+  static String articleKey(NewsArticle article) {
+    return article.newsId ?? article.articleId ?? article.title;
+  }
+
+  static int indexOfArticle(List<NewsArticle> articles, NewsArticle article) {
+    final key = articleKey(article);
+    if (key.isEmpty) return -1;
+    return articles.indexWhere((a) => articleKey(a) == key);
+  }
+
+  /// Open detail with the exact list + index from the feed the user tapped.
+  static void open(
+    BuildContext context, {
+    required NewsArticle article,
+    List<NewsArticle>? articles,
+    int? initialIndex,
+  }) {
+    final snapshot = articles != null ? List<NewsArticle>.from(articles) : null;
+    var index = initialIndex ??
+        (snapshot != null ? indexOfArticle(snapshot, article) : 0);
+    if (index < 0) index = 0;
+    if (snapshot != null && snapshot.isNotEmpty && index >= snapshot.length) {
+      index = snapshot.length - 1;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NewsDetailScreen(
+          article: article,
+          articles: snapshot,
+          initialIndex: index,
+        ),
+      ),
+    );
+  }
 
   @override
   State<NewsDetailScreen> createState() => _NewsDetailScreenState();
@@ -64,7 +112,65 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   }
 
   String _articleTrackingKey(NewsArticle article) {
-    return article.newsId ?? article.articleId ?? article.title;
+    return NewsDetailScreen.articleKey(article);
+  }
+
+  int _indexOfArticle(List<NewsArticle> articles, NewsArticle article) {
+    return NewsDetailScreen.indexOfArticle(articles, article);
+  }
+
+  /// Initialize PageView with article list based on source
+  void _initializePageView() {
+    if (widget.articles != null && widget.articles!.isNotEmpty) {
+      _articlesList = List<NewsArticle>.from(widget.articles!);
+      var startIndex =
+          widget.initialIndex ?? _indexOfArticle(_articlesList, widget.article);
+      if (startIndex < 0) startIndex = 0;
+      if (startIndex >= _articlesList.length) {
+        startIndex = _articlesList.length - 1;
+      }
+      _initialIndex = startIndex;
+      _currentPageIndex = _initialIndex;
+      _pageController = PageController(initialPage: _initialIndex);
+      debugPrint(
+          '📋 Initialized PageView from feed snapshot (${_articlesList.length} articles) at index $_initialIndex');
+      return;
+    }
+
+    _initializeFromProvider();
+  }
+
+  /// Fallback when no feed snapshot was passed (deep links, legacy routes).
+  void _initializeFromProvider() {
+    final newsProvider = context.read<NewsProvider>();
+    final tapped = widget.article;
+
+    final candidates = <List<NewsArticle>>[
+      newsProvider.categoryNews,
+      newsProvider.todayNews,
+      newsProvider.articles,
+      newsProvider.breakingNews,
+    ];
+
+    for (final list in candidates) {
+      if (list.isEmpty) continue;
+      final idx = _indexOfArticle(list, tapped);
+      if (idx >= 0) {
+        _articlesList = List<NewsArticle>.from(list);
+        _initialIndex = idx;
+        _currentPageIndex = _initialIndex;
+        _pageController = PageController(initialPage: _initialIndex);
+        debugPrint(
+            '📋 Initialized PageView from provider (${_articlesList.length} articles) at index $_initialIndex');
+        return;
+      }
+    }
+
+    _articlesList = [tapped];
+    _initialIndex = 0;
+    _currentPageIndex = 0;
+    _pageController = PageController(initialPage: 0);
+    debugPrint('📋 Initialized PageView with single article');
   }
 
   void _trackVisibleArticle(int index) {
@@ -107,70 +213,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         _checkAndSyncAutoAdvance(_audioProvider!);
       }
     });
-  }
-
-  /// Initialize PageView with article list based on source
-  void _initializePageView() {
-    final newsProvider = context.read<NewsProvider>();
-    List<NewsArticle> articlesList;
-    int startIndex = 0;
-
-    // Check if article is in breaking news
-    final breakingIndex = newsProvider.breakingNews.indexWhere(
-      (a) =>
-          (a.articleId ?? a.title) ==
-          (widget.article.articleId ?? widget.article.title),
-    );
-
-    if (breakingIndex >= 0) {
-      // Use all breaking news for swipeable list
-      articlesList = newsProvider.breakingNews;
-      startIndex = breakingIndex;
-      debugPrint(
-          '📋 Initialized PageView with breaking news (${articlesList.length} articles) at index $startIndex');
-    } else {
-      // Check if article is in flash news (first 5 breaking news)
-      final flashNews = newsProvider.breakingNews.take(5).toList();
-      final flashIndex = flashNews.indexWhere(
-        (a) =>
-            (a.articleId ?? a.title) ==
-            (widget.article.articleId ?? widget.article.title),
-      );
-
-      if (flashIndex >= 0) {
-        // Use flash news (first 5 breaking news) for swipeable list
-        articlesList = flashNews;
-        startIndex = flashIndex;
-        debugPrint(
-            '📋 Initialized PageView with flash news (${articlesList.length} articles) at index $startIndex');
-      } else {
-        // Check if article is in today's news
-        final todayIndex = newsProvider.todayNews.indexWhere(
-          (a) =>
-              (a.articleId ?? a.title) ==
-              (widget.article.articleId ?? widget.article.title),
-        );
-
-        if (todayIndex >= 0) {
-          articlesList = newsProvider.todayNews;
-          startIndex = todayIndex;
-          debugPrint(
-              '📋 Initialized PageView with today news (${articlesList.length} articles) at index $startIndex');
-        } else {
-          // Article not found in any list, use single article
-          articlesList = [widget.article];
-          startIndex = 0;
-          debugPrint('📋 Initialized PageView with single article');
-        }
-      }
-    }
-
-    _articlesList = articlesList;
-    _initialIndex = startIndex;
-    _currentPageIndex = _initialIndex;
-
-    // Initialize PageController with initial index
-    _pageController = PageController(initialPage: _initialIndex);
   }
 
   /// Handle user swipe - STOP audio and update page
@@ -359,25 +401,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         _visibleArticleIndex! >= 0 &&
         _visibleArticleIndex! < _articlesList.length) {
       _sendReadForArticle(_articlesList[_visibleArticleIndex!]);
-      InterstitialAdManager.instance.recordArticleEngaged();
     }
 
     if (!mounted) return;
-
-    if (!AdService().policy.enabled ||
-        !AdService().policy.interstitialEnabled) {
-      Navigator.pop(context);
-      return;
-    }
-
-    final shown = await InterstitialAdManager.instance.tryShowOnNaturalBreak(
-      onDismissed: () {
-        if (mounted) Navigator.pop(context);
-      },
-    );
-    if (!shown && mounted) {
-      Navigator.pop(context);
-    }
+    Navigator.pop(context);
   }
 
   @override
@@ -483,198 +510,383 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
           _checkAndSyncAutoAdvance(audioProvider);
         }
 
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              /// 🔹 HEADER IMAGE + OVERLAY
-              Stack(
-                children: [
-                  // Background image
-                  CachedNetworkImage(
-                    imageUrl: article.imageUrl ?? article.sourceIcon ?? '',
-                    height: 380,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, url, error) => newsOnImageFallback(
-                        width: double.infinity, height: 380),
-                  ),
-
-                  // Gradient Overlay
-                  Container(
-                    height: 380,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black87],
+        // Fixed hero header + scrollable article body only (industry pattern).
+        return Column(
+          children: [
+            /// 🔹 FIXED HEADER — image + exact bands below status bar:
+            /// 80 chrome · 180 category+title · remaining (~80) source/date
+            Builder(
+              builder: (context) {
+                final topInset = MediaQuery.paddingOf(context).top;
+                return SizedBox(
+                  height: _heroImageHeight + topInset,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: article.imageUrl ?? article.sourceIcon ?? '',
+                        height: _heroImageHeight + topInset,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) =>
+                            newsOnImageFallback(
+                          width: double.infinity,
+                          height: _heroImageHeight + topInset,
+                        ),
                       ),
-                    ),
-                  ),
-
-                  // Top AppBar section
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: [0.0, 0.18, 0.48, 1.0],
+                            colors: [
+                              Color(0xB3000000),
+                              Colors.transparent,
+                              Colors.transparent,
+                              Color(0xE6000000),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          InkWell(
-                            onTap: _leaveDetail,
-                            borderRadius: BorderRadius.circular(25),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Colors.black45,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back,
-                                color: Colors.white,
-                              ),
+                          SizedBox(height: topInset),
+                          SizedBox(
+                            height: _heroChromeHeight,
+                            child: _buildHeroChrome(config, article),
+                          ),
+                          SizedBox(
+                            height: _heroTitleBandHeight,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: _buildHeroTitleBand(article, config),
                             ),
                           ),
-                          giveWidth(12),
-                          // The header sits over a dark gradient + (possibly dark)
-                          // image, so always use the light logo variant and place
-                          // it on a translucent backdrop so it stays visible on
-                          // bright, dark, or failed/black images alike.
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black45,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: showImage(
-                              config.getAppNameLogoForTheme(Brightness.dark),
-                              BoxFit.contain,
-                              height: 52,
-                              width: 80,
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                              child: _buildHeroFooterBand(article),
                             ),
                           ),
-                          const Spacer(),
                         ],
                       ),
-                    ),
+                    ],
                   ),
+                );
+              },
+            ),
 
-                  // Title overlay (bottom)
-                  Positioned(
-                    bottom: 35,
-                    left: 20,
-                    right: 20,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          article.category?.first ?? "Politics",
-                          style: GoogleFonts.inter(
-                            color: config.primaryColorValue,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+            /// 🔹 SCROLLABLE CONTENT ONLY
+            Expanded(
+              child: Material(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(22),
+                  topRight: Radius.circular(22),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAudioControlBar(
+                        article,
+                        config,
+                        theme,
+                        audioProvider,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        _getArticleContent(article),
+                        style: GoogleFonts.inriaSerif(
+                          fontSize: _contentTextSize,
+                          fontWeight: FontWeight.w500,
+                          height: 1.6,
+                          color: theme.colorScheme.secondary,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '"${article.title}"',
-                          style: GoogleFonts.playfairDisplay(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            height: 1.3,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '${LocalizationHelper.sourceLabel(context, article.sourceName ?? 'NewsOn')}${(article.creator != null && article.creator!.isNotEmpty) ? ' | ${LocalizationHelper.authorLabel(context, article.creator![0])}' : ''}',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${LocalizationHelper.publishedLabel(context, article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now()))} (${_getTimeAgo(article)})',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      _buildPageIndicator(config, theme),
+                      const SizedBox(height: 12),
+                    ],
                   ),
-                ],
+                ),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-              /// 🔹 CONTENT AREA
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 22,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(22),
-                    topRight: Radius.circular(22),
+  /// Exact hero layout bands (must sum with footer to [_heroImageHeight]).
+  static const double _heroImageHeight = 340;
+  static const double _heroChromeHeight = 80;
+  static const double _heroTitleBandHeight = 180;
+  // Remaining footer band: 340 - 80 - 180 = 80
+
+  /// Back · logo · share — locked to [_heroChromeHeight] (full 80px usable).
+  Widget _buildHeroChrome(dynamic config, NewsArticle article) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _HeroChromeButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            size: 42,
+            onTap: _leaveDetail,
+          ),
+          const SizedBox(width: 10),
+          Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.42),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child: showImage(
+              config.getAppNameLogoForTheme(Brightness.dark),
+              BoxFit.contain,
+              height: 60,
+              width: 80,
+            ),
+          ),
+          const Spacer(),
+          _HeroChromeButton(
+            icon: Icons.share_rounded,
+            size: 42,
+            onTap: () {
+              unawaited(_interactionService.trackShare(article));
+              NewsShareService.shareArticle(
+                article,
+                curiousCta: LocalizationHelper.shareNewsCuriousCta(context),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Category + title — locked to [_heroTitleBandHeight] (180).
+  Widget _buildHeroTitleBand(NewsArticle article, dynamic config) {
+    final titleText = '"${article.title}"';
+    final categoryText = article.category?.first ?? 'Politics';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final categoryStyle = GoogleFonts.inter(
+          color: config.primaryColorValue,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          height: 1.3,
+        );
+        final titleStyle = GoogleFonts.playfairDisplay(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          height: 1.3,
+        );
+
+        const categoryGap = 8.0;
+        final categoryH = _measureTextHeight(
+          categoryText,
+          categoryStyle,
+          constraints.maxWidth,
+          maxLines: 1,
+        );
+        final titleMaxH = (constraints.maxHeight - categoryH - categoryGap)
+            .clamp(24.0, 180.0);
+        final titleSize = _fitTitleFontSize(
+          text: titleText,
+          baseStyle: titleStyle,
+          maxWidth: constraints.maxWidth,
+          maxHeight: titleMaxH,
+        );
+
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                categoryText,
+                style: categoryStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: categoryGap),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    titleText,
+                    style: titleStyle.copyWith(
+                      fontSize: titleSize,
+                      height: 1.3,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.fade,
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// AUDIO CONTROL BAR
-                    _buildAudioControlBar(
-                        article, config, theme, audioProvider),
-                    const SizedBox(height: 20),
-
-                    /// ARTICLE CONTENT
-                    Text(
-                      _getArticleContent(article),
-                      style: GoogleFonts.inriaSerif(
-                        fontSize: _contentTextSize,
-                        fontWeight: FontWeight.w500,
-                        height: 1.6,
-                        color: theme.colorScheme.secondary,
-                      ),
-                    ),
-
-                    /// PAGE INDICATOR
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(
-                            _articlesList.length,
-                            (index) => Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: index == _currentPageIndex ? 18 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: index == _currentPageIndex
-                                    ? config.primaryColorValue
-                                    : Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  /// Source + published — fills remaining hero space (80px).
+  Widget _buildHeroFooterBand(NewsArticle article) {
+    final sourceLine =
+        '${LocalizationHelper.sourceLabel(context, article.sourceName ?? 'NewsOn')}'
+        '${(article.creator != null && article.creator!.isNotEmpty) ? ' | ${LocalizationHelper.authorLabel(context, article.creator![0])}' : ''}';
+    final publishedLine =
+        '${LocalizationHelper.publishedLabel(context, article.pubDate != null ? DateFormatter.formatDate(DateFormatter.parseApiDate(article.pubDate) ?? DateTime.now()) : DateFormatter.formatDate(DateTime.now()))} (${_getTimeAgo(article)})';
+
+    final sourceStyle = GoogleFonts.inter(
+      color: Colors.white.withOpacity(0.9),
+      fontSize: 12,
+      height: 1.35,
+    );
+    final publishedStyle = GoogleFonts.inter(
+      color: Colors.white.withOpacity(0.8),
+      fontSize: 11,
+      height: 1.35,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  sourceLine,
+                  style: sourceStyle,
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                publishedLine,
+                style: publishedStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  double _measureTextHeight(
+    String text,
+    TextStyle style,
+    double maxWidth, {
+    int? maxLines,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: maxLines,
+      ellipsis: maxLines != null ? '…' : null,
+    )..layout(maxWidth: maxWidth);
+    return painter.height;
+  }
+
+  /// Largest Playfair size (≤22) that keeps [text] inside the title band.
+  double _fitTitleFontSize({
+    required String text,
+    required TextStyle baseStyle,
+    required double maxWidth,
+    required double maxHeight,
+    double minSize = 12,
+    double maxSize = 22,
+  }) {
+    if (maxWidth <= 0 || maxHeight <= 0) return minSize;
+
+    var low = minSize;
+    var high = maxSize;
+    var best = minSize;
+
+    for (var i = 0; i < 16; i++) {
+      final mid = (low + high) / 2;
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: baseStyle.copyWith(fontSize: mid, height: 1.3),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      if (painter.height <= maxHeight) {
+        best = mid;
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    return best;
+  }
+
+  static const int _maxPageIndicatorDots = 12;
+
+  Widget _buildPageIndicator(dynamic config, ThemeData theme) {
+    final total = _articlesList.length;
+    if (total <= 1) {
+      return const SizedBox(height: 20);
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: total <= _maxPageIndicatorDots
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    total,
+                    (index) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: index == _currentPageIndex ? 18 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: index == _currentPageIndex
+                            ? config.primaryColorValue
+                            : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : Text(
+                '${_currentPageIndex + 1} / $total',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.secondary.withOpacity(0.7),
+                ),
+              ),
+      ),
     );
   }
 
@@ -907,7 +1119,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                             child: Text(
                               isCurrentArticle && isLoading
                                   ? LocalizationHelper.loading(context)
-                                  : LocalizationHelper.tapToPlayArticle(context),
+                                  : LocalizationHelper.tapToPlayArticle(
+                                      context),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
                                 fontSize: fontSize,
@@ -1122,5 +1335,47 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     }
 
     return DateFormatter.getRelativeTime(dateTime);
+  }
+}
+
+/// Compact circular control for the detail hero toolbar.
+class _HeroChromeButton extends StatelessWidget {
+  const _HeroChromeButton({
+    required this.icon,
+    required this.onTap,
+    this.size = 42,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = (size * 0.48).clamp(16.0, 20.0);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Ink(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.42),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.22),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: iconSize),
+        ),
+      ),
+    );
   }
 }

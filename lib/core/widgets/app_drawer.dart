@@ -100,23 +100,22 @@ class AppDrawer extends StatelessWidget {
                               () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder:
-                                        (c) =>
-                                            i == 0
-                                                ? const AccountSettings()
-                                                : i == 1
-                                                ? const NotificationView()
-                                                : i == 2
+                                    builder: (c) => i == 0
+                                        ? const AccountSettings()
+                                        : i == 1
+                                            ? const NotificationView()
+                                            : i == 2
                                                 ? BookMark()
                                                 : i == 3
-                                                ? ApplicationSettings()
-                                                : i == 4
-                                                ? TermsAndConditions()
-                                                : i == 5
-                                                ? PrivacyPolicy()
-                                                : const CategorySelectionScreen(
-                                                  isFromSideMenu: true,
-                                                ),
+                                                    ? ApplicationSettings()
+                                                    : i == 4
+                                                        ? TermsAndConditions()
+                                                        : i == 5
+                                                            ? PrivacyPolicy()
+                                                            : const CategorySelectionScreen(
+                                                                isFromSideMenu:
+                                                                    true,
+                                                              ),
                                   ),
                                 );
                               },
@@ -187,99 +186,97 @@ class AppDrawer extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(LocalizationHelper.selectLanguage(context)),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: languageProvider.languageNames.length,
-                itemBuilder: (context, index) {
-                  final languageName = languageProvider.languageNames[index];
+      builder: (context) => AlertDialog(
+        title: Text(LocalizationHelper.selectLanguage(context)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: languageProvider.languageNames.length,
+            itemBuilder: (context, index) {
+              final languageName = languageProvider.languageNames[index];
 
-                  return RadioListTile<String>(
-                    title: Text(
-                      languageName,
-                    ), // Display full language name (English, Tamil, Hindi)
-                    value: languageName,
-                    groupValue: languageProvider.selectedLanguage,
-                    activeColor: const Color(0xFFE31E24),
-                    onChanged: (value) {
-                      if (value != null) {
-                        languageProvider.setLanguage(value);
-                        Navigator.pop(context);
-                      }
-                    },
-                  );
+              return RadioListTile<String>(
+                title: Text(
+                  languageName,
+                ), // Display full language name (English, Tamil, Hindi)
+                value: languageName,
+                groupValue: languageProvider.selectedLanguage,
+                activeColor: const Color(0xFFE31E24),
+                onChanged: (value) {
+                  if (value != null) {
+                    languageProvider.setLanguage(value);
+                    Navigator.pop(context);
+                  }
                 },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(LocalizationHelper.cancel(context)),
-              ),
-            ],
+              );
+            },
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(LocalizationHelper.cancel(context)),
+          ),
+        ],
+      ),
     );
   }
 
   void _showAboutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE31E24),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'NEWS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'ON',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${LocalizationHelper.version(context)}: 1.0.0'),
-                const SizedBox(height: 8),
-                Text(
-                  LocalizationHelper.yourPersonalizedNewsApplication(context),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '© 2025 NewsOn. All rights reserved.',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(LocalizationHelper.close(context)),
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
               ),
-            ],
+              decoration: BoxDecoration(
+                color: const Color(0xFFE31E24),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'NEWS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Text(
+              'ON',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${LocalizationHelper.version(context)}: 1.0.0'),
+            const SizedBox(height: 8),
+            Text(
+              LocalizationHelper.yourPersonalizedNewsApplication(context),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '© 2025 NewsOn. All rights reserved.',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(LocalizationHelper.close(context)),
           ),
+        ],
+      ),
     );
   }
 }

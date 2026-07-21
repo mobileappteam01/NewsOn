@@ -1159,11 +1159,12 @@ class _SearchTabState extends State<SearchTab>
                   }
                 },
                 onNewsTapped: () {
-                  Navigator.push(
+                  final searchResults = newsProvider.articles;
+                  NewsDetailScreen.open(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => NewsDetailScreen(article: article),
-                    ),
+                    article: article,
+                    articles: searchResults,
+                    initialIndex: articleIndex,
                   );
                 },
                 onShareTapped: () {

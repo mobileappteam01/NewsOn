@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
+import 'news_article_image.dart';
 import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/audio_player_provider.dart';
@@ -53,30 +53,14 @@ class NewsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image section (left side, smaller)
-            if (showImage && article.imageUrl != null)
+            if (showImage)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: article.imageUrl!,
+                child: NewsArticleImage.fromArticle(
+                  article,
                   height: 100,
                   width: 100,
                   fit: BoxFit.cover,
-                  placeholder:
-                      (context, url) => Container(
-                        height: 100,
-                        width: 100,
-                        color: theme.colorScheme.surface,
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                  errorWidget:
-                      (context, url, error) => Container(
-                        height: 100,
-                        width: 100,
-                        color: theme.colorScheme.surface,
-                        child: const Icon(Icons.image_not_supported, size: 32),
-                      ),
                 ),
               ),
 

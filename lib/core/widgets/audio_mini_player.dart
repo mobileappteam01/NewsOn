@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../screens/audio_player/audio_player_screen.dart';
+import 'news_article_image.dart';
 
 /// Spotify-like Mini Player Widget
 /// Displays at the bottom of the screen when audio is playing
@@ -58,23 +59,13 @@ class AudioMiniPlayer extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.grey[800],
                     ),
-                    child: article.imageUrl != null
-                        ? Image.network(
-                            article.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.article,
-                                color: Colors.grey[600],
-                                size: 30,
-                              );
-                            },
-                          )
-                        : Icon(
-                            Icons.article,
-                            color: Colors.grey[600],
-                            size: 30,
-                          ),
+                    child: NewsArticleImage.fromArticle(
+                      article,
+                      fit: BoxFit.cover,
+                      width: 70,
+                      height: 70,
+                      backgroundColor: Colors.grey[800],
+                    ),
                   ),
 
                   // Article info and controls

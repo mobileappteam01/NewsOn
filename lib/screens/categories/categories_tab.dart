@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/widgets/news_article_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -138,24 +138,25 @@ class _CategoriesTabState extends State<CategoriesTab>
     try {
       final newsProvider = context.read<NewsProvider>();
       final nextPage = _currentPage + 1;
-      
-      int previousLength = newsProvider.selectedDate != null 
-          ? newsProvider.todayNews.length 
+
+      int previousLength = newsProvider.selectedDate != null
+          ? newsProvider.todayNews.length
           : newsProvider.breakingNews.length;
 
       if (newsProvider.selectedDate != null) {
-        await newsProvider.fetchNewsByDate(newsProvider.selectedDate!, limit: 10, page: nextPage);
+        await newsProvider.fetchNewsByDate(newsProvider.selectedDate!,
+            limit: 10, page: nextPage);
       } else {
         await newsProvider.fetchBreakingNews(limit: 10, page: nextPage);
       }
-      
+
       if (mounted) {
         setState(() {
           _currentPage = nextPage;
-          int currentLength = newsProvider.selectedDate != null 
-              ? newsProvider.todayNews.length 
+          int currentLength = newsProvider.selectedDate != null
+              ? newsProvider.todayNews.length
               : newsProvider.breakingNews.length;
-              
+
           if (currentLength <= previousLength) {
             _hasMorePages = false;
           }
@@ -880,17 +881,9 @@ class _CategoriesTabState extends State<CategoriesTab>
                 SizedBox(
                   width: 100,
                   height: 100,
-                  child: CachedNetworkImage(
-                    imageUrl: article.imageUrl ?? article.sourceIcon ?? '',
+                  child: NewsArticleImage.fromArticle(
+                    article,
                     fit: BoxFit.cover,
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                        size: 32,
-                      ),
-                    ),
                   ),
                 ),
 
@@ -1033,9 +1026,8 @@ class _CategoriesTabState extends State<CategoriesTab>
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : Icon(

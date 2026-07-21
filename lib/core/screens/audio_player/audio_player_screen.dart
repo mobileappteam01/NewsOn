@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../providers/audio_player_provider.dart';
 import '../../../providers/remote_config_provider.dart';
+import '../../widgets/news_article_image.dart';
 
 /// Full Audio Player Screen - Spotify-like UI
 class AudioPlayerScreen extends StatefulWidget {
@@ -132,102 +132,23 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 // Main image with improved rendering
                                 GestureDetector(
                                   onTap: () {
-                                    if (article.imageUrl != null) {
+                                    final url =
+                                        article.imageUrl ?? article.sourceIcon;
+                                    if (url != null && url.trim().isNotEmpty) {
                                       _showFullScreenImage(
-                                          context, article.imageUrl!);
+                                          context, url.trim());
                                     }
                                   },
-                                  child: Container(
+                                  child: SizedBox(
                                     width: double.infinity,
                                     height: double.infinity,
-                                    child: article.imageUrl != null
-                                        ? CachedNetworkImage(
-                                            imageUrl: article.imageUrl!,
-                                            fit: BoxFit
-                                                .contain, // Preserve aspect ratio, show full image
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            placeholder: (context, url) =>
-                                                Container(
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              color: Colors.grey[900],
-                                              child: Center(
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    CircularProgressIndicator(
-                                                      color: Colors.white,
-                                                      strokeWidth: 2,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    Text(
-                                                      'Loading image...',
-                                                      style: GoogleFonts.inter(
-                                                        color: Colors.white,
-                                                        fontSize: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            errorWidget:
-                                                (context, url, error) =>
-                                                    Container(
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              color: Colors.grey[900],
-                                              child: Center(
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.broken_image,
-                                                      color: Colors.grey[600],
-                                                      size: 64,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    Text(
-                                                      'Image not available',
-                                                      style: GoogleFonts.inter(
-                                                        color: Colors.grey[600],
-                                                        fontSize: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        : Container(
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            color: Colors.grey[900],
-                                            child: Center(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.article,
-                                                    color: Colors.grey[600],
-                                                    size: 64,
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  Text(
-                                                    'No image available',
-                                                    style: GoogleFonts.inter(
-                                                      color: Colors.grey[600],
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
+                                    child: NewsArticleImage.fromArticle(
+                                      article,
+                                      fit: BoxFit.contain,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      backgroundColor: Colors.grey[900],
+                                    ),
                                   ),
                                 ),
                                 // Visual indicator for full screen viewing
@@ -752,56 +673,12 @@ class FullScreenImageView extends StatelessWidget {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 3.0,
-                child: CachedNetworkImage(
+                child: NewsArticleImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.contain,
                   width: double.infinity,
                   height: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading image...',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image,
-                            color: Colors.grey[600],
-                            size: 64,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Image not available',
-                            style: GoogleFonts.inter(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  backgroundColor: Colors.black,
                 ),
               ),
             ),

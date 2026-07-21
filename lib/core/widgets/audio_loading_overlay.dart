@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../utils/localization_helper.dart';
+import 'news_article_image.dart';
 
 /// Beautiful loading overlay that appears when ElevenLabs API is generating audio
 class AudioLoadingOverlay extends StatelessWidget {
@@ -75,7 +76,7 @@ class AudioLoadingOverlay extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Article thumbnail (if available)
-                  if (article?.imageUrl != null)
+                  if (article != null)
                     Container(
                       width: 100,
                       height: 100,
@@ -91,23 +92,16 @@ class AudioLoadingOverlay extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          article!.imageUrl!,
+                        child: NewsArticleImage.fromArticle(
+                          article,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[800],
-                              child: const Icon(
-                                Icons.article,
-                                color: Colors.white54,
-                                size: 40,
-                              ),
-                            );
-                          },
+                          width: 100,
+                          height: 100,
+                          backgroundColor: Colors.grey[800],
                         ),
                       ),
                     ),
-                  if (article?.imageUrl != null) const SizedBox(height: 20),
+                  if (article != null) const SizedBox(height: 20),
 
                   // Loading text
                   Text(

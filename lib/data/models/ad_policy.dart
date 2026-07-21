@@ -5,7 +5,7 @@ class AdPolicy {
     this.useTestAds = false,
     this.inlineInterval = 5,
     this.anchorBannerEnabled = true,
-    this.interstitialEnabled = true,
+    this.interstitialEnabled = false,
     this.interstitialMinSeconds = 120,
     this.interstitialMinArticlesRead = 2,
     this.interstitialMaxPerSession = 4,
@@ -59,10 +59,9 @@ class AdPolicy {
         map['anchor_banner_enabled'],
         defaults.anchorBannerEnabled,
       ),
-      interstitialEnabled: parseBool(
-        map['interstitial_enabled'],
-        defaults.interstitialEnabled,
-      ),
+      // Interstitials removed per client request — keep false even if Firebase
+      // still has interstitial_enabled: true.
+      interstitialEnabled: false,
       interstitialMinSeconds: parseInt(
         map['interstitial_min_seconds'],
         defaults.interstitialMinSeconds,

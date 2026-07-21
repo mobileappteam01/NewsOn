@@ -85,24 +85,49 @@ class ApiService {
 
       _hydrateFromLocalCache();
 
-      // Step 1: Fetch base URL from Realtime Database
-      await _fetchBaseUrl();
+      // If we already have a cached base URL (common after first launch),
+      // mark usable immediately so deep links / first paint are not blocked.
+      final hadCachedBase =
+          _cachedBaseUrl != null && _cachedBaseUrl!.trim().isNotEmpty;
+
+      // Step 1: Fetch base URL from Realtime Database (with timeout)
+      try {
+        await _fetchBaseUrl().timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('⚠️ Base URL fetch timed out / failed: $e');
+        if (!hadCachedBase) {
+          _hydrateFromLocalCache();
+        }
+      }
 
       // Step 2: Fetch image base URL from Realtime Database
-      await _fetchImageBaseUrl();
+      try {
+        await _fetchImageBaseUrl().timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('⚠️ Image Base URL fetch skipped: $e');
+      }
 
       // Step 3: Fetch all endpoints from Firestore
-      await _fetchAllEndpoints();
+      try {
+        await _fetchAllEndpoints().timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('⚠️ Endpoints fetch timed out / failed: $e');
+      }
 
-      _isInitialized = true;
-      debugPrint('✅ API Service initialized successfully');
-      debugPrint('   Base URL: $_cachedBaseUrl');
-      debugPrint('   Endpoints loaded: ${_cachedEndpoints.length}');
+      if (_cachedBaseUrl != null && _cachedBaseUrl!.trim().isNotEmpty) {
+        _isInitialized = true;
+        debugPrint('✅ API Service initialized successfully');
+        debugPrint('   Base URL: $_cachedBaseUrl');
+        debugPrint('   Endpoints loaded: ${_cachedEndpoints.length}');
+      } else {
+        throw Exception('Base URL unavailable after initialize()');
+      }
     } catch (e) {
       debugPrint('❌ Error initializing API Service: $e');
-      if (_cachedBaseUrl != null) {
+      _hydrateFromLocalCache();
+      if (_cachedBaseUrl != null && _cachedBaseUrl!.trim().isNotEmpty) {
         _isInitialized = true;
-        debugPrint('✅ API Service using cached URLs (offline)');
+        debugPrint('✅ API Service using cached URLs (offline/fallback)');
         return;
       }
       rethrow;
@@ -117,8 +142,18 @@ class ApiService {
 
     final cachedIp = StorageService.getRealtimeDbCache('ipAddress');
     if (cachedIp != null) {
-      _cachedBaseUrl = cachedIp.toString();
+      final asString = cachedIp.toString().trim();
+      if (asString.isNotEmpty) {
+        _cachedBaseUrl = asString;
+      }
     }
+  }
+
+  /// Apply base URL known from bootstrap (Realtime DB / cache) without waiting.
+  void applyKnownBaseUrl(String? url) {
+    final trimmed = url?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    _cachedBaseUrl = trimmed;
   }
 
   /// Fetch base URL from Firebase Realtime Database

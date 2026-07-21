@@ -15,7 +15,7 @@ class NewsShareService {
     return null;
   }
 
-  /// Title, short description, catchy CTA, and app deep link only.
+  /// Title, catchy CTA, and app deep link only (no description body).
   static String buildShareText(
     NewsArticle article, {
     String? curiousCta,
@@ -25,16 +25,9 @@ class NewsShareService {
 
     buffer.writeln(article.title);
 
-    if (article.description != null && article.description!.trim().isNotEmpty) {
-      final desc = article.description!.trim();
-      buffer.writeln();
-      buffer.writeln(
-        desc.length > 280 ? '${desc.substring(0, 277)}...' : desc,
-      );
-    }
-
     if (id != null) {
-      final cta = curiousCta ?? LocalizationHelper.shareNewsCuriousCtaFallback();
+      final cta =
+          curiousCta ?? LocalizationHelper.shareNewsCuriousCtaFallback();
       final httpsLink = DeepLinkConstants.buildHttpsDeepLink(id);
       buffer.writeln();
       buffer.writeln(cta);

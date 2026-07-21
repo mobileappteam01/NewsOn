@@ -21,13 +21,15 @@ class AdCacheManager {
 
     for (int i = 0; i < 3; i++) {
       final ad = AdService().createBannerAd(
-        size: AdSize.mediumRectangle,
+        size: AdService().inlineFeedAdSize,
+        adUnitId: AdService().inlineFeedAdUnitId,
+        inlineFeed: true,
         listener: BannerAdListener(
           onAdLoaded: (ad) {
             debugPrint("✅ Medium ad loaded");
           },
           onAdFailedToLoad: (ad, error) {
-            debugPrint("❌ Medium ad failed: ${error.message}");
+            debugPrint("❌ Medium ad failed: ${AdService.describeLoadError(error)}");
             ad.dispose();
           },
         ),

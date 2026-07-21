@@ -7,6 +7,7 @@ import 'package:newson/core/services/font_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../core/widgets/animated_pressable.dart';
+import '../core/widgets/news_article_image.dart';
 import '../data/models/news_article.dart';
 import '../data/models/remote_config_model.dart';
 import '../providers/remote_config_provider.dart';
@@ -433,8 +434,9 @@ class NewsGridView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                showImage(
-                  newsDetails.imageUrl ?? newsDetails.sourceIcon ?? '',
+                showNewsArticleImage(
+                  context,
+                  newsDetails.imageUrl ?? newsDetails.sourceIcon,
                   BoxFit.contain,
                   height: MediaQuery.of(context).size.height / 5.5,
                   width: MediaQuery.of(context).size.width / 2.5,
@@ -515,7 +517,11 @@ class NewsGridView extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // 🖼 Background image
-              showImage(newsDetails.sourceIcon!, BoxFit.cover),
+              showNewsArticleImage(
+                context,
+                newsDetails.imageUrl ?? newsDetails.sourceIcon,
+                BoxFit.cover,
+              ),
 
               // 🌑 Gradient overlay for readability
               Container(
@@ -624,7 +630,11 @@ class NewsGridView extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // 🖼 Background image
-              showImage(newsDetails.sourceIcon!, BoxFit.cover),
+              showNewsArticleImage(
+                context,
+                newsDetails.imageUrl ?? newsDetails.sourceIcon,
+                BoxFit.cover,
+              ),
 
               // 🌑 Gradient overlay for readability
               Container(

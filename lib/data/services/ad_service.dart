@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_database/firebase_database.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../models/ad_policy.dart';
+import 'ad_network_diagnostics.dart';
 
 /// Loads AdMob unit IDs from Firebase and picks the correct format per placement.
 class AdService {
@@ -17,8 +19,27 @@ class AdService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
   bool _isInitialized = false;
+  bool _mobileAdsReady = false;
+  bool _mobileAdsInitializing = false;
+  Completer<bool>? _mobileAdsCompleter;
+  Completer<void>? _initCompleter;
   AdPolicy _policy = AdPolicy.defaults;
   bool _productionIdsMisconfigured = false;
+
+  /// After live units return "publisher data not found", use Google sample
+  /// units for the rest of this process so QA can verify placements.
+  bool _sessionForceTestUnits = false;
+
+  /// `flutter run --release --dart-define=FORCE_TEST_ADS=true`
+  static const bool _forceTestAdsEnv =
+      bool.fromEnvironment('FORCE_TEST_ADS', defaultValue: false);
+
+  /// Serializes BannerAd.load() calls. Parallel loads on Xiaomi/OEM devices
+  /// overwhelm the WebView process and surface as "Unable to obtain a
+  /// JavascriptEngine" (error code 0).
+  Future<void> _bannerLoadQueue = Future.value();
+  static const Duration _postSdkWarmup = Duration(milliseconds: 800);
+  static const Duration _betweenBannerLoads = Duration(milliseconds: 350);
 
   /// Google official test units — always work in development.
   /// https://developers.google.com/admob/android/test-ads
@@ -46,41 +67,160 @@ class AdService {
   String? _iosMediumRectangleId;
   String? _iosInterstitialId;
 
+  /// Medium unit IDs that are not real AdMob units (cause code 3 /
+  /// "Publisher data not found"). Always fall back to Banner instead.
+  static const Set<String> _invalidMediumUnitIds = {
+    'ca-app-pub-6015484156094454/2875777054',
+  };
+
   bool get isInitialized => _isInitialized;
+  bool get isMobileAdsReady => _mobileAdsReady;
   AdPolicy get policy => _policy;
   bool get productionIdsMisconfigured => _productionIdsMisconfigured;
 
-  /// Test units only when Firebase says so, or production IDs are invalid.
-  /// Debug/profile builds still use live Firebase IDs when configured correctly.
+  /// Test units when Firebase / env / debug / session publisher-error fallback.
   bool get shouldUseTestAdUnits =>
-      _policy.useTestAds || _productionIdsMisconfigured;
+      _forceTestAdsEnv ||
+      _policy.useTestAds ||
+      _productionIdsMisconfigured ||
+      _sessionForceTestUnits ||
+      kDebugMode;
+
+  static bool isPublisherSetupError(LoadAdError error) {
+    final msg = error.message.toLowerCase();
+    // "No fill" alone is normal inventory emptiness — do not force test ads.
+    // "Publisher data not found" means the app/unit is not serving in AdMob.
+    return msg.contains('publisher data not found');
+  }
+
+  /// Call from banner/inline failure handlers. Returns true if the caller
+  /// should immediately retry (now on Google test units).
+  Future<bool> handleLoadFailure(LoadAdError error) async {
+    if (_sessionForceTestUnits || _policy.useTestAds) return false;
+    if (!isPublisherSetupError(error)) return false;
+
+    _sessionForceTestUnits = true;
+    debugPrint(
+      '⚠️ Live AdMob units returned "${error.message}" (code ${error.code}).\n'
+      '   Switching this session to Google TEST ad units so placements can be verified.\n'
+      '   Fix AdMob (app approved, billing, Policy center) and/or set '
+      'ads_config.use_test_ads=true in Firebase RTDB for intentional QA.\n'
+      '   See https://support.google.com/admob/answer/9905175#9',
+    );
+    await _applyRequestConfiguration();
+    return true;
+  }
+
+  String? _sanitizeMediumId(String? id) {
+    final cleaned = _cleanId(id);
+    if (cleaned == null) return null;
+    if (_invalidMediumUnitIds.contains(cleaned)) return null;
+    return cleaned;
+  }
+
+  String? get _effectiveAndroidMediumId =>
+      _sanitizeMediumId(_androidMediumRectangleId);
+
+  String? get _effectiveIosMediumId =>
+      _sanitizeMediumId(_iosMediumRectangleId);
+
+  /// Wait until [MobileAds.initialize] finishes (or [timeout]).
+  Future<bool> ensureMobileAdsReady({
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    if (_mobileAdsReady) return true;
+
+    // Kick off full AdService init if nothing has started yet.
+    // Avoid re-entering [initialize] while it is already running (deadlock).
+    if (!_isInitialized && _initCompleter == null) {
+      await initialize();
+      if (_mobileAdsReady) return true;
+    }
+
+    _mobileAdsCompleter ??= Completer<bool>();
+    if (_mobileAdsCompleter!.isCompleted) return _mobileAdsReady;
+
+    // Ensure the SDK init future is actually running.
+    unawaited(_initializeMobileAdsSdk());
+
+    try {
+      return await _mobileAdsCompleter!.future.timeout(timeout);
+    } catch (_) {
+      return _mobileAdsReady;
+    }
+  }
 
   Future<void> _applyRequestConfiguration() async {
+    // Always register known QA devices so AdMob can serve test ads when
+    // requested; does not force test creatives by itself.
+    const testDevices = [
+      '6E221DF684D0B597923A949ED82C2D7D',
+      '656FE85C8D08386073977B1F62D93163',
+    ];
+
     if (shouldUseTestAdUnits) {
       await MobileAds.instance.updateRequestConfiguration(
         RequestConfiguration(
-          testDeviceIds: const [
-            '6E221DF684D0B597923A949ED82C2D7D',
-          ],
+          testDeviceIds: testDevices,
           tagForChildDirectedTreatment:
               TagForChildDirectedTreatment.unspecified,
         ),
       );
       debugPrint('📢 AdMob: test mode (test units or test device routing)');
     } else {
-      // Do not register this device as a test device — live units serve real ads.
       await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(),
+        RequestConfiguration(testDeviceIds: testDevices),
       );
       debugPrint('📢 AdMob: live ad units from Firebase');
     }
   }
 
+  /// Human-readable hint for common AdMob load failures (esp. code 3).
+  static String describeLoadError(LoadAdError error) {
+    final code = error.code;
+    final message = error.message;
+    final lower = message.toLowerCase();
+    if (lower.contains('publisher data not found')) {
+      return 'AdMob publisher data not found (code $code). '
+          'App/ad-unit setup issue — not an app crash. Check: app approved, '
+          'billing complete, Policy center clean, correct app ID. '
+          'See https://support.google.com/admob/answer/9905175#9';
+    }
+    if (code == 3 || lower.contains('no fill')) {
+      return 'AdMob no fill (code $code): $message. '
+          'Often temporary inventory emptiness on live units. '
+          'For QA use: flutter run --release --dart-define=FORCE_TEST_ADS=true '
+          'or set ads_config.use_test_ads=true in Firebase RTDB.';
+    }
+    if (message.contains('JavascriptEngine')) {
+      return 'WebView/JavascriptEngine failed — check Private DNS / AdGuard / VPN.';
+    }
+    return message;
+  }
+
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      // Hot restart / late callers: scrub phantom medium IDs even if init
+      // already completed with a stale Firebase value.
+      _scrubInvalidMediumIds();
+      if (!_mobileAdsReady && _mobileAdsCompleter != null) {
+        await ensureMobileAdsReady();
+      }
+      return;
+    }
+
+    if (_initCompleter != null) {
+      await _initCompleter!.future;
+      return;
+    }
+
+    _initCompleter = Completer<void>();
 
     try {
       debugPrint('📢 Initializing AdService...');
+
+      // Start MobileAds SDK early — must finish before any BannerAd.load().
+      unawaited(_initializeMobileAdsSdk());
 
       final ref = _database.ref();
 
@@ -102,6 +242,7 @@ class AdService {
       _iosInterstitialId = _cleanId(
         (await ref.child('ios_interstitial_ad_id').get()).value?.toString(),
       );
+      _scrubInvalidMediumIds();
 
       final policySnapshot = await ref.child('ads_config').get();
       if (policySnapshot.value is Map) {
@@ -114,9 +255,23 @@ class AdService {
 
       await _applyRequestConfiguration();
 
+      // Prefer waiting for the SDK; ads will no-op cleanly if it never comes up.
+      if (!_mobileAdsReady && _mobileAdsCompleter != null) {
+        try {
+          await _mobileAdsCompleter!.future.timeout(
+            const Duration(seconds: 15),
+          );
+        } catch (_) {}
+      }
+
+      // Surface Private DNS / AdGuard blocks early (saves rebuild chasing).
+      unawaited(AdNetworkDiagnostics.checkAdsReachable());
+
       debugPrint('✅ AdService initialized');
       debugPrint('📢 Ads enabled: ${_policy.enabled}');
+      debugPrint('📢 MobileAds ready: $_mobileAdsReady');
       debugPrint('📢 Using test ad units: $shouldUseTestAdUnits');
+      debugPrint('📢 Inline interval: ${_policy.inlineInterval}');
       if (_productionIdsMisconfigured) {
         debugPrint(
           '⚠️ Firebase ad IDs are identical for multiple formats — using '
@@ -133,17 +288,77 @@ class AdService {
         debugPrint('📢 Banner unit: $bannerAdUnitId');
         debugPrint('📢 Medium unit: $mediumRectangleAdUnitId');
         debugPrint('📢 Interstitial unit: $interstitialAdUnitId');
+        if (_forceTestAdsEnv) {
+          debugPrint('ℹ️ FORCE_TEST_ADS dart-define is on — Google test units');
+        }
       } else {
         debugPrint('📢 Production banner: $bannerAdUnitId');
-        debugPrint('📢 Production medium: $mediumRectangleAdUnitId');
+        debugPrint(
+          '📢 Inline feed: $inlineFeedAdUnitId '
+          '(${hasDedicatedMediumUnit ? 'medium rectangle' : 'large banner fallback'})',
+        );
         debugPrint('📢 Production interstitial: $interstitialAdUnitId');
       }
 
       _isInitialized = true;
+      if (!_initCompleter!.isCompleted) _initCompleter!.complete();
     } catch (e) {
       debugPrint('❌ AdService init error: $e');
       _isInitialized = true;
+      if (!_initCompleter!.isCompleted) _initCompleter!.complete();
     }
+  }
+
+  Future<void> _initializeMobileAdsSdk() async {
+    if (_mobileAdsReady) return;
+    if (_mobileAdsInitializing) {
+      _mobileAdsCompleter ??= Completer<bool>();
+      await _mobileAdsCompleter!.future;
+      return;
+    }
+
+    _mobileAdsInitializing = true;
+    _mobileAdsCompleter ??= Completer<bool>();
+
+    try {
+      debugPrint('📢 MobileAds.initialize() starting...');
+      await MobileAds.instance.initialize().timeout(
+        const Duration(seconds: 25),
+      );
+      // Give the WebView / JavascriptEngine process time to come up before
+      // the first BannerAd.load() — critical on cold start / release.
+      await Future<void>.delayed(_postSdkWarmup);
+      _mobileAdsReady = true;
+      debugPrint('✅ MobileAds.initialize() completed');
+      if (!(_mobileAdsCompleter?.isCompleted ?? true)) {
+        _mobileAdsCompleter!.complete(true);
+      }
+    } catch (e) {
+      debugPrint('❌ MobileAds.initialize() failed: $e');
+      _mobileAdsReady = false;
+      if (!(_mobileAdsCompleter?.isCompleted ?? true)) {
+        _mobileAdsCompleter!.complete(false);
+      }
+    } finally {
+      _mobileAdsInitializing = false;
+    }
+  }
+
+  /// Runs [load] one-at-a-time so inline + anchor + interstitial don't race
+  /// the shared WebView process.
+  Future<T> runExclusiveBannerLoad<T>(Future<T> Function() load) {
+    final previous = _bannerLoadQueue;
+    final gate = Completer<void>();
+    _bannerLoadQueue = gate.future;
+
+    return previous.then((_) async {
+      try {
+        return await load();
+      } finally {
+        await Future<void>.delayed(_betweenBannerLoads);
+        if (!gate.isCompleted) gate.complete();
+      }
+    });
   }
 
   static String? _cleanId(String? id) {
@@ -152,20 +367,62 @@ class AdService {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-  bool _detectMisconfiguredIds() {
-    if (Platform.isAndroid) {
-      return _idsAreSame(_androidBannerId, _androidMediumRectangleId) ||
-          _idsAreSame(_androidBannerId, _androidInterstitialId) ||
-          _idsAreSame(_androidMediumRectangleId, _androidInterstitialId);
+  void _scrubInvalidMediumIds() {
+    if (_androidMediumRectangleId != null &&
+        _sanitizeMediumId(_androidMediumRectangleId) == null) {
+      debugPrint(
+        '⚠️ android_medium_ad_id $_androidMediumRectangleId is not a valid '
+        'AdMob unit — ignoring. In-feed ads use Banner '
+        '(…/3897012392) + largeBanner. Create a Medium rectangle unit in '
+        'AdMob, then update Firebase.',
+      );
+      _androidMediumRectangleId = null;
     }
-    return _idsAreSame(_iosBannerId, _iosMediumRectangleId) ||
-        _idsAreSame(_iosBannerId, _iosInterstitialId) ||
-        _idsAreSame(_iosMediumRectangleId, _iosInterstitialId);
+    if (_iosMediumRectangleId != null &&
+        _sanitizeMediumId(_iosMediumRectangleId) == null) {
+      debugPrint(
+        '⚠️ ios_medium_ad_id $_iosMediumRectangleId is not a valid '
+        'AdMob unit — ignoring.',
+      );
+      _iosMediumRectangleId = null;
+    }
+  }
+
+  bool _detectMisconfiguredIds() {
+    // Banner + medium may share one Banner-format unit (common when only
+    // Banner + Interstitial exist in AdMob). Only flag cross-format clashes.
+    if (Platform.isAndroid) {
+      return _idsAreSame(_androidBannerId, _androidInterstitialId) ||
+          _idsAreSame(_effectiveAndroidMediumId, _androidInterstitialId);
+    }
+    return _idsAreSame(_iosBannerId, _iosInterstitialId) ||
+        _idsAreSame(_effectiveIosMediumId, _iosInterstitialId);
   }
 
   static bool _idsAreSame(String? a, String? b) {
     if (a == null || b == null) return false;
     return a == b;
+  }
+
+  /// True when Firebase has a usable medium ID distinct from the banner unit.
+  bool get hasDedicatedMediumUnit {
+    if (shouldUseTestAdUnits) return true;
+    if (Platform.isAndroid) {
+      final medium = _effectiveAndroidMediumId;
+      return medium != null && !_idsAreSame(medium, _androidBannerId);
+    }
+    final medium = _effectiveIosMediumId;
+    return medium != null && !_idsAreSame(medium, _iosBannerId);
+  }
+
+  /// In-feed: medium rectangle only with a real dedicated unit; otherwise
+  /// large banner on the Banner ad unit (matches your AdMob dashboard).
+  AdSize get inlineFeedAdSize =>
+      hasDedicatedMediumUnit ? AdSize.mediumRectangle : AdSize.largeBanner;
+
+  String get inlineFeedAdUnitId {
+    if (hasDedicatedMediumUnit) return mediumRectangleAdUnitId;
+    return bannerAdUnitId;
   }
 
   String get bannerAdUnitId => _unitForFormat(AdFormat.banner);
@@ -210,7 +467,9 @@ class AdService {
         case AdFormat.anchored:
           return _androidBannerId ?? _testAndroidAnchored;
         case AdFormat.mediumRectangle:
-          return _androidMediumRectangleId ?? _testAndroidMedium;
+          return _effectiveAndroidMediumId ??
+              _androidBannerId ??
+              _testAndroidMedium;
         case AdFormat.interstitial:
           return _androidInterstitialId ?? _testAndroidInterstitial;
       }
@@ -222,7 +481,7 @@ class AdService {
       case AdFormat.anchored:
         return _iosBannerId ?? _testIosAnchored;
       case AdFormat.mediumRectangle:
-        return _iosMediumRectangleId ?? _testIosMedium;
+        return _effectiveIosMediumId ?? _iosBannerId ?? _testIosMedium;
       case AdFormat.interstitial:
         return _iosInterstitialId ?? _testIosInterstitial;
     }
@@ -233,23 +492,49 @@ class AdService {
     AdSize size = AdSize.banner,
     String? adUnitId,
     bool anchored = false,
+    bool inlineFeed = false,
   }) {
-    final unitId = adUnitId ??
-        (anchored
-            ? anchoredBannerAdUnitId
-            : size == AdSize.mediumRectangle
-                ? mediumRectangleAdUnitId
-                : bannerAdUnitId);
-
-    if (kDebugMode) {
-      debugPrint(
-          '📢 Loading ${anchored ? 'anchored' : size.toString()} ad: $unitId');
+    // Always sanitize — never request a known-invalid medium unit.
+    var resolvedSize = size;
+    var unitId = adUnitId;
+    if (inlineFeed) {
+      resolvedSize = inlineFeedAdSize;
+      unitId = inlineFeedAdUnitId;
+    } else if (anchored) {
+      unitId ??= anchoredBannerAdUnitId;
+    } else if (unitId == null) {
+      final isMedium = size.width == AdSize.mediumRectangle.width &&
+          size.height == AdSize.mediumRectangle.height;
+      if (isMedium) {
+        if (hasDedicatedMediumUnit) {
+          unitId = mediumRectangleAdUnitId;
+        } else {
+          // Banner-format unit cannot serve 300x250 — remap size + unit.
+          resolvedSize = AdSize.largeBanner;
+          unitId = bannerAdUnitId;
+        }
+      } else {
+        unitId = bannerAdUnitId;
+      }
     }
+
+    if (_invalidMediumUnitIds.contains(unitId)) {
+      debugPrint(
+        '⚠️ Refusing invalid medium unit $unitId — using Banner instead',
+      );
+      unitId = bannerAdUnitId;
+      resolvedSize = AdSize.largeBanner;
+    }
+
+    debugPrint(
+      '📢 Loading ${anchored ? 'anchored' : '${resolvedSize.width}x${resolvedSize.height}'} '
+      'ad: $unitId${inlineFeed ? ' (inline feed)' : ''}',
+    );
 
     return BannerAd(
       adUnitId: unitId,
       request: const AdRequest(),
-      size: size,
+      size: resolvedSize,
       listener: listener,
     );
   }

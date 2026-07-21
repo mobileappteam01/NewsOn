@@ -513,71 +513,81 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               // Selection count
-                              Text(
-                                LocalizationHelper.categoriesSelectedCount(
-                                    context,
-                                    _selectedCategoryIds.length,
-                                    _categories.length),
-                                style: GoogleFonts.roboto(
-                                  color: theme.colorScheme.tertiary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                              Expanded(
+                                child: Text(
+                                  LocalizationHelper.categoriesSelectedCount(
+                                      context,
+                                      _selectedCategoryIds.length,
+                                      _categories.length),
+                                  style: GoogleFonts.roboto(
+                                    color: theme.colorScheme.tertiary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               // Select All / Deselect All Button
-                              InkWell(
-                                onTap: _toggleSelectAll,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _isAllSelected
-                                        ? config.primaryColorValue
-                                            .withOpacity(0.1)
-                                        : config.primaryColorValue,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: config.primaryColorValue,
-                                      width: 1.5,
+                              Flexible(
+                                child: InkWell(
+                                  onTap: _toggleSelectAll,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
                                     ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _isAllSelected
-                                            ? Icons.deselect
-                                            : _isSomeSelected
-                                                ? Icons
-                                                    .indeterminate_check_box_outlined
-                                                : Icons.select_all,
-                                        size: 18,
-                                        color: _isAllSelected
-                                            ? config.primaryColorValue
-                                            : Colors.white,
+                                    decoration: BoxDecoration(
+                                      color: _isAllSelected
+                                          ? config.primaryColorValue
+                                              .withOpacity(0.1)
+                                          : config.primaryColorValue,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: config.primaryColorValue,
+                                        width: 1.5,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        _isAllSelected
-                                            ? LocalizationHelper.deselectAll(
-                                                context)
-                                            : LocalizationHelper.selectAll(
-                                                context),
-                                        style: GoogleFonts.roboto(
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _isAllSelected
+                                              ? Icons.deselect
+                                              : _isSomeSelected
+                                                  ? Icons
+                                                      .indeterminate_check_box_outlined
+                                                  : Icons.select_all,
+                                          size: 18,
                                           color: _isAllSelected
                                               ? config.primaryColorValue
                                               : Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            _isAllSelected
+                                                ? LocalizationHelper
+                                                    .deselectAll(context)
+                                                : LocalizationHelper
+                                                    .selectAll(context),
+                                            style: GoogleFonts.roboto(
+                                              color: _isAllSelected
+                                                  ? config.primaryColorValue
+                                                  : Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

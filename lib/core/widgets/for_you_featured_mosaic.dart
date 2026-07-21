@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../data/models/news_article.dart';
+import 'news_article_image.dart';
 
 /// Instagram-style featured row: two stacked tiles left, one hero tile right.
 class ForYouFeaturedMosaic extends StatelessWidget {
@@ -199,15 +199,11 @@ class _FeaturedTile extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (_imageUrl != null)
-                  CachedNetworkImage(
-                    imageUrl: _imageUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: Colors.grey[300]),
-                    errorWidget: (_, __, ___) => _placeholder(),
-                  )
-                else
-                  _placeholder(),
+                NewsArticleImage(
+                  imageUrl: _imageUrl,
+                  fit: BoxFit.cover,
+                  height: height,
+                ),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -284,15 +280,6 @@ class _FeaturedTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      color: Colors.grey[400],
-      child: const Center(
-        child: Icon(Icons.article_outlined, color: Colors.white54, size: 36),
       ),
     );
   }

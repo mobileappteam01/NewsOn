@@ -207,7 +207,14 @@ class _ForYouTabState extends State<ForYouTab>
             articles: block.mosaic,
             primaryColor: config.primaryColorValue,
             showListenOverlay: voiceEnabled,
-            onArticleTap: (article, _) => _openDetail(context, article),
+            onArticleTap: (article, _) {
+              final feedIndex = ForYouFeedLayout.feedIndexOf(all, article);
+              _openDetail(
+                context,
+                article,
+                initialIndex: feedIndex >= 0 ? feedIndex : null,
+              );
+            },
             onListenTap: voiceEnabled
                 ? (article, _) {
                     final index = ForYouFeedLayout.feedIndexOf(all, article);
@@ -229,7 +236,14 @@ class _ForYouTabState extends State<ForYouTab>
             articles: block.mosaic,
             primaryColor: config.primaryColorValue,
             showListenOverlay: voiceEnabled,
-            onArticleTap: (article, _) => _openDetail(context, article),
+            onArticleTap: (article, _) {
+              final feedIndex = ForYouFeedLayout.feedIndexOf(all, article);
+              _openDetail(
+                context,
+                article,
+                initialIndex: feedIndex >= 0 ? feedIndex : null,
+              );
+            },
             onListenTap: voiceEnabled
                 ? (article, _) {
                     final index = ForYouFeedLayout.feedIndexOf(all, article);
@@ -301,7 +315,14 @@ class _ForYouTabState extends State<ForYouTab>
             article: article,
             primaryColor: config.primaryColorValue,
             showListenButton: voiceEnabled,
-            onTap: () => _openDetail(context, article),
+            onTap: () {
+              final feedIndex = ForYouFeedLayout.feedIndexOf(all, article);
+              _openDetail(
+                context,
+                article,
+                initialIndex: feedIndex >= 0 ? feedIndex : index,
+              );
+            },
             onListenTap: voiceEnabled
                 ? () => _onListenTapped(
                       context,
@@ -532,12 +553,17 @@ class _ForYouTabState extends State<ForYouTab>
     }
   }
 
-  void _openDetail(BuildContext context, NewsArticle article) {
-    Navigator.push(
+  void _openDetail(
+    BuildContext context,
+    NewsArticle article, {
+    int? initialIndex,
+  }) {
+    final articles = context.read<ForYouProvider>().articles;
+    NewsDetailScreen.open(
       context,
-      MaterialPageRoute(
-        builder: (context) => NewsDetailScreen(article: article),
-      ),
+      article: article,
+      articles: articles,
+      initialIndex: initialIndex,
     );
   }
 }

@@ -26,7 +26,7 @@ import '../../../providers/region_provider.dart';
 import '../../../core/widgets/news_feed_shimmer.dart';
 import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
-import '../../../data/services/news_image_cache_service.dart';
+import '../../../core/widgets/news_article_image.dart';
 import '../../../data/services/storage_service.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
@@ -74,6 +74,10 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   List<NewsArticle> _allCategoryNews = [];
 
   String? _lastNewsLanguageCode;
+
+  /// FAB refresh spinner — provider flags clear on cache hit, so we track the
+  /// full refresh sequence locally.
+  bool _isFabRefreshing = false;
 
   @override
   void initState() {
@@ -460,7 +464,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
           children: [
             // Fixed Header: logo + date + language
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -678,14 +682,20 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 ) // Limit to 10 on home page
                               : widget.newsList.length.clamp(0, 10),
                           itemBuilder: (context, index, realIndex) {
-                            final article = newsProvider.breakingNews.isNotEmpty
-                                ? newsProvider.breakingNews[index]
-                                : _mapToArticle(widget.newsList[index]);
+                            final articles = newsProvider
+                                    .breakingNews.isNotEmpty
+                                ? newsProvider.breakingNews.take(10).toList()
+                                : widget.newsList
+                                    .take(10)
+                                    .map((e) => _mapToArticle(e))
+                                    .toList();
+                            final article = articles[index];
                             return _buildBreakingNewsCard(
                               context,
                               article,
                               remoteConfig,
-                              index, // Pass index for playlist
+                              index,
+                              articles,
                             );
                           },
                           options: CarouselOptions(
@@ -895,7 +905,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              LocalizationHelper.error(context, e.toString()),
+                                              LocalizationHelper.error(
+                                                  context, e.toString()),
                                             ),
                                             duration: const Duration(
                                               seconds: 2,
@@ -906,13 +917,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     }
                                   },
                                   onNewsTapped: () {
-                                    Navigator.push(
+                                    NewsDetailScreen.open(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (context) => NewsDetailScreen(
-                                          article: article,
-                                        ),
-                                      ),
+                                      article: article,
+                                      articles: _allCategoryNews,
+                                      initialIndex: articleIndex,
                                     );
                                   },
                                   onShareTapped: () {
@@ -1058,12 +1067,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   } catch (e) {}
                                 },
                                 onNewsTapped: () {
-                                  Navigator.push(
+                                  NewsDetailScreen.open(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          NewsDetailScreen(article: article),
-                                    ),
+                                    article: article,
+                                    articles: _allTodayNews,
+                                    initialIndex: articleIndex,
                                   );
                                 },
                                 onShareTapped: () {
@@ -1108,7 +1116,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                             5,
                           ), // Limit to 5 on home page
                           itemBuilder: (context, index) {
-                            final data = newsProvider.breakingNews[index];
+                            final flashNews =
+                                newsProvider.breakingNews.take(5).toList();
+                            final data = flashNews[index];
                             return NewsGridView(
                               key: ValueKey('flash_$index'),
                               type: 'bannerview',
@@ -1197,22 +1207,20 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text(LocalizationHelper.error(context, e.toString())),
+                                        content: Text(LocalizationHelper.error(
+                                            context, e.toString())),
                                         duration: const Duration(seconds: 2),
                                       ),
                                     );
                                   }
                                 }
                               },
-                              onNewsTapped: () async {
-                                NewsArticle newsArticle = await getNewsDetail();
-                                Navigator.push(
+                              onNewsTapped: () {
+                                NewsDetailScreen.open(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NewsDetailScreen(
-                                      article: newsArticle,
-                                    ),
-                                  ),
+                                  article: data,
+                                  articles: flashNews,
+                                  initialIndex: index,
                                 );
                               },
                               onShareTapped: () {
@@ -1388,36 +1396,55 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   }
 
   /// Build refresh button
+  Future<void> _refreshFeedFromFab() async {
+    if (_isFabRefreshing || !mounted) return;
+
+    setState(() => _isFabRefreshing = true);
+    try {
+      final newsProvider = context.read<NewsProvider>();
+      await newsProvider.fetchBreakingNews();
+      if (!mounted) return;
+
+      if (_selectedCategory == 'All') {
+        await _loadInitialTodayNews(allowCacheFallback: false);
+      } else {
+        await _loadInitialCategoryNews(
+          _selectedCategory.toLowerCase(),
+          allowCacheFallback: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ FAB refresh failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isFabRefreshing = false);
+      }
+    }
+  }
+
   Widget _buildRefreshButton(
     BuildContext context,
     NewsProvider newsProvider,
     RemoteConfigModel remoteConfig,
   ) {
-    final isRefreshing = newsProvider.isLoading || newsProvider.isLoadingToday;
+    final isRefreshing = _isFabRefreshing ||
+        newsProvider.isLoading ||
+        newsProvider.isLoadingToday ||
+        newsProvider.isLoadingCategoryNews;
 
     return FloatingActionButton(
-      onPressed: isRefreshing
-          ? null
-          : () async {
-              // Refresh breaking news + the currently active view (today or category)
-              await newsProvider.fetchBreakingNews();
-              if (!mounted) return;
-              if (_selectedCategory == 'All') {
-                await _loadInitialTodayNews(allowCacheFallback: false);
-              } else {
-                await _loadInitialCategoryNews(
-                  _selectedCategory.toLowerCase(),
-                  allowCacheFallback: false,
-                );
-              }
-            },
+      heroTag: 'news_feed_refresh_fab',
+      // Keep onPressed non-null so the FAB stays primary-colored while spinning
+      // (null disables and greys out the white spinner).
+      onPressed: isRefreshing ? () {} : _refreshFeedFromFab,
       backgroundColor: remoteConfig.primaryColorValue,
+      foregroundColor: Colors.white,
       child: isRefreshing
           ? const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
+                strokeWidth: 2.5,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             )
@@ -1429,16 +1456,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   Widget _buildBreakingNewsCard(
     BuildContext context,
     NewsArticle article,
-    RemoteConfigModel config, [
-    int? articleIndex,
-  ]) {
+    RemoteConfigModel config,
+    int articleIndex,
+    List<NewsArticle> articles,
+  ) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        NewsDetailScreen.open(
           context,
-          MaterialPageRoute(
-            builder: (context) => NewsDetailScreen(article: article),
-          ),
+          article: article,
+          articles: articles,
+          initialIndex: articleIndex,
         );
       },
       child: LayoutBuilder(
@@ -1585,7 +1613,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                               .showSnackBar(
                                             SnackBar(
                                               content: Text(
-                                                  LocalizationHelper.error(context, e.toString())),
+                                                  LocalizationHelper.error(
+                                                      context, e.toString())),
                                               duration:
                                                   const Duration(seconds: 2),
                                             ),
@@ -1680,10 +1709,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(
-                                          content:
-                                              Text(LocalizationHelper
-                                                  .errorPlayingAudio(
-                                                      context, e.toString())),
+                                          content: Text(LocalizationHelper
+                                              .errorPlayingAudio(
+                                                  context, e.toString())),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -1711,16 +1739,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   /// Build card image with proper handling
   Widget _buildCardImage(NewsArticle article) {
-    final imageUrl = article.imageUrl ?? article.sourceIcon ?? '';
-
-    if (imageUrl.isEmpty) {
-      return newsOnImageFallback();
-    }
-
-    return NewsImageCacheService.instance.cachedImage(
-      url: imageUrl,
+    return NewsArticleImage.fromArticle(
+      article,
       fit: BoxFit.cover,
-      errorWidget: newsOnImageFallback(),
     );
   }
 

@@ -6,19 +6,30 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <!-- Speech Recognition Permission -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required for AdMob on Android 13+ -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <application
         android:label="NewsOn India"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/launcher_icon">
-        <!-- AdMob App  ID - Must be inside <application> tag, not <activity> -->
+        <!-- AdMob App ID - Must be inside <application> tag, not <activity> -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-6015484156094454~1775075691"
-            />  
+            />
+
+        <!-- Impeller+Vulkan breaks AdMob PlatformViews / WebView on many OEMs
+             (Xiaomi, Oppo, MediaTek). Skia is the industry-standard fallback
+             until Flutter has full ad PlatformView support on Impeller. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
             
         
         <!-- Main Activity - Primary launcher for Flutter build system -->

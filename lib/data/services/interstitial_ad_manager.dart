@@ -30,25 +30,33 @@ class InterstitialAdManager {
     if (_isLoading || _interstitial != null) return;
 
     await AdService().initialize();
+    final ready = await AdService().ensureMobileAdsReady();
+    if (!ready) {
+      debugPrint('⚠️ Interstitial preload skipped — MobileAds not ready');
+      return;
+    }
     _isLoading = true;
 
-    await InterstitialAd.load(
-      adUnitId: AdService().interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          debugPrint('✅ Interstitial preloaded');
-          _interstitial = ad;
-          _isLoading = false;
-          _attachCallbacks(ad);
-        },
-        onAdFailedToLoad: (error) {
-          debugPrint('❌ Interstitial load failed: ${error.message}');
-          _interstitial = null;
-          _isLoading = false;
-        },
-      ),
-    );
+    // Share the same WebView queue as banners so we don't starve JavascriptEngine.
+    await AdService().runExclusiveBannerLoad(() async {
+      await InterstitialAd.load(
+        adUnitId: AdService().interstitialAdUnitId,
+        request: const AdRequest(),
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (ad) {
+            debugPrint('✅ Interstitial preloaded');
+            _interstitial = ad;
+            _isLoading = false;
+            _attachCallbacks(ad);
+          },
+          onAdFailedToLoad: (error) {
+            debugPrint('❌ Interstitial load failed: ${error.message}');
+            _interstitial = null;
+            _isLoading = false;
+          },
+        ),
+      );
+    });
   }
 
   void _attachCallbacks(InterstitialAd ad) {

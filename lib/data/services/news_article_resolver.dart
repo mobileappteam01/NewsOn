@@ -26,8 +26,13 @@ class NewsArticleResolver {
     }
 
     try {
-      if (!ApiService().isInitialized) {
-        await ApiService().initialize();
+      final api = ApiService();
+      if (!api.isInitialized) {
+        await api.initialize().timeout(const Duration(seconds: 10));
+      }
+      if (!api.isInitialized) {
+        debugPrint('⚠️ resolveById: ApiService still not initialized');
+        return null;
       }
       return await NewsRepository(apiKey: '').fetchArticleById(articleId);
     } catch (e) {

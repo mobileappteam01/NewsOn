@@ -3,15 +3,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:newson/core/utils/shared_functions.dart';
-import 'data/services/interstitial_ad_manager.dart';
 import 'package:newson/l10n/app_localizations.dart';
 import 'package:newson/screens/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/api_constants.dart';
+import 'core/bootstrap/app_bootstrap.dart';
 import 'data/services/storage_service.dart';
 import 'data/services/api_service.dart';
 import 'data/services/user_service.dart';
@@ -69,135 +68,38 @@ Future<void> _warmOfflineMediaCaches() async {
   }
 }
 
+Future<T?> _withTimeout<T>(
+  Future<T> future, {
+  Duration timeout = const Duration(seconds: 8),
+  String? label,
+}) async {
+  try {
+    return await future.timeout(timeout);
+  } catch (e) {
+    debugPrint('⚠️ ${label ?? 'startup task'} timed out / failed: $e');
+    return null;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppBootstrap.markStarted();
 
-  // Initialize Firebase
+  // Minimal blocking work only — paint first Flutter frame ASAP.
   await Firebase.initializeApp();
-
-  // Initialize local storage FIRST (required for cache operations)
   await StorageService.initialize();
 
-  unawaited(_warmOfflineMediaCaches());
+  // Capture share / cold-start deep link early (local, no network).
+  unawaited(DeepLinkService.instance.initialize());
 
-  await DeepLinkService.instance.initialize();
-
-  // Fetch all DB configs (API keys, URLs, App Icon) in parallel
-  // This drastically reduces startup time compared to sequential fetches
   final networkService = NetworkService();
   final remoteConfigProvider = RemoteConfigProvider();
 
-  await Future.wait([
-    fetchAllDBData(),
-    networkService.initialize(),
-    UserService().initialize(),
-    remoteConfigProvider.initialize(),
-    MobileAds.instance.initialize(),
-    AudioBackgroundService.init().catchError((e) {
-      debugPrint("❌ Failed to initialize Audio Background Service: $e");
-    }),
-  ]);
+  // Instant UI config from local cache / defaults (does not wait on network).
+  unawaited(remoteConfigProvider.initialize());
 
-  // Initialize Network Service for connectivity monitoring
-
-  // Initialize User Service - Load saved user data and token
+  // Load token / user from disk before UI so splash routing is correct.
   await UserService().initialize();
-
-  // Initialize Remote Config FIRST (required for API config)
-
-  // Update app icon if fetched from Realtime Database
-  if (appIconUrl.isNotEmpty) {
-    remoteConfigProvider.updateAppIcon(appIconUrl);
-    debugPrint('✅ App icon set in RemoteConfigProvider');
-
-    // Apply dynamic launcher icon change (Android only)
-    // Only change icon if we're not already using the default
-    // This prevents duplicate app entries on the launcher
-    try {
-      final currentIcon = await DynamicIconService.getCurrentIcon();
-      if (currentIcon != 'dynamic1') {
-        // Switch to dynamic1 variant when icon is fetched
-        // In production, you can download the icon and create variants
-        await DynamicIconService.changeIcon('dynamic1');
-        debugPrint('✅ Dynamic launcher icon applied');
-      } else {
-        debugPrint('ℹ️ Dynamic icon already active, skipping change');
-      }
-    } catch (e) {
-      debugPrint('⚠️ Could not apply dynamic icon: $e');
-      // This is expected on iOS or if the feature is not fully set up
-    }
-  }
-
-  // Initialize Dynamic Localization Service and API Config
-  // These depend on RemoteConfigProvider being initialized
-  await Future.wait([
-    ApiConstants.initialize(),
-    DynamicLocalizationService().initialize(),
-  ]);
-  debugPrint("✅ Dynamic API and Localization Services initialized");
-
-  // Initialize dependent services that don't block app start
-  Future.wait([
-    AdService().initialize().then((_) {
-      InterstitialAdManager.instance.preload();
-    }).catchError((e) {
-      debugPrint("❌ Failed to initialize Ad Service: $e");
-    }),
-    ApiService().initialize().catchError((e) {
-      debugPrint("❌ Failed to initialize API Service: $e");
-    }),
-    FcmService().getToken().then((fcmToken) {
-      if (fcmToken != null) {
-        debugPrint("✅ FCM Token initialized: $fcmToken");
-      }
-    }).catchError((e) {
-      debugPrint("❌ Failed to initialize FCM Service: $e");
-    }),
-  ]);
-
-  if (remoteConfigProvider.isVoiceFeaturesEnabled) {
-    // Pre-initialize background music (fetch URL from Firebase) so first article gets BG
-    BackgroundMusicService().ensureInitialized().catchError((e) {
-      debugPrint('⚠️ Background music pre-init failed: $e');
-      return null;
-    });
-
-    // Prefetch audio for previously cached news lists (offline listen after one online session)
-    unawaited(
-      NewsAudioCacheService.instance
-          .prefetchAllStoredNewsCaches()
-          .catchError((e) {
-        debugPrint('⚠️ News audio cache prefetch at startup: $e');
-      }),
-    );
-  }
-
-  // ... fcm logic moved to Future.wait ...
-
-  // Setup background refresh when network comes online
-  networkService.onOnline(() async {
-    debugPrint('🔄 Network came online - refreshing data...');
-    try {
-      // Refresh Remote Config
-      await remoteConfigProvider.forceRefresh();
-
-      // Refresh API Config
-      await ApiConstants.initialize();
-
-      // Refresh all news if NewsProvider is available
-      if (_globalNewsProvider != null) {
-        await _globalNewsProvider!.refreshAllNews();
-      }
-
-      unawaited(
-        NewsAudioCacheService.instance.prefetchAllStoredNewsCaches(),
-      );
-      DeepLinkService.instance.processPendingLink();
-    } catch (e) {
-      debugPrint('⚠️ Error refreshing data on network connect: $e');
-    }
-  });
 
   runApp(
     NewsOnApp(
@@ -205,6 +107,129 @@ void main() async {
       networkService: networkService,
     ),
   );
+
+  // Heavy / network work AFTER first frame so users never stare at a blank window.
+  unawaited(_bootstrapAfterFirstFrame(
+    remoteConfigProvider: remoteConfigProvider,
+    networkService: networkService,
+  ));
+}
+
+Future<void> _bootstrapAfterFirstFrame({
+  required RemoteConfigProvider remoteConfigProvider,
+  required NetworkService networkService,
+}) async {
+  try {
+    // Yield so runApp can schedule the first frame.
+    await Future<void>.delayed(Duration.zero);
+
+    unawaited(_warmOfflineMediaCaches());
+
+    await Future.wait([
+      _withTimeout(fetchAllDBData(), label: 'fetchAllDBData'),
+      _withTimeout(networkService.initialize(), label: 'NetworkService'),
+      _withTimeout(
+        remoteConfigProvider.initialize(),
+        timeout: const Duration(seconds: 12),
+        label: 'RemoteConfig',
+      ),
+      _withTimeout(
+        AudioBackgroundService.init().then<void>((_) {}).catchError((e) {
+          debugPrint('❌ Audio Background Service: $e');
+        }),
+        timeout: const Duration(seconds: 6),
+        label: 'AudioBackground',
+      ),
+    ]);
+
+    // MobileAds is initialized inside AdService — do not race/timeout it here
+    // (that caused "Unable to obtain a JavascriptEngine" on inline ads).
+
+    if (baseURL.isNotEmpty) {
+      ApiService().applyKnownBaseUrl(baseURL);
+    }
+
+    if (appIconUrl.isNotEmpty) {
+      remoteConfigProvider.updateAppIcon(appIconUrl);
+      unawaited(_applyDynamicIcon());
+    }
+
+    await Future.wait([
+      _withTimeout(ApiConstants.initialize(), label: 'ApiConstants'),
+      _withTimeout(
+        DynamicLocalizationService().initialize(),
+        label: 'DynamicLocalization',
+      ),
+      _withTimeout(ApiService().initialize(), label: 'ApiService'),
+    ]);
+
+    unawaited(
+      AdService().initialize().then((_) async {
+        await AdService().ensureMobileAdsReady();
+      }).catchError((e) {
+        debugPrint('❌ Ad Service: $e');
+      }),
+    );
+
+    unawaited(
+      FcmService().getToken().then((fcmToken) {
+        if (fcmToken != null) {
+          debugPrint('✅ FCM Token initialized: $fcmToken');
+        }
+      }).catchError((e) {
+        debugPrint('❌ FCM Service: $e');
+      }),
+    );
+
+    if (remoteConfigProvider.isVoiceFeaturesEnabled) {
+      unawaited(
+        BackgroundMusicService().ensureInitialized().catchError((e) {
+          debugPrint('⚠️ Background music pre-init failed: $e');
+          return null;
+        }),
+      );
+      unawaited(
+        NewsAudioCacheService.instance
+            .prefetchAllStoredNewsCaches()
+            .catchError((e) {
+          debugPrint('⚠️ News audio cache prefetch at startup: $e');
+        }),
+      );
+    }
+
+    networkService.onOnline(() async {
+      debugPrint('🔄 Network came online - refreshing data...');
+      try {
+        await remoteConfigProvider.forceRefresh();
+        await ApiConstants.initialize();
+        if (_globalNewsProvider != null) {
+          await _globalNewsProvider!.refreshAllNews();
+        }
+        unawaited(NewsAudioCacheService.instance.prefetchAllStoredNewsCaches());
+        DeepLinkService.instance.processPendingLink();
+      } catch (e) {
+        debugPrint('⚠️ Error refreshing data on network connect: $e');
+      }
+    });
+  } catch (e) {
+    debugPrint('⚠️ Bootstrap error: $e');
+  } finally {
+    AppBootstrap.markReady();
+    DeepLinkService.instance.processPendingLink();
+    debugPrint('✅ App bootstrap ready');
+  }
+}
+
+Future<void> _applyDynamicIcon() async {
+  try {
+    final currentIcon = await DynamicIconService.getCurrentIcon();
+    if (currentIcon != 'dynamic1') {
+      await DynamicIconService.changeIcon('dynamic1');
+      debugPrint('✅ Dynamic launcher icon applied');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Could not apply dynamic icon: $e');
+  }
 }
 
 class NewsOnApp extends StatelessWidget {
@@ -224,7 +249,6 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: remoteConfigProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        // Dynamic Language Provider - Fetches languages from Firebase
         ChangeNotifierProvider(
           create: (_) {
             final provider = DynamicLanguageProvider();
@@ -232,17 +256,16 @@ class NewsOnApp extends StatelessWidget {
             return provider;
           },
         ),
-        // NewsProvider depends on LanguageProvider for language-based API calls
         ChangeNotifierProxyProvider<LanguageProvider, NewsProvider>(
           create: (_) {
             final provider = NewsProvider();
-            _globalNewsProvider = provider; // Store global reference
+            _globalNewsProvider = provider;
             return provider;
           },
           update: (_, languageProvider, previous) {
             previous ??= NewsProvider();
             previous.setLanguageProvider(languageProvider);
-            _globalNewsProvider = previous; // Update global reference
+            _globalNewsProvider = previous;
             return previous;
           },
         ),
@@ -251,25 +274,13 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ForYouProvider()),
         ChangeNotifierProvider(create: (_) => CompletedNewsProvider()),
         ChangeNotifierProvider(create: (_) => TtsProvider()),
-        // Audio Player Provider - Get API key from Firebase
         ChangeNotifierProvider(
           create: (_) {
             final provider = AudioPlayerProvider(
               elevenLabsApiKey:
                   elevenLabsAPIKey.isNotEmpty ? elevenLabsAPIKey : null,
             );
-            // Store global reference to update when key is fetched
             _globalAudioPlayerProvider = provider;
-
-            if (elevenLabsAPIKey.isNotEmpty) {
-              debugPrint(
-                '✅ AudioPlayerProvider initialized with ElevenLabs API key',
-              );
-            } else {
-              debugPrint(
-                '⚠️ AudioPlayerProvider initialized without API key - will update when fetched',
-              );
-            }
             return provider;
           },
         ),
@@ -286,9 +297,6 @@ class NewsOnApp extends StatelessWidget {
                 configProvider,
                 child,
               ) {
-                // Selected app language (UI). ARB-backed locales resolve directly;
-                // others (e.g. Malayalam/Telugu/Kannada) use DynamicLocalizationService
-                // via LocalizationHelper and fall back to English for Material widgets.
                 final requestedLocale = languageProvider.locale;
 
                 final isArbSupported = AppLocalizations.supportedLocales.any(
@@ -304,10 +312,6 @@ class NewsOnApp extends StatelessWidget {
                   theme: AppTheme.getLightTheme(configProvider.config),
                   darkTheme: AppTheme.getDarkTheme(configProvider.config),
                   themeMode: themeProvider.themeMode,
-
-                  // Localization configuration
-                  // Use effectiveLocale for Flutter's built-in localization (ARB files)
-                  // Dynamic translations are handled separately by DynamicLocalizationService
                   locale: effectiveLocale,
                   localizationsDelegates: const [
                     AppLocalizations.delegate,
@@ -315,10 +319,7 @@ class NewsOnApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
-                  // All locales that ship with ARB files (en, es, fr, hi, ta)
                   supportedLocales: AppLocalizations.supportedLocales,
-
-                  // Resolve locale - fall back to English if not supported by ARB
                   localeResolutionCallback: (locale, supportedLocales) {
                     if (locale != null) {
                       for (final supportedLocale in supportedLocales) {
@@ -328,11 +329,9 @@ class NewsOnApp extends StatelessWidget {
                         }
                       }
                     }
-                    return const Locale('en'); // Default fallback
+                    return const Locale('en');
                   },
-
                   home: const SplashScreen(),
-                  // home: CategorySelectionScreen(),
                 );
               },
             ),
@@ -390,7 +389,7 @@ class _VoiceFeaturesBridgeState extends State<_VoiceFeaturesBridge> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Processes pending share / deep links once [MaterialApp] has a navigator.
+/// Processes pending share / deep links after bootstrap + first paint.
 class _DeepLinkBridge extends StatefulWidget {
   const _DeepLinkBridge({required this.child});
   final Widget child;
@@ -403,7 +402,10 @@ class _DeepLinkBridgeState extends State<_DeepLinkBridge> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Wait until configs/API are ready — avoid false "could not load" on cold start.
+      await AppBootstrap.waitForReady();
+      if (!mounted) return;
       DeepLinkService.instance.processPendingLink();
     });
   }
@@ -451,7 +453,7 @@ class _CompletedNewsBridgeState extends State<_CompletedNewsBridge> {
 
 /// Fetch all DB configurations in parallel to optimize startup time
 Future<void> fetchAllDBData() async {
-  debugPrint("Fetching API keys and configurations...");
+  debugPrint('Fetching API keys and configurations...');
 
   final results = await Future.wait([
     fetchDBData('ipAddress'),
@@ -461,11 +463,14 @@ Future<void> fetchAllDBData() async {
     fetchDBData('appImages'),
   ]);
 
-  if (results[0] != null) baseURL = results[0];
-  if (results[1] != null) newsAPIKey = results[1];
+  if (results[0] != null) {
+    baseURL = results[0].toString();
+    ApiService().applyKnownBaseUrl(baseURL);
+  }
+  if (results[1] != null) newsAPIKey = results[1].toString();
 
   if (results[2] != null) {
-    elevenLabsAPIKey = results[2];
+    elevenLabsAPIKey = results[2].toString();
     if (_globalAudioPlayerProvider != null) {
       _globalAudioPlayerProvider!.setApiKey(elevenLabsAPIKey);
       debugPrint('✅ ElevenLabs API key updated in AudioPlayerProvider');
@@ -473,7 +478,7 @@ Future<void> fetchAllDBData() async {
   }
 
   if (results[3] != null) {
-    elevenLabsVoiceId = results[3];
+    elevenLabsVoiceId = results[3].toString();
     if (_globalAudioPlayerProvider != null) {
       _globalAudioPlayerProvider!.setVoiceId(elevenLabsVoiceId);
     }
@@ -481,6 +486,6 @@ Future<void> fetchAllDBData() async {
 
   if (results[4] != null) {
     appIconUrl = results[4].toString();
-    debugPrint("✅ App Icon URL fetched: $appIconUrl");
+    debugPrint('✅ App Icon URL fetched: $appIconUrl');
   }
 }

@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/models/news_article.dart';
 import '../../providers/bookmark_provider.dart';
+import 'news_article_image.dart';
 
 /// Compact explore-style tile used in the For You 2-column spotlight grid.
 class ForYouSpotlightCard extends StatelessWidget {
@@ -66,12 +66,9 @@ class ForYouSpotlightCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       if (hasImage)
-                        CachedNetworkImage(
-                          imageUrl: _imageUrl!,
+                        NewsArticleImage(
+                          imageUrl: _imageUrl,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) =>
-                              Container(color: Colors.grey[300]),
-                          errorWidget: (_, __, ___) => _textBackdrop(theme),
                         )
                       else
                         _textBackdrop(theme),

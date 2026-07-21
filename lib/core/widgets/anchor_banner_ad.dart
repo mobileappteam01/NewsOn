@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../data/services/ad_service.dart';
+import '../../data/services/ad_network_diagnostics.dart';
 import 'ad_labeled_slot.dart';
 
 /// Persistent anchored adaptive banner above the bottom navigation bar.
@@ -31,6 +32,17 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
 
     _isLoading = true;
     await AdService().initialize();
+    final ready = await AdService().ensureMobileAdsReady(
+      timeout: const Duration(seconds: 20),
+    );
+    if (!ready) {
+      debugPrint('⚠️ Anchor banner: MobileAds not ready, retrying…');
+      _isLoading = false;
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && !_isLoaded) _loadAd();
+      });
+      return;
+    }
 
     if (!mounted) return;
 
@@ -38,65 +50,92 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
     final size =
         await AdService.anchoredAdaptiveSize(width) ?? AdSize.banner;
 
-    _bannerAd = AdService().createBannerAd(
-      size: size,
-      anchored: true,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) return;
-          setState(() {
-            _bannerAd = ad as BannerAd;
-            _isLoaded = true;
-            _isLoading = false;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          debugPrint(
-            '❌ Anchor banner failed: ${error.message} (code ${error.code})',
-          );
-          ad.dispose();
-          if (!mounted) return;
-          setState(() {
-            _bannerAd = null;
-            _isLoaded = false;
-            _isLoading = false;
-          });
-          if (!_fallbackTried) {
-            _fallbackTried = true;
-            _loadStandardBannerFallback();
-          }
-        },
-      ),
-    );
+    await AdService().runExclusiveBannerLoad(() async {
+      if (!mounted) return;
+      _bannerAd = AdService().createBannerAd(
+        size: size,
+        anchored: true,
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (!mounted) return;
+            setState(() {
+              _bannerAd = ad as BannerAd;
+              _isLoaded = true;
+              _isLoading = false;
+            });
+            debugPrint('✅ Anchor banner loaded');
+          },
+          onAdFailedToLoad: (ad, error) async {
+            debugPrint(
+              '❌ Anchor banner failed: ${AdService.describeLoadError(error)}',
+            );
+            ad.dispose();
+            if (!mounted) return;
+            setState(() {
+              _bannerAd = null;
+              _isLoaded = false;
+              _isLoading = false;
+            });
+            if (error.message.contains('JavascriptEngine')) {
+              await AdNetworkDiagnostics.reportJavascriptEngineFailure();
+              if (AdNetworkDiagnostics.isLikelyBlocked) return;
+            }
+            if (await AdService().handleLoadFailure(error)) {
+              if (mounted && !_isLoaded) _loadAd();
+              return;
+            }
+            if (!_fallbackTried) {
+              _fallbackTried = true;
+              _loadStandardBannerFallback();
+            }
+          },
+        ),
+      );
 
-    await _bannerAd?.load();
+      await _bannerAd?.load();
+    });
   }
 
   Future<void> _loadStandardBannerFallback() async {
     if (!mounted || _isLoading) return;
     _isLoading = true;
     await AdService().initialize();
+    final ready = await AdService().ensureMobileAdsReady();
+    if (!ready || !mounted) {
+      _isLoading = false;
+      return;
+    }
 
-    _bannerAd = AdService().createBannerAd(
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) return;
-          setState(() {
-            _bannerAd = ad as BannerAd;
-            _isLoaded = true;
-            _isLoading = false;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          debugPrint('❌ Anchor banner fallback failed: ${error.message}');
-          ad.dispose();
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-        },
-      ),
-    );
-    await _bannerAd?.load();
+    await AdService().runExclusiveBannerLoad(() async {
+      if (!mounted) return;
+      _bannerAd = AdService().createBannerAd(
+        size: AdSize.banner,
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (!mounted) return;
+            setState(() {
+              _bannerAd = ad as BannerAd;
+              _isLoaded = true;
+              _isLoading = false;
+            });
+            debugPrint('✅ Anchor banner fallback loaded');
+          },
+          onAdFailedToLoad: (ad, error) async {
+            debugPrint('❌ Anchor banner fallback failed: ${error.message}');
+            ad.dispose();
+            if (!mounted) return;
+            setState(() => _isLoading = false);
+            if (await AdService().handleLoadFailure(error)) {
+              if (mounted && !_isLoaded) {
+                _fallbackTried = false;
+                _loadAd();
+              }
+            }
+          },
+        ),
+      );
+      await _bannerAd?.load();
+    });
   }
 
   @override

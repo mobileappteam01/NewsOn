@@ -59,7 +59,8 @@ class PaginationInfo {
   bool get hasMore => page < totalPages;
 }
 
-/// Service for handling bookmark API operations
+/// Service for handling bookmark API operations.
+/// [newsId] must be the news article MongoDB `_id` — never `article_id`.
 class BookmarkApiService {
   static final BookmarkApiService _instance = BookmarkApiService._internal();
   factory BookmarkApiService() => _instance;
@@ -70,7 +71,7 @@ class BookmarkApiService {
 
   /// Add bookmark
   /// POST /news/addBookmark
-  /// Body: {"newsId": "article_id"}
+  /// Body: {"newsId": "<Mongo _id of news article>"}
   Future<bool> addBookmark(String newsId) async {
     try {
       final token = _userService.getToken();

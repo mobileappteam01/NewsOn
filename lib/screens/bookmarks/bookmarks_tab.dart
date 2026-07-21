@@ -331,14 +331,11 @@ class _BookmarksTabState extends State<BookmarksTab>
                                   }
                                 },
                                 onNewsTapped: () {
-                                  Navigator.push(
+                                  NewsDetailScreen.open(
                                     context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => NewsDetailScreen(
-                                            article: article,
-                                          ),
-                                    ),
+                                    article: article,
+                                    articles: displayedBookmarks,
+                                    initialIndex: index,
                                   );
                                 },
                                 onShareTapped: () {

@@ -4,13 +4,14 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/bootstrap/app_bootstrap.dart';
 import '../../core/constants/deep_link_constants.dart';
 import '../../core/navigation/app_navigator.dart';
 import '../../core/utils/connectivity_helper.dart';
 import '../../screens/auth/auth_screen.dart';
-import '../../screens/home/home_screen.dart';
 import '../../screens/news_detail/news_detail_screen.dart';
 import '../models/news_article.dart';
+import 'api_service.dart';
 import 'news_article_resolver.dart';
 import 'user_service.dart';
 
@@ -34,6 +35,10 @@ class DeepLinkService {
   bool _isResolving = false;
   bool _routedToLogin = false;
   bool _fromColdStart = false;
+  bool _homeSeeded = false;
+  int _attemptCount = 0;
+
+  static const int _maxAttempts = 8;
 
   /// True when a share link is waiting to be opened.
   bool get hasPendingArticle =>
@@ -82,6 +87,8 @@ class DeepLinkService {
     _userOpenedShareLink = true;
     _showedNotFoundSnackBar = false;
     _routedToLogin = false;
+    _homeSeeded = false;
+    _attemptCount = 0;
     if (coldStart) _fromColdStart = true;
 
     debugPrint('🔗 Pending article id: $articleId (coldStart: $coldStart)');
@@ -89,18 +96,37 @@ class DeepLinkService {
   }
 
   /// Call after [MaterialApp] is mounted, home loads, or login completes.
-  void processPendingLink() {
+  ///
+  /// Set [navigationReady] when Splash/Auth/Home has finished its first route
+  /// so cold-start share links don't open detail on top of the splash screen.
+  void processPendingLink({bool navigationReady = false}) {
+    if (navigationReady) {
+      _homeSeeded = true;
+    }
     _schedulePendingLinkAttempts();
   }
 
   void _schedulePendingLinkAttempts() {
     if (_pendingArticleId == null) return;
-    const delaysMs = [0, 200, 500, 1000, 2000, 3500];
+    // Longer cold-start window — API / Firebase may still be warming up.
+    const delaysMs = [0, 300, 800, 1500, 2500, 4000, 6000, 9000];
     for (final delay in delaysMs) {
       Future<void>.delayed(Duration(milliseconds: delay), () {
         if (_pendingArticleId == null || _isResolving) return;
         unawaited(_tryOpenPending());
       });
+    }
+  }
+
+  Future<bool> _ensureApiReady() async {
+    final api = ApiService();
+    if (api.isInitialized) return true;
+    try {
+      await api.initialize().timeout(const Duration(seconds: 10));
+      return api.isInitialized;
+    } catch (e) {
+      debugPrint('🔗 ApiService not ready yet: $e');
+      return api.isInitialized;
     }
   }
 
@@ -114,8 +140,18 @@ class DeepLinkService {
     if (context == null) return;
 
     _isResolving = true;
+    _attemptCount++;
     try {
-      // Instagram-style: must be logged in before opening the article.
+      // Wait for bootstrap on cold start so Firebase/API are ready.
+      if (!AppBootstrap.isReady) {
+        final ready = await AppBootstrap.waitForReady(
+          timeout: const Duration(seconds: 12),
+        );
+        if (!ready) {
+          debugPrint('🔗 Bootstrap still not ready (attempt $_attemptCount)');
+        }
+      }
+
       if (!_userService.isLoggedIn) {
         debugPrint('🔗 Not logged in — routing to AuthScreen');
         _navigateToLogin();
@@ -125,10 +161,14 @@ class DeepLinkService {
       final navigator = appNavigatorKey.currentState;
       if (navigator == null) return;
 
-      // Cold start from share link: land on home first, then open article.
+      // Cold-start routing is owned by SplashScreen → Home/Auth.
+      // Splash / Home call processPendingLink after navigation and mark home ready.
+      if (_fromColdStart && !_homeSeeded) {
+        debugPrint('🔗 Waiting for splash/home before opening article');
+        return;
+      }
       if (_fromColdStart) {
         _fromColdStart = false;
-        await _navigateToHome(navigator);
       }
 
       if (!context.mounted) return;
@@ -139,10 +179,16 @@ class DeepLinkService {
         final online = await ConnectivityHelper.hasConnection();
         if (!online) {
           debugPrint('🔗 Article $articleId not cached and offline');
-          if (_userOpenedShareLink && !_showedNotFoundSnackBar) {
-            _showNotFoundMessage(context, offline: true);
-            _showedNotFoundSnackBar = true;
+          if (_attemptCount >= _maxAttempts) {
+            _failPending(context, offline: true);
           }
+          return;
+        }
+
+        final apiReady = await _ensureApiReady();
+        if (!apiReady) {
+          debugPrint(
+              '🔗 Skipping article fetch — API not ready (attempt $_attemptCount)');
           return;
         }
 
@@ -150,10 +196,10 @@ class DeepLinkService {
       }
 
       if (article == null) {
-        debugPrint('🔗 Article $articleId could not be loaded');
-        if (_userOpenedShareLink && !_showedNotFoundSnackBar) {
-          _showNotFoundMessage(context);
-          _showedNotFoundSnackBar = true;
+        debugPrint(
+            '🔗 Article $articleId could not be loaded (attempt $_attemptCount)');
+        if (_attemptCount >= _maxAttempts) {
+          _failPending(context);
         }
         return;
       }
@@ -167,12 +213,25 @@ class DeepLinkService {
     }
   }
 
+  void _failPending(BuildContext context, {bool offline = false}) {
+    if (_userOpenedShareLink && !_showedNotFoundSnackBar) {
+      _showNotFoundMessage(context, offline: offline);
+      _showedNotFoundSnackBar = true;
+    }
+    // Keep pending cleared so we don't spam after final failure.
+    _pendingArticleId = null;
+    _userOpenedShareLink = false;
+    _fromColdStart = false;
+  }
+
   void _clearPending() {
     _pendingArticleId = null;
     _userOpenedShareLink = false;
     _showedNotFoundSnackBar = false;
     _routedToLogin = false;
     _fromColdStart = false;
+    _homeSeeded = false;
+    _attemptCount = 0;
   }
 
   void _navigateToLogin() {
@@ -186,18 +245,6 @@ class DeepLinkService {
       MaterialPageRoute<void>(builder: (_) => const AuthScreen()),
       (route) => false,
     );
-  }
-
-  Future<void> _navigateToHome(NavigatorState navigator) async {
-    debugPrint('🔗 Navigating to home before opening shared article');
-    navigator.pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => const HomeScreen(selectedCategories: []),
-      ),
-      (route) => false,
-    );
-    // Allow HomeScreen init (API, providers) to start.
-    await Future<void>.delayed(const Duration(milliseconds: 100));
   }
 
   Future<NewsArticle?> _resolveWithLoading(
@@ -230,6 +277,8 @@ class DeepLinkService {
   void openArticleById(String articleId) {
     _pendingArticleId = articleId;
     _userOpenedShareLink = true;
+    _attemptCount = 0;
+    _showedNotFoundSnackBar = false;
     unawaited(_tryOpenPending());
   }
 
@@ -270,6 +319,13 @@ class _SharedArticleLoadingRouteState extends State<_SharedArticleLoadingRoute> 
   }
 
   Future<void> _load() async {
+    final api = ApiService();
+    if (!api.isInitialized) {
+      try {
+        await api.initialize().timeout(const Duration(seconds: 10));
+      } catch (_) {}
+    }
+
     final article = await NewsArticleResolver.resolveById(widget.articleId);
     if (!mounted) return;
     Navigator.of(context).pop(article);
