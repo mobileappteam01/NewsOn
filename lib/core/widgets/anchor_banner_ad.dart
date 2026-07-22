@@ -26,7 +26,8 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
   }
 
   Future<void> _loadAd() async {
-    if (_isLoading) return;
+    // Keep the last good creative — never tear it down for a refresh/no-fill.
+    if (_isLoading || _isLoaded) return;
     final policy = AdService().policy;
     if (!policy.enabled || !policy.anchorBannerEnabled) return;
 
@@ -44,20 +45,29 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted || _isLoaded) {
+      _isLoading = false;
+      return;
+    }
 
     final width = MediaQuery.sizeOf(context).width.truncate();
     final size =
         await AdService.anchoredAdaptiveSize(width) ?? AdSize.banner;
 
     await AdService().runExclusiveBannerLoad(() async {
-      if (!mounted) return;
-      _bannerAd = AdService().createBannerAd(
+      if (!mounted || _isLoaded) {
+        _isLoading = false;
+        return;
+      }
+      final pending = AdService().createBannerAd(
         size: size,
         anchored: true,
         listener: BannerAdListener(
           onAdLoaded: (ad) {
-            if (!mounted) return;
+            if (!mounted) {
+              ad.dispose();
+              return;
+            }
             setState(() {
               _bannerAd = ad as BannerAd;
               _isLoaded = true;
@@ -70,11 +80,16 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
               '❌ Anchor banner failed: ${AdService.describeLoadError(error)}',
             );
             ad.dispose();
+            _isLoading = false;
             if (!mounted) return;
+            // Do not blank a previously shown creative.
+            if (_isLoaded && _bannerAd != null) {
+              setState(() {});
+              return;
+            }
             setState(() {
               _bannerAd = null;
               _isLoaded = false;
-              _isLoading = false;
             });
             if (error.message.contains('JavascriptEngine')) {
               await AdNetworkDiagnostics.reportJavascriptEngineFailure();
@@ -92,27 +107,34 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
         ),
       );
 
-      await _bannerAd?.load();
+      _bannerAd = pending;
+      await pending.load();
     });
   }
 
   Future<void> _loadStandardBannerFallback() async {
-    if (!mounted || _isLoading) return;
+    if (!mounted || _isLoading || _isLoaded) return;
     _isLoading = true;
     await AdService().initialize();
     final ready = await AdService().ensureMobileAdsReady();
-    if (!ready || !mounted) {
+    if (!ready || !mounted || _isLoaded) {
       _isLoading = false;
       return;
     }
 
     await AdService().runExclusiveBannerLoad(() async {
-      if (!mounted) return;
-      _bannerAd = AdService().createBannerAd(
+      if (!mounted || _isLoaded) {
+        _isLoading = false;
+        return;
+      }
+      final pending = AdService().createBannerAd(
         size: AdSize.banner,
         listener: BannerAdListener(
           onAdLoaded: (ad) {
-            if (!mounted) return;
+            if (!mounted) {
+              ad.dispose();
+              return;
+            }
             setState(() {
               _bannerAd = ad as BannerAd;
               _isLoaded = true;
@@ -123,8 +145,16 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
           onAdFailedToLoad: (ad, error) async {
             debugPrint('❌ Anchor banner fallback failed: ${error.message}');
             ad.dispose();
+            _isLoading = false;
             if (!mounted) return;
-            setState(() => _isLoading = false);
+            if (_isLoaded && _bannerAd != null) {
+              setState(() {});
+              return;
+            }
+            setState(() {
+              _bannerAd = null;
+              _isLoaded = false;
+            });
             if (await AdService().handleLoadFailure(error)) {
               if (mounted && !_isLoaded) {
                 _fallbackTried = false;
@@ -134,7 +164,8 @@ class _AnchorBannerAdState extends State<AnchorBannerAd> {
           },
         ),
       );
-      await _bannerAd?.load();
+      _bannerAd = pending;
+      await pending.load();
     });
   }
 

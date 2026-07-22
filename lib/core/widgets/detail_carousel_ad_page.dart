@@ -46,6 +46,7 @@ class _DetailCarouselAdPageState extends State<DetailCarouselAdPage>
   }
 
   Future<void> _loadAd() async {
+    // Once filled, keep that creative for the lifetime of this page.
     if (_isLoading || _isLoaded) return;
     final policy = AdService().policy;
     if (!policy.enabled || !policy.detailCarouselAdsEnabled) return;
@@ -67,11 +68,19 @@ class _DetailCarouselAdPageState extends State<DetailCarouselAdPage>
         return;
       }
 
-      await _bannerAd?.dispose();
-      _bannerAd = null;
+      if (_isLoaded) {
+        _isLoading = false;
+        return;
+      }
+
+      // Only clear a pending (never-shown) instance.
+      if (!_isLoaded && _bannerAd != null) {
+        await _bannerAd?.dispose();
+        _bannerAd = null;
+      }
 
       await AdService().runExclusiveBannerLoad(() async {
-        if (!mounted) {
+        if (!mounted || _isLoaded) {
           _isLoading = false;
           return;
         }
@@ -80,14 +89,17 @@ class _DetailCarouselAdPageState extends State<DetailCarouselAdPage>
         // (same inventory as feed). Width matches the carousel content area.
         final contentWidth =
             (MediaQuery.sizeOf(context).width - 48).floor().clamp(160, 1200);
-        _bannerAd = AdService().createBannerAd(
+        final pending = AdService().createBannerAd(
           size: AdService().resolveInlineFeedAdSize(contentWidth),
           adUnitId: AdService().inlineFeedAdUnitId,
           inlineFeed: true,
           maxContentWidth: contentWidth,
           listener: BannerAdListener(
             onAdLoaded: (ad) {
-              if (!mounted) return;
+              if (!mounted) {
+                ad.dispose();
+                return;
+              }
               setState(() {
                 _bannerAd = ad as BannerAd;
                 _isLoaded = true;
@@ -103,8 +115,13 @@ class _DetailCarouselAdPageState extends State<DetailCarouselAdPage>
                 '${AdService.describeLoadError(error)}',
               );
               ad.dispose();
-              _bannerAd = null;
               _isLoading = false;
+              // Never blank a creative that already displayed.
+              if (_isLoaded && _bannerAd != null) {
+                if (mounted) setState(() {});
+                return;
+              }
+              _bannerAd = null;
               if (error.message.contains('JavascriptEngine')) {
                 await AdNetworkDiagnostics.reportJavascriptEngineFailure();
                 if (AdNetworkDiagnostics.isLikelyBlocked) return;
@@ -116,18 +133,22 @@ class _DetailCarouselAdPageState extends State<DetailCarouselAdPage>
                 }
                 return;
               }
-              if (error.code == 3) return;
+              if (error.code == 3) {
+                if (mounted) setState(() {});
+                return;
+              }
               _scheduleRetry();
             },
           ),
         );
 
-        await _bannerAd?.load();
+        _bannerAd = pending;
+        await pending.load();
       });
     } catch (e) {
       debugPrint('❌ Detail carousel ad ${widget.slotIndex} error: $e');
       _isLoading = false;
-      _scheduleRetry();
+      if (!_isLoaded) _scheduleRetry();
     }
   }
 

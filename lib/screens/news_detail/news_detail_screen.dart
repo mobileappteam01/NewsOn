@@ -570,8 +570,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         // Fixed hero header + scrollable article body only (industry pattern).
         return Column(
           children: [
-            /// 🔹 FIXED HEADER — image + exact bands below status bar:
-            /// 80 chrome · 180 category+title · remaining (~80) source/date
+            /// 🔹 FIXED HEADER — image overlay: chrome · title teaser · source/date
             Builder(
               builder: (context) {
                 final topInset = MediaQuery.paddingOf(context).top;
@@ -585,7 +584,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                         imageUrl: article.imageUrl ?? article.sourceIcon ?? '',
                         height: _heroImageHeight + topInset,
                         width: double.infinity,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorWidget: (context, url, error) =>
                             newsOnImageFallback(
                           width: double.infinity,
@@ -637,7 +636,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
               },
             ),
 
-            /// 🔹 SCROLLABLE CONTENT ONLY
+            /// 🔹 SCROLLABLE CONTENT — full title + article body
             Expanded(
               child: Material(
                 color: theme.scaffoldBackgroundColor,
@@ -652,6 +651,16 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        article.title,
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       _buildAudioControlBar(
                         article,
                         config,
@@ -682,10 +691,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   }
 
   /// Exact hero layout bands (must sum with footer to [_heroImageHeight]).
-  static const double _heroImageHeight = 340;
+  static const double _heroImageHeight = 180;
   static const double _heroChromeHeight = 80;
-  static const double _heroTitleBandHeight = 210;
-  // Remaining footer band: 340 - 80 - 210 = 50
+
+  /// Category + up to 3 lines of title teaser.
+  static const double _heroTitleBandHeight = 130;
+  // Remaining footer band: 340 - 80 - 130 = 130
 
   /// Back · logo · share — locked to [_heroChromeHeight] (full 80px usable).
   Widget _buildHeroChrome(dynamic config, NewsArticle article) {
@@ -735,76 +746,45 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     );
   }
 
-  /// Category + title — locked to [_heroTitleBandHeight] (180).
+  /// Category + short title teaser (max 3 lines). Full title is in the body.
   Widget _buildHeroTitleBand(NewsArticle article, dynamic config) {
-    final titleText = '"${article.title}"';
     final categoryText = article.category?.first ?? 'Politics';
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final categoryStyle = GoogleFonts.inter(
-          color: config.primaryColorValue,
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-          height: 1.3,
-        );
-        final titleStyle = GoogleFonts.playfairDisplay(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          height: 1.3,
-        );
-
-        const categoryGap = 8.0;
-        final categoryH = _measureTextHeight(
-          categoryText,
-          categoryStyle,
-          constraints.maxWidth,
-          maxLines: 1,
-        );
-        final titleMaxH = (constraints.maxHeight - categoryH - categoryGap)
-            .clamp(24.0, 180.0);
-        final titleSize = _fitTitleFontSize(
-          text: titleText,
-          baseStyle: titleStyle,
-          maxWidth: constraints.maxWidth,
-          maxHeight: titleMaxH,
-        );
-
-        return SizedBox(
-          width: constraints.maxWidth,
-          height: constraints.maxHeight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                categoryText,
-                style: categoryStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: categoryGap),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    titleText + titleText + titleText,
-                    style: titleStyle.copyWith(
-                      fontSize: titleSize,
-                      height: 1.3,
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.fade,
-                  ),
-                ),
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          categoryText.toUpperCase(),
+          style: GoogleFonts.inter(
+            color: config.primaryColorValue,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            height: 1.2,
+            letterSpacing: 0.6,
           ),
-        );
-      },
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Text(
+            article.title,
+            style: GoogleFonts.playfairDisplay(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              height: 1.3,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            softWrap: true,
+          ),
+        ),
+      ],
     );
   }
 
-  /// Source + published — fills remaining hero space (80px).
+  /// Source + published — fills remaining hero space.
   Widget _buildHeroFooterBand(NewsArticle article) {
     final sourceLine =
         '${LocalizationHelper.sourceLabel(context, article.sourceName ?? 'NewsOn')}'
@@ -853,57 +833,6 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         );
       },
     );
-  }
-
-  double _measureTextHeight(
-    String text,
-    TextStyle style,
-    double maxWidth, {
-    int? maxLines,
-  }) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      maxLines: maxLines,
-      ellipsis: maxLines != null ? '…' : null,
-    )..layout(maxWidth: maxWidth);
-    return painter.height;
-  }
-
-  /// Largest Playfair size (≤22) that keeps [text] inside the title band.
-  double _fitTitleFontSize({
-    required String text,
-    required TextStyle baseStyle,
-    required double maxWidth,
-    required double maxHeight,
-    double minSize = 12,
-    double maxSize = 22,
-  }) {
-    if (maxWidth <= 0 || maxHeight <= 0) return minSize;
-
-    var low = minSize;
-    var high = maxSize;
-    var best = minSize;
-
-    for (var i = 0; i < 16; i++) {
-      final mid = (low + high) / 2;
-      final painter = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: baseStyle.copyWith(fontSize: mid, height: 1.3),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: maxWidth);
-
-      if (painter.height <= maxHeight) {
-        best = mid;
-        low = mid;
-      } else {
-        high = mid;
-      }
-    }
-
-    return best;
   }
 
   static const int _maxPageIndicatorDots = 12;
