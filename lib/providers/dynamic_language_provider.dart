@@ -91,23 +91,19 @@ class DynamicLanguageProvider extends ChangeNotifier {
 
   /// Set language by language code (e.g., 'en', 'ta', 'ml')
   Future<void> setLanguageByCode(String languageCode) async {
-    if (languageCode == _localizationService.currentLanguageCode) {
-      debugPrint('🌐 Language already set to $languageCode');
-      return;
-    }
-
     try {
       _isLoading = true;
+      _error = null;
       notifyListeners();
 
       await _localizationService.setLanguage(languageCode);
-      
-      // Also save to StorageService for backward compatibility
+
+      // Also save to StorageService for backward compatibility with LanguageProvider
       await StorageService.saveLanguage(languageCode);
-      
+
       _isLoading = false;
       notifyListeners();
-      
+
       debugPrint('✅ Language changed to $languageCode');
     } catch (e) {
       _error = e.toString();

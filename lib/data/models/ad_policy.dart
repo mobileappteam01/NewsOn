@@ -1,4 +1,6 @@
-/// Remote-tunable ad policy (Firebase Realtime Database `ads_config`).
+/// Remote-tunable ad policy.
+/// Most flags come from Realtime Database `ads_config`.
+/// Detail-carousel flags are overridden by Firebase Remote Config.
 class AdPolicy {
   const AdPolicy({
     this.enabled = true,
@@ -12,6 +14,8 @@ class AdPolicy {
     this.forYouBlockAdsEnabled = true,
     this.searchInlineEnabled = true,
     this.bookmarksAnchorEnabled = true,
+    this.detailCarouselAdsEnabled = true,
+    this.detailCarouselAdInterval = 4,
   });
 
   final bool enabled;
@@ -27,6 +31,10 @@ class AdPolicy {
   final bool forYouBlockAdsEnabled;
   final bool searchInlineEnabled;
   final bool bookmarksAnchorEnabled;
+  /// Inshorts-style full-page ads between detail carousel articles.
+  final bool detailCarouselAdsEnabled;
+  /// Insert an ad page after every N articles (3–8).
+  final int detailCarouselAdInterval;
 
   static const AdPolicy defaults = AdPolicy();
 
@@ -86,6 +94,53 @@ class AdPolicy {
         map['bookmarks_anchor_enabled'],
         defaults.bookmarksAnchorEnabled,
       ),
+      detailCarouselAdsEnabled: parseBool(
+        map['detail_carousel_ads_enabled'],
+        defaults.detailCarouselAdsEnabled,
+      ),
+      detailCarouselAdInterval: parseInt(
+        map['detail_carousel_ad_interval'],
+        defaults.detailCarouselAdInterval,
+      ).clamp(3, 8),
+    );
+  }
+
+  AdPolicy copyWith({
+    bool? enabled,
+    bool? useTestAds,
+    int? inlineInterval,
+    bool? anchorBannerEnabled,
+    bool? interstitialEnabled,
+    int? interstitialMinSeconds,
+    int? interstitialMinArticlesRead,
+    int? interstitialMaxPerSession,
+    bool? forYouBlockAdsEnabled,
+    bool? searchInlineEnabled,
+    bool? bookmarksAnchorEnabled,
+    bool? detailCarouselAdsEnabled,
+    int? detailCarouselAdInterval,
+  }) {
+    return AdPolicy(
+      enabled: enabled ?? this.enabled,
+      useTestAds: useTestAds ?? this.useTestAds,
+      inlineInterval: inlineInterval ?? this.inlineInterval,
+      anchorBannerEnabled: anchorBannerEnabled ?? this.anchorBannerEnabled,
+      interstitialEnabled: interstitialEnabled ?? this.interstitialEnabled,
+      interstitialMinSeconds:
+          interstitialMinSeconds ?? this.interstitialMinSeconds,
+      interstitialMinArticlesRead:
+          interstitialMinArticlesRead ?? this.interstitialMinArticlesRead,
+      interstitialMaxPerSession:
+          interstitialMaxPerSession ?? this.interstitialMaxPerSession,
+      forYouBlockAdsEnabled:
+          forYouBlockAdsEnabled ?? this.forYouBlockAdsEnabled,
+      searchInlineEnabled: searchInlineEnabled ?? this.searchInlineEnabled,
+      bookmarksAnchorEnabled:
+          bookmarksAnchorEnabled ?? this.bookmarksAnchorEnabled,
+      detailCarouselAdsEnabled:
+          detailCarouselAdsEnabled ?? this.detailCarouselAdsEnabled,
+      detailCarouselAdInterval:
+          detailCarouselAdInterval ?? this.detailCarouselAdInterval,
     );
   }
 }

@@ -216,6 +216,8 @@ class RemoteConfigService {
       // Feature flags
       'enable_voice_search': false,
       'enable_voice_features': true,
+      'detail_carousel_ads_enabled': true,
+      'detail_carousel_ad_interval': 4,
     };
   }
 
@@ -383,6 +385,18 @@ class RemoteConfigService {
         'enable_voice_features',
         defaultValue: true,
       ),
+      detailCarouselAdsEnabled: _getRemoteConfigBool(
+        'detail_carousel_ads_enabled',
+        defaultValue: true,
+      ),
+      detailCarouselAdInterval: () {
+        try {
+          final v = _remoteConfig.getInt('detail_carousel_ad_interval');
+          if (v > 0) return v.clamp(3, 8);
+        } catch (_) {}
+        final raw = _remoteConfig.getString('detail_carousel_ad_interval');
+        return (int.tryParse(raw) ?? 4).clamp(3, 8);
+      }(),
     );
   }
 

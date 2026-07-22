@@ -272,10 +272,15 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                                 );
                               }
                             } else {
-                              if (dynamicProvider.isInitialized) {
-                                await dynamicProvider.setLanguage(_selectedLanguage!);
+                              // App UI language: keep Dynamic + Language providers in sync.
+                              // Dynamic translations must finish loading before UI rebuilds.
+                              if (!dynamicProvider.isInitialized) {
+                                await dynamicProvider.initialize();
                               }
-                              await languageProvider.setLanguage(_selectedLanguage!);
+                              await dynamicProvider
+                                  .setLanguage(_selectedLanguage!);
+                              await languageProvider
+                                  .setLanguage(_selectedLanguage!);
                               if (mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(

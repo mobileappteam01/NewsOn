@@ -59,7 +59,12 @@ class ForYouProvider with ChangeNotifier {
       debugPrint('✅ ForYouProvider refreshed: ${_articles.length} items');
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      // Strip redundant "Exception: " nesting from API / endpoint errors.
+      var message = e.toString();
+      while (message.startsWith('Exception: ')) {
+        message = message.substring('Exception: '.length);
+      }
+      _error = message;
       if (_articles.isEmpty) {
         _hasMore = false;
       }

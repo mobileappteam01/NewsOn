@@ -18,6 +18,8 @@ import '../../providers/audio_player_provider.dart';
 import '../../providers/news_provider.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
+import '../../core/widgets/detail_carousel_ad_page.dart';
+import '../../core/utils/detail_carousel_ad_helper.dart';
 import '../../data/services/interaction_service.dart';
 
 class NewsDetailScreen extends StatefulWidget {
@@ -82,9 +84,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     with WidgetsBindingObserver {
   late PageController _pageController;
   late List<NewsArticle> _articlesList;
+  late List<DetailCarouselItem> _carouselPages;
   late int _initialIndex;
   double _contentTextSize = AppConstants.defaultTextSize;
-  int _currentPageIndex = 0;
+
+  /// PageView index (may point at an article or an ad page).
+  int _currentCarouselIndex = 0;
   bool _isAnimating = false; // Prevent duplicate animations
   AudioPlayerProvider? _audioProvider; // Cached for safe use in dispose
 
@@ -107,8 +112,35 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     _startStateSyncTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _trackVisibleArticle(_currentPageIndex);
+      final articleIdx = _articleIndexForCarousel(_currentCarouselIndex);
+      if (articleIdx != null) _trackVisibleArticle(articleIdx);
     });
+  }
+
+  int? _articleIndexForCarousel(int carouselIndex) =>
+      DetailCarouselAdHelper.articleIndexForCarousel(
+        _carouselPages,
+        carouselIndex,
+      );
+
+  int _carouselIndexForArticle(int articleIndex) =>
+      DetailCarouselAdHelper.carouselIndexForArticle(
+        _carouselPages,
+        articleIndex,
+      );
+
+  int? get _currentArticleIndex =>
+      _articleIndexForCarousel(_currentCarouselIndex);
+
+  void _rebuildCarouselPages({int? preferredArticleIndex}) {
+    _carouselPages = DetailCarouselAdHelper.buildPages(_articlesList.length);
+    final articleIdx = preferredArticleIndex ??
+        _articleIndexForCarousel(_currentCarouselIndex) ??
+        0;
+    _currentCarouselIndex = _carouselIndexForArticle(articleIdx.clamp(
+      0,
+      (_articlesList.isEmpty ? 0 : _articlesList.length - 1),
+    ));
   }
 
   String _articleTrackingKey(NewsArticle article) {
@@ -130,10 +162,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
         startIndex = _articlesList.length - 1;
       }
       _initialIndex = startIndex;
-      _currentPageIndex = _initialIndex;
-      _pageController = PageController(initialPage: _initialIndex);
+      _rebuildCarouselPages(preferredArticleIndex: _initialIndex);
+      _pageController = PageController(initialPage: _currentCarouselIndex);
       debugPrint(
-          '📋 Initialized PageView from feed snapshot (${_articlesList.length} articles) at index $_initialIndex');
+          '📋 Initialized PageView from feed snapshot (${_articlesList.length} articles, ${_carouselPages.length} pages) at article $_initialIndex / carousel $_currentCarouselIndex');
       return;
     }
 
@@ -158,17 +190,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
       if (idx >= 0) {
         _articlesList = List<NewsArticle>.from(list);
         _initialIndex = idx;
-        _currentPageIndex = _initialIndex;
-        _pageController = PageController(initialPage: _initialIndex);
+        _rebuildCarouselPages(preferredArticleIndex: _initialIndex);
+        _pageController = PageController(initialPage: _currentCarouselIndex);
         debugPrint(
-            '📋 Initialized PageView from provider (${_articlesList.length} articles) at index $_initialIndex');
+            '📋 Initialized PageView from provider (${_articlesList.length} articles, ${_carouselPages.length} pages) at article $_initialIndex / carousel $_currentCarouselIndex');
         return;
       }
     }
 
     _articlesList = [tapped];
     _initialIndex = 0;
-    _currentPageIndex = 0;
+    _rebuildCarouselPages(preferredArticleIndex: 0);
     _pageController = PageController(initialPage: 0);
     debugPrint('📋 Initialized PageView with single article');
   }
@@ -216,16 +248,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   }
 
   /// Handle user swipe - STOP audio and update page
-  void _onUserSwipe(int newIndex) {
-    if (newIndex == _currentPageIndex ||
-        newIndex < 0 ||
-        newIndex >= _articlesList.length) {
+  void _onUserSwipe(int newCarouselIndex) {
+    if (newCarouselIndex == _currentCarouselIndex ||
+        newCarouselIndex < 0 ||
+        newCarouselIndex >= _carouselPages.length) {
       return;
     }
 
-    debugPrint('👆 [USER SWIPE] Page: $_currentPageIndex → $newIndex');
+    debugPrint(
+        '👆 [USER SWIPE] Page: $_currentCarouselIndex → $newCarouselIndex');
 
-    // STOP audio when user swipes
+    // STOP audio when user swipes (including onto/off an ad page)
     final audioProvider = context.read<AudioPlayerProvider>();
     if (audioProvider.hasCurrentArticle) {
       debugPrint('🛑 Stopping audio due to user swipe');
@@ -233,9 +266,18 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     }
 
     setState(() {
-      _currentPageIndex = newIndex;
+      _currentCarouselIndex = newCarouselIndex;
     });
-    _trackVisibleArticle(newIndex);
+
+    final articleIdx = _articleIndexForCarousel(newCarouselIndex);
+    if (articleIdx != null) {
+      _trackVisibleArticle(articleIdx);
+    } else if (_visibleArticleIndex != null &&
+        _visibleArticleIndex! >= 0 &&
+        _visibleArticleIndex! < _articlesList.length) {
+      // Landed on an ad — close out the previous article's read timer.
+      _sendReadForArticle(_articlesList[_visibleArticleIndex!]);
+    }
   }
 
   /// Check if audio has auto-advanced and sync PageView
@@ -250,29 +292,32 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     if (audioIndex < 0 || audioIndex >= audioProvider.playlist.length) return;
     if (audioIndex >= _articlesList.length) return;
 
-    // Only sync when audio has *advanced forward* (auto-advance to next article).
-    // Do NOT sync when audioIndex < _currentPageIndex: user may have opened a
-    // different article (e.g. tapped 2nd news while 1st was playing) and we must
-    // stay on the article they chose.
-    if (audioIndex > _currentPageIndex) {
-      debugPrint(
-          '🔄 [AUTO-ADVANCE] Audio at $audioIndex, page at $_currentPageIndex - syncing...');
+    final targetCarousel = _carouselIndexForArticle(audioIndex);
+    final currentArticle = _currentArticleIndex ?? -1;
 
-      // Animate to new page (prevent duplicate animations)
-      if (mounted && _pageController.hasClients && !_isAnimating) {
+    // Only sync when audio has *advanced forward* past the article we're on.
+    if (audioIndex > currentArticle) {
+      debugPrint(
+          '🔄 [AUTO-ADVANCE] Audio article $audioIndex, carousel $_currentCarouselIndex → $targetCarousel');
+
+      if (mounted &&
+          _pageController.hasClients &&
+          !_isAnimating &&
+          targetCarousel != _currentCarouselIndex) {
         _isAnimating = true;
         _pageController
             .animateToPage(
-          audioIndex,
+          targetCarousel,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
         )
             .then((_) {
           if (mounted) {
             setState(() {
-              _currentPageIndex = audioIndex;
+              _currentCarouselIndex = targetCarousel;
               _isAnimating = false;
             });
+            _trackVisibleArticle(audioIndex);
             debugPrint(
                 '✅ [AUTO-ADVANCE] PageView synced to article ${audioIndex + 1}/${_articlesList.length}');
           }
@@ -361,9 +406,9 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
       final currentArticle = audioProvider.currentArticle;
       final currentArticleId =
           currentArticle?.articleId ?? currentArticle?.title;
-      final pageArticle = _currentPageIndex < _articlesList.length
-          ? _articlesList[_currentPageIndex]
-          : null;
+      final pageArticleIdx = _currentArticleIndex;
+      final pageArticle =
+          pageArticleIdx != null ? _articlesList[pageArticleIdx] : null;
       final pageArticleId = pageArticle?.articleId ?? pageArticle?.title;
 
       debugPrint(
@@ -438,44 +483,56 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                   },
                   child: PageView.builder(
                     controller: _pageController,
-                    itemCount: _articlesList.length,
+                    itemCount: _carouselPages.length,
                     onPageChanged: (index) {
-                      if (index != _currentPageIndex) {
-                        // If we're animating (auto-advance triggered the animation), don't treat as user swipe
-                        if (_isAnimating) {
-                          debugPrint(
-                              '🔄 [AUTO-ADVANCE] Page animation completed: $index');
-                          setState(() {
-                            _currentPageIndex = index;
-                          });
-                          _trackVisibleArticle(index);
-                          return;
-                        }
+                      if (index == _currentCarouselIndex) return;
 
-                        // Check if this is auto-advance (audio provider index matches) or user swipe
-                        final audioProvider =
-                            context.read<AudioPlayerProvider>();
-                        final isAutoAdvance =
-                            audioProvider.currentPlaylistIndex == index &&
-                                (audioProvider.isPlaying ||
-                                    audioProvider.hasCurrentArticle) &&
-                                !audioProvider.playTitleMode;
-
-                        if (isAutoAdvance) {
-                          // Auto-advance - just update page index, don't stop audio
-                          debugPrint('🔄 [AUTO-ADVANCE] Page synced: $index');
-                          setState(() {
-                            _currentPageIndex = index;
-                          });
-                          _trackVisibleArticle(index);
-                        } else {
-                          // User swipe - stop audio
-                          _onUserSwipe(index);
+                      if (_isAnimating) {
+                        debugPrint(
+                            '🔄 [AUTO-ADVANCE] Page animation completed: $index');
+                        setState(() {
+                          _currentCarouselIndex = index;
+                        });
+                        final articleIdx = _articleIndexForCarousel(index);
+                        if (articleIdx != null) {
+                          _trackVisibleArticle(articleIdx);
                         }
+                        return;
+                      }
+
+                      final audioProvider = context.read<AudioPlayerProvider>();
+                      final articleIdx = _articleIndexForCarousel(index);
+                      final isAutoAdvance = articleIdx != null &&
+                          audioProvider.currentPlaylistIndex == articleIdx &&
+                          (audioProvider.isPlaying ||
+                              audioProvider.hasCurrentArticle) &&
+                          !audioProvider.playTitleMode;
+
+                      if (isAutoAdvance) {
+                        debugPrint(
+                            '🔄 [AUTO-ADVANCE] Page synced: carousel $index / article $articleIdx');
+                        setState(() {
+                          _currentCarouselIndex = index;
+                        });
+                        _trackVisibleArticle(articleIdx);
+                      } else {
+                        _onUserSwipe(index);
                       }
                     },
                     itemBuilder: (context, index) {
-                      final article = _articlesList[index];
+                      final page = _carouselPages[index];
+                      if (page is DetailAdPageItem) {
+                        return DetailCarouselAdPage(
+                          key: ValueKey('detail_ad_${page.adSlotIndex}'),
+                          slotIndex: page.adSlotIndex,
+                          onClose: _leaveDetail,
+                          appLogoUrl:
+                              config.getAppNameLogoForTheme(Brightness.dark),
+                        );
+                      }
+
+                      final articleItem = page as DetailArticlePageItem;
+                      final article = _articlesList[articleItem.articleIndex];
                       return _buildArticlePage(article, config, theme);
                     },
                   ),
@@ -505,8 +562,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
               (a.articleId ?? a.title) == (article.articleId ?? article.title),
         );
 
-        // Only check auto-advance for the currently visible page
-        if (articleIndex == _currentPageIndex) {
+        // Only check auto-advance for the currently visible article page
+        if (articleIndex == _currentArticleIndex) {
           _checkAndSyncAutoAdvance(audioProvider);
         }
 
@@ -558,14 +615,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                             height: _heroChromeHeight,
                             child: _buildHeroChrome(config, article),
                           ),
-                          SizedBox(
-                            height: _heroTitleBandHeight,
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: _buildHeroTitleBand(article, config),
-                            ),
-                          ),
+                          // SizedBox(
+                          //   height: _heroTitleBandHeight,
+                          //   child: Padding(
+                          //     padding:
+                          //         const EdgeInsets.symmetric(horizontal: 20),
+                          //     child: _buildHeroTitleBand(article, config),
+                          //   ),
+                          // ),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -627,11 +684,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
   /// Exact hero layout bands (must sum with footer to [_heroImageHeight]).
   static const double _heroImageHeight = 340;
   static const double _heroChromeHeight = 80;
-  static const double _heroTitleBandHeight = 180;
-  // Remaining footer band: 340 - 80 - 180 = 80
+  static const double _heroTitleBandHeight = 210;
+  // Remaining footer band: 340 - 80 - 210 = 50
 
   /// Back · logo · share — locked to [_heroChromeHeight] (full 80px usable).
   Widget _buildHeroChrome(dynamic config, NewsArticle article) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
@@ -640,6 +698,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
           _HeroChromeButton(
             icon: Icons.arrow_back_ios_new_rounded,
             size: 42,
+            color: Colors.white,
             onTap: _leaveDetail,
           ),
           const SizedBox(width: 10),
@@ -647,7 +706,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
             height: 60,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.42),
+              color: Colors.black.withOpacity(0.9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withOpacity(0.14)),
             ),
@@ -662,6 +721,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
           _HeroChromeButton(
             icon: Icons.share_rounded,
             size: 42,
+            color: theme.colorScheme.primary,
             onTap: () {
               unawaited(_interactionService.trackShare(article));
               NewsShareService.shareArticle(
@@ -727,7 +787,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: Text(
-                    titleText,
+                    titleText + titleText + titleText,
                     style: titleStyle.copyWith(
                       fontSize: titleSize,
                       height: 1.3,
@@ -854,6 +914,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
       return const SizedBox(height: 20);
     }
 
+    final activeArticle = _currentArticleIndex ?? _visibleArticleIndex ?? 0;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -866,10 +928,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                     total,
                     (index) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: index == _currentPageIndex ? 18 : 8,
+                      width: index == activeArticle ? 18 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: index == _currentPageIndex
+                        color: index == activeArticle
                             ? config.primaryColorValue
                             : Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(4),
@@ -879,11 +941,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                 ),
               )
             : Text(
-                '${_currentPageIndex + 1} / $total',
+                '${activeArticle + 1} / $total',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.secondary.withOpacity(0.7),
+                  fontSize: 12,
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
       ),
@@ -1344,11 +1406,13 @@ class _HeroChromeButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.size = 42,
+    required this.color,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1362,7 +1426,7 @@ class _HeroChromeButton extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.42),
+            color: Colors.black.withOpacity(0.9),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.14)),
             boxShadow: [
@@ -1373,7 +1437,7 @@ class _HeroChromeButton extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(icon, color: Colors.white, size: iconSize),
+          child: Icon(icon, color: color, size: iconSize),
         ),
       ),
     );

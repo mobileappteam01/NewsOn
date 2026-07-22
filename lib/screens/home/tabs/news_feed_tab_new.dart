@@ -782,11 +782,34 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
+                                final feedItems =
+                                    AdPlacementHelper.shouldShowInlineAds(
+                                  AdService().policy,
+                                )
+                                        ? AdPlacementHelper.totalItemCount(
+                                            _allCategoryNews.length,
+                                          )
+                                        : _allCategoryNews.length;
+
+                                if (index >= feedItems) {
+                                  return _isLoadingMoreCategory
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(16),
+                                          child: Center(
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink();
+                                }
+
                                 if (AdPlacementHelper.isAdSlot(index) &&
                                     AdPlacementHelper.shouldShowInlineAds(
                                       AdService().policy,
                                     )) {
                                   return InlineFeedAd(
+                                    key: ValueKey(
+                                      'feed_ad_cat_${AdPlacementHelper.adSlotIndex(index)}',
+                                    ),
                                     slotIndex:
                                         AdPlacementHelper.adSlotIndex(index),
                                   );
@@ -930,16 +953,17 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                 );
                               },
                               childCount: () {
-                                final capped =
-                                    _allCategoryNews.length.clamp(0, 10);
-                                if (AdPlacementHelper.shouldShowInlineAds(
+                                final articleCount = _allCategoryNews.length;
+                                final withAds =
+                                    AdPlacementHelper.shouldShowInlineAds(
                                   AdService().policy,
-                                )) {
-                                  return AdPlacementHelper.totalItemCount(
-                                    capped,
-                                  );
-                                }
-                                return capped;
+                                )
+                                        ? AdPlacementHelper.totalItemCount(
+                                            articleCount,
+                                          )
+                                        : articleCount;
+                                return withAds +
+                                    (_isLoadingMoreCategory ? 1 : 0);
                               }(),
                             ),
                           ),
@@ -1007,6 +1031,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     AdService().policy,
                                   )) {
                                 return InlineFeedAd(
+                                  key: ValueKey(
+                                    'feed_ad_today_${AdPlacementHelper.adSlotIndex(index)}',
+                                  ),
                                   slotIndex:
                                       AdPlacementHelper.adSlotIndex(index),
                                 );

@@ -7,7 +7,8 @@ import '../../data/services/ad_service.dart';
 import '../../data/services/ad_network_diagnostics.dart';
 import 'ad_labeled_slot.dart';
 
-/// Medium-rectangle in-feed ad (one instance per slot — safe for ListView).
+/// In-feed ad (every N articles). Width-adaptive so Banner-unit creatives fit
+/// padded phone layouts; off-screen instances are disposable (no keep-alive).
 class InlineFeedAd extends StatefulWidget {
   const InlineFeedAd({
     super.key,
@@ -20,40 +21,61 @@ class InlineFeedAd extends StatefulWidget {
   State<InlineFeedAd> createState() => _InlineFeedAdState();
 }
 
-class _InlineFeedAdState extends State<InlineFeedAd>
-    with AutomaticKeepAliveClientMixin {
+class _InlineFeedAdState extends State<InlineFeedAd> {
   BannerAd? _bannerAd;
+  AdSize? _adSize;
   bool _isLoaded = false;
   bool _isLoading = false;
+  bool _gaveUp = false;
+  bool _initialLoadQueued = false;
   int _retryCount = 0;
-  static const int _maxRetries = 3;
-
-  @override
-  bool get wantKeepAlive => true;
+  int _lastLoadWidth = 0;
+  static const int _maxRetries = 4;
 
   @override
   void initState() {
     super.initState();
-    _loadAd();
   }
 
-  Future<void> _loadAd() async {
-    if (_isLoading || _isLoaded) return;
+  @override
+  void didUpdateWidget(covariant InlineFeedAd oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.slotIndex != widget.slotIndex) {
+      _disposeAd();
+      _isLoaded = false;
+      _gaveUp = false;
+      _retryCount = 0;
+      _lastLoadWidth = 0;
+      _initialLoadQueued = false;
+      setState(() {});
+    }
+  }
+
+  Future<void> _loadAd(int contentWidth) async {
+    if (_isLoading || _isLoaded || _gaveUp) return;
+    if (contentWidth < 160) return;
+
     final policy = AdService().policy;
     if (!policy.enabled) return;
 
+    // Avoid reloading the same width repeatedly while scrolling.
+    if (_lastLoadWidth == contentWidth && (_isLoading || _bannerAd != null)) {
+      return;
+    }
+
     _isLoading = true;
+    _lastLoadWidth = contentWidth;
+
     try {
-      // Don't burn retries when device DNS sinksholes AdMob.
       if (AdNetworkDiagnostics.isLikelyBlocked) {
         _isLoading = false;
+        _gaveUp = true;
+        if (mounted) setState(() {});
         return;
       }
 
       await AdService().initialize();
 
-      // Wait for MobileAds SDK — loading before this causes
-      // "Unable to obtain a JavascriptEngine" on cold start / release.
       final ready = await AdService().ensureMobileAdsReady(
         timeout: const Duration(seconds: 20),
       );
@@ -62,7 +84,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
           '⚠️ Inline feed ad ${widget.slotIndex}: MobileAds not ready, will retry',
         );
         _isLoading = false;
-        _scheduleRetry();
+        _scheduleRetry(contentWidth);
         return;
       }
 
@@ -73,6 +95,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
 
       await _bannerAd?.dispose();
       _bannerAd = null;
+      _adSize = null;
 
       await AdService().runExclusiveBannerLoad(() async {
         if (!mounted) {
@@ -80,21 +103,33 @@ class _InlineFeedAdState extends State<InlineFeedAd>
           return;
         }
 
+        final requestWidth = contentWidth;
         _bannerAd = AdService().createBannerAd(
-          size: AdService().inlineFeedAdSize,
+          size: AdService().resolveInlineFeedAdSize(requestWidth),
           adUnitId: AdService().inlineFeedAdUnitId,
           inlineFeed: true,
+          maxContentWidth: requestWidth,
           listener: BannerAdListener(
-            onAdLoaded: (ad) {
-              if (!mounted) return;
+            onAdLoaded: (ad) async {
+              final banner = ad as BannerAd;
+              AdSize? platformSize;
+              try {
+                platformSize = await banner.getPlatformAdSize();
+              } catch (_) {}
+              if (!mounted) {
+                banner.dispose();
+                return;
+              }
               setState(() {
-                _bannerAd = ad as BannerAd;
+                _bannerAd = banner;
+                _adSize = platformSize ?? banner.size;
                 _isLoaded = true;
                 _isLoading = false;
               });
               debugPrint(
                 '✅ Inline feed ad ${widget.slotIndex} loaded '
-                '(slot after every ${AdService().policy.inlineInterval} articles)',
+                '${_adSize?.width}x${_adSize?.height} '
+                '(every ${AdService().policy.inlineInterval} articles)',
               );
             },
             onAdFailedToLoad: (ad, error) async {
@@ -105,22 +140,35 @@ class _InlineFeedAdState extends State<InlineFeedAd>
               );
               ad.dispose();
               _bannerAd = null;
+              _adSize = null;
               _isLoading = false;
+              if (!mounted) return;
+
               if (error.message.contains('JavascriptEngine')) {
                 await AdNetworkDiagnostics.reportJavascriptEngineFailure();
-                if (AdNetworkDiagnostics.isLikelyBlocked) return;
+                if (AdNetworkDiagnostics.isLikelyBlocked) {
+                  _gaveUp = true;
+                  setState(() {});
+                  return;
+                }
               }
-              // Live AdMob setup broken → switch to Google test units & retry once.
+
               if (await AdService().handleLoadFailure(error)) {
                 if (mounted && !_isLoaded) {
                   _retryCount = 0;
-                  _loadAd();
+                  _lastLoadWidth = 0;
+                  _loadAd(contentWidth);
                 }
                 return;
               }
-              // Don't hammer retries on permanent no-fill once already on test units.
-              if (error.code == 3) return;
-              _scheduleRetry();
+
+              // Transient no-fill / network — retry a few times, then collapse.
+              if (error.code == 3 && _retryCount >= 2) {
+                _gaveUp = true;
+                if (mounted) setState(() {});
+                return;
+              }
+              _scheduleRetry(contentWidth);
             },
           ),
         );
@@ -130,50 +178,88 @@ class _InlineFeedAdState extends State<InlineFeedAd>
     } catch (e) {
       debugPrint('❌ Inline feed ad ${widget.slotIndex} load error: $e');
       _isLoading = false;
-      _scheduleRetry();
+      _scheduleRetry(contentWidth);
     }
   }
 
-  void _scheduleRetry() {
-    if (_retryCount >= _maxRetries || !mounted) return;
+  void _scheduleRetry(int contentWidth) {
+    if (_retryCount >= _maxRetries || !mounted || _gaveUp) {
+      _gaveUp = true;
+      if (mounted) setState(() {});
+      return;
+    }
     _retryCount++;
-    // Stagger retries so multiple slots don't all hit WebView at once.
-    final delaySeconds = _retryCount == 1 ? 4 : 8 * _retryCount;
-    final staggerMs = widget.slotIndex * 400;
+    final delaySeconds = _retryCount == 1 ? 3 : 6 * _retryCount;
+    final staggerMs = widget.slotIndex * 350;
     Future.delayed(Duration(seconds: delaySeconds, milliseconds: staggerMs), () {
-      if (mounted && !_isLoaded) {
+      if (mounted && !_isLoaded && !_gaveUp) {
         _isLoading = false;
-        _loadAd();
+        _lastLoadWidth = 0;
+        _loadAd(contentWidth);
       }
     });
   }
 
+  void _disposeAd() {
+    _bannerAd?.dispose();
+    _bannerAd = null;
+    _adSize = null;
+  }
+
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    _disposeAd();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-
-    if (!AdService().policy.enabled || !_isLoaded || _bannerAd == null) {
-      // Collapse until loaded so failed ads don't leave empty gaps.
+    if (!AdService().policy.enabled || _gaveUp) {
       return const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: AdLabeledSlot(
-          child: SizedBox(
-            width: _bannerAd!.size.width.toDouble(),
-            height: _bannerAd!.size.height.toDouble(),
-            child: AdWidget(ad: _bannerAd!),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // SliverPadding (16*2) + AdLabeledSlot (12*2 + 8*2) ≈ 72.
+        // Prefer tight constraint when list provides it; else screen width.
+        final screenW = MediaQuery.sizeOf(context).width;
+        final maxW = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+            ? constraints.maxWidth
+            : screenW;
+        final contentWidth = (maxW - 40).floor().clamp(160, 1200);
+
+        if (!_initialLoadQueued && !_isLoaded && !_gaveUp) {
+          _initialLoadQueued = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _loadAd(contentWidth);
+          });
+        }
+
+        if (!_isLoaded || _bannerAd == null || _adSize == null) {
+          // Soft reserved height while loading — avoids zero-height slots
+          // that never reflow after a late successful load on some OEMs.
+          if (_isLoading || _retryCount > 0) {
+            return const SizedBox(height: 8);
+          }
+          return const SizedBox.shrink();
+        }
+
+        final w = _adSize!.width.toDouble();
+        final h = _adSize!.height.toDouble();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: AdLabeledSlot(
+              child: SizedBox(
+                width: w > 0 ? w : contentWidth.toDouble(),
+                height: h > 0 ? h : 100,
+                child: AdWidget(ad: _bannerAd!),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

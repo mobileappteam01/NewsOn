@@ -288,22 +288,36 @@ class NewsOnApp extends StatelessWidget {
       child: _DeepLinkBridge(
         child: _VoiceFeaturesBridge(
           child: _CompletedNewsBridge(
-            child: Consumer3<ThemeProvider, LanguageProvider,
-                RemoteConfigProvider>(
+            child: Consumer4<ThemeProvider, LanguageProvider,
+                DynamicLanguageProvider, RemoteConfigProvider>(
               builder: (
                 context,
                 themeProvider,
                 languageProvider,
+                dynamicLanguageProvider,
                 configProvider,
                 child,
               ) {
-                final requestedLocale = languageProvider.locale;
+                // Prefer dynamic provider code once initialized so ml/te/kn stay in sync
+                final requestedLocale = dynamicLanguageProvider.isInitialized
+                    ? dynamicLanguageProvider.locale
+                    : languageProvider.locale;
 
                 final isArbSupported = AppLocalizations.supportedLocales.any(
                   (l) => l.languageCode == requestedLocale.languageCode,
                 );
+                // Non-ARB languages (ml/te/kn) still need a valid MaterialApp locale;
+                // strings come from DynamicLocalizationService via LocalizationHelper.
                 final effectiveLocale =
                     isArbSupported ? requestedLocale : const Locale('en');
+
+                // Include all known UI languages so locale resolution stays stable.
+                final supportedLocales = <Locale>{
+                  ...AppLocalizations.supportedLocales,
+                  ...languageProvider.supportedLocales,
+                  if (dynamicLanguageProvider.isInitialized)
+                    ...dynamicLanguageProvider.supportedLocales,
+                }.toList();
 
                 return MaterialApp(
                   navigatorKey: appNavigatorKey,
@@ -319,7 +333,7 @@ class NewsOnApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
-                  supportedLocales: AppLocalizations.supportedLocales,
+                  supportedLocales: supportedLocales,
                   localeResolutionCallback: (locale, supportedLocales) {
                     if (locale != null) {
                       for (final supportedLocale in supportedLocales) {

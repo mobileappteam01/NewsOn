@@ -1063,6 +1063,9 @@ class _SearchTabState extends State<SearchTab>
 
               if (adsOn && AdPlacementHelper.isAdSlot(index)) {
                 return InlineFeedAd(
+                  key: ValueKey(
+                    'feed_ad_search_${AdPlacementHelper.adSlotIndex(index)}',
+                  ),
                   slotIndex: AdPlacementHelper.adSlotIndex(index),
                 );
               }

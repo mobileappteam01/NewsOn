@@ -279,7 +279,12 @@ class _ForYouTabState extends State<ForYouTab>
 
     final adPolicy = AdService().policy;
     if (adPolicy.enabled && adPolicy.forYouBlockAdsEnabled) {
-      widgets.add(InlineFeedAd(slotIndex: block.index));
+      widgets.add(
+        InlineFeedAd(
+          key: ValueKey('feed_ad_foryou_${block.index}'),
+          slotIndex: block.index,
+        ),
+      );
     }
 
     return widgets;

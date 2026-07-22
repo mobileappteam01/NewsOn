@@ -27,6 +27,12 @@ class ApiService {
   final Map<String, String> _cachedEndpoints = {};
   bool _isInitialized = false;
 
+  /// Coalesce concurrent [initialize] calls (startup + HomeScreen fallback).
+  Future<void>? _initFuture;
+
+  /// In-flight Firestore endpoint refresh (avoid stampedes on For You open).
+  Future<void>? _endpointsRefreshFuture;
+
   // Dio client with SSL certificate handling
   late final Dio _dio;
 
@@ -75,11 +81,29 @@ class ApiService {
   /// Initialize API Service - Fetch base URL and all endpoints at startup
   /// Call this once when the app launches
   Future<void> initialize() async {
-    if (_isInitialized) {
+    // Fast path: usable base URL + at least some endpoints already in memory.
+    if (_isInitialized &&
+        _cachedBaseUrl != null &&
+        _cachedBaseUrl!.trim().isNotEmpty &&
+        _cachedEndpoints.isNotEmpty) {
       debugPrint('✅ API Service already initialized');
       return;
     }
 
+    if (_initFuture != null) {
+      await _initFuture;
+      return;
+    }
+
+    _initFuture = _doInitialize();
+    try {
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
+  }
+
+  Future<void> _doInitialize() async {
     try {
       debugPrint('🚀 Initializing API Service...');
 
@@ -107,11 +131,14 @@ class ApiService {
         debugPrint('⚠️ Image Base URL fetch skipped: $e');
       }
 
-      // Step 3: Fetch all endpoints from Firestore
+      // Step 3: Fetch all endpoints from Firestore (keep local cache if remote fails)
       try {
-        await _fetchAllEndpoints().timeout(const Duration(seconds: 8));
+        await _fetchAllEndpoints().timeout(const Duration(seconds: 12));
       } catch (e) {
         debugPrint('⚠️ Endpoints fetch timed out / failed: $e');
+        if (_cachedEndpoints.isEmpty) {
+          _hydrateEndpointsFromLocalCache();
+        }
       }
 
       if (_cachedBaseUrl != null && _cachedBaseUrl!.trim().isNotEmpty) {
@@ -146,6 +173,69 @@ class ApiService {
       if (asString.isNotEmpty) {
         _cachedBaseUrl = asString;
       }
+    }
+
+    _hydrateEndpointsFromLocalCache();
+  }
+
+  void _hydrateEndpointsFromLocalCache() {
+    final cached = StorageService.getApiEndpointsCache();
+    if (cached.isEmpty) return;
+    // Local cache is a base layer; never wipe fresher in-memory keys.
+    cached.forEach((key, value) {
+      _cachedEndpoints.putIfAbsent(key, () => value);
+    });
+    debugPrint(
+      '📦 Hydrated ${_cachedEndpoints.length} API endpoints from local cache',
+    );
+  }
+
+  /// Ensure base URL + [module]/[endpointKey] are available before a request.
+  /// Retries Firestore when cold start raced ahead of endpoint download.
+  Future<void> ensureEndpoint(String module, String endpointKey) async {
+    await initialize();
+
+    if (_resolveEndpoint(module, endpointKey) != null) {
+      return;
+    }
+
+    debugPrint(
+      '🔄 Endpoint "$endpointKey" missing in "$module" — refreshing from Firestore',
+    );
+    await _refreshEndpoints();
+
+    if (_resolveEndpoint(module, endpointKey) != null) {
+      return;
+    }
+
+    // Last chance: disk cache may have been written by a parallel refresh.
+    _hydrateEndpointsFromLocalCache();
+    if (_resolveEndpoint(module, endpointKey) != null) {
+      return;
+    }
+
+    throw Exception(
+      'Endpoint "$endpointKey" not found in module "$module". '
+      'Make sure the endpoint exists in Firestore and API Service is initialized.',
+    );
+  }
+
+  Future<void> _refreshEndpoints() async {
+    if (_endpointsRefreshFuture != null) {
+      await _endpointsRefreshFuture;
+      return;
+    }
+    _endpointsRefreshFuture = () async {
+      try {
+        await _fetchAllEndpoints().timeout(const Duration(seconds: 12));
+      } catch (e) {
+        debugPrint('⚠️ Endpoint refresh failed: $e');
+      }
+    }();
+    try {
+      await _endpointsRefreshFuture;
+    } finally {
+      _endpointsRefreshFuture = null;
     }
   }
 
@@ -224,6 +314,10 @@ class ApiService {
         debugPrint('✅ Loaded module "$module" with ${data.length} endpoints');
       }
 
+      await StorageService.saveApiEndpointsCache(
+        Map<String, String>.from(_cachedEndpoints),
+      );
+
       debugPrint('✅ Total endpoints loaded: $endpointCount');
     } catch (e) {
       debugPrint('❌ Error fetching endpoints: $e');
@@ -241,15 +335,45 @@ class ApiService {
     return _cachedBaseUrl!;
   }
 
+  /// Resolve endpoint with exact key, then case-insensitive / alias match.
+  String? _resolveEndpoint(String module, String endpointKey) {
+    final cacheKey = '$module/$endpointKey';
+    final exact = _cachedEndpoints[cacheKey];
+    if (exact != null && exact.isNotEmpty) return exact;
+
+    final wanted = '$module/$endpointKey'.toLowerCase();
+    for (final entry in _cachedEndpoints.entries) {
+      if (entry.key.toLowerCase() == wanted && entry.value.isNotEmpty) {
+        return entry.value;
+      }
+    }
+
+    // Aliases for keys that may differ between Firestore docs and app code.
+    const aliases = <String, List<String>>{
+      'foryou': ['for_you', 'for-you', 'for you'],
+      'breakingnews': ['breaking_news', 'breaking-news'],
+    };
+    final aliasList = aliases[endpointKey.toLowerCase()] ?? const <String>[];
+    for (final alias in aliasList) {
+      final aliasKey = '$module/$alias';
+      final value = _cachedEndpoints[aliasKey];
+      if (value != null && value.isNotEmpty) return value;
+      for (final entry in _cachedEndpoints.entries) {
+        if (entry.key.toLowerCase() == aliasKey.toLowerCase() &&
+            entry.value.isNotEmpty) {
+          return entry.value;
+        }
+      }
+    }
+    return null;
+  }
+
   /// Get endpoint (from cache, must be initialized first)
   /// [module] - The document name in apiEndPoints collection (e.g., 'auth')
   /// [endpointKey] - The field name in the document (e.g., 'signUp')
   String getEndpoint(String module, String endpointKey) {
-    final cacheKey = '$module/$endpointKey';
-
-    if (_cachedEndpoints.containsKey(cacheKey)) {
-      return _cachedEndpoints[cacheKey]!;
-    }
+    final resolved = _resolveEndpoint(module, endpointKey);
+    if (resolved != null) return resolved;
 
     throw Exception(
       'Endpoint "$endpointKey" not found in module "$module". '
@@ -391,6 +515,7 @@ class ApiService {
     String? bearerToken,
   }) async {
     try {
+      await ensureEndpoint(module, endpointKey);
       final url = buildUrl(module, endpointKey);
 
       debugPrint('🌐 GET Request: $url');
@@ -440,6 +565,7 @@ class ApiService {
     String? bearerToken,
   }) async {
     try {
+      await ensureEndpoint(module, endpointKey);
       final baseUrl = buildUrl(module, endpointKey);
       
       // Build query string manually to support multiple values for same key
@@ -506,6 +632,7 @@ class ApiService {
     String? bearerToken,
   }) async {
     try {
+      await ensureEndpoint(module, endpointKey);
       final url = buildUrl(module, endpointKey);
 
       debugPrint('🌐 POST Request: $url');
@@ -567,6 +694,7 @@ class ApiService {
     String? bearerToken,
   }) async {
     try {
+      await ensureEndpoint(module, endpointKey);
       final url = buildUrl(module, endpointKey);
 
       debugPrint('🌐 PUT Request: $url');
@@ -631,6 +759,7 @@ class ApiService {
     Map<String, String>? pathParameters,
   }) async {
     try {
+      await ensureEndpoint(module, endpointKey);
       final url = buildUrl(module, endpointKey);
 
       debugPrint('🌐 DELETE Request: $url');

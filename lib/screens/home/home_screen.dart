@@ -8,6 +8,8 @@ import '../../providers/news_provider.dart';
 import '../../providers/bookmark_provider.dart';
 import '../../providers/completed_news_provider.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../providers/dynamic_language_provider.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
@@ -46,18 +48,16 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       // Initialize API Service - Ensures base URL and endpoints are loaded
-      // This is a fallback in case initialization failed at app startup
-      // The service checks if already initialized, so it's safe to call multiple times
+      // (safe to call repeatedly; re-fetches endpoints if cache was empty)
       try {
         final apiService = ApiService();
-        if (!apiService.isInitialized) {
-          await apiService.initialize();
-          debugPrint("✅ API Service initialized from Home Screen");
-        } else {
-          debugPrint("✅ API Service already initialized");
-        }
+        await apiService.initialize();
+        debugPrint(
+          '✅ API Service ready (endpoints: '
+          '${apiService.isInitialized ? "ok" : "pending"})',
+        );
       } catch (e) {
-        debugPrint("⚠️ API Service initialization failed in Home Screen: $e");
+        debugPrint('⚠️ API Service initialization failed in Home Screen: $e');
         // Continue even if initialization fails - user can still use the app
       }
 
@@ -154,9 +154,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Consumer<RemoteConfigProvider>(
-      builder: (context, configProvider, child) {
+    return Consumer3<RemoteConfigProvider, LanguageProvider,
+        DynamicLanguageProvider>(
+      builder: (context, configProvider, languageProvider,
+          dynamicLanguageProvider, child) {
         final config = configProvider.config;
+        // Consumer3 watches language providers so bottom nav labels refresh
+        // for both ARB (ta/hi/en) and dynamic (ml/te/kn) languages.
+        assert(languageProvider.locale.languageCode.isNotEmpty);
+        assert(dynamicLanguageProvider.currentLanguageCode.isNotEmpty);
 
         return Scaffold(
           key: _scaffoldKey,
@@ -270,8 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_showHomeAnchorBanner())
-                const AnchorBannerAd(),
+              if (_showHomeAnchorBanner()) const AnchorBannerAd(),
               _buildBottomBar(theme, config),
             ],
           ),

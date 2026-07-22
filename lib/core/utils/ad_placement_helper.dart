@@ -11,13 +11,19 @@ class AdPlacementHelper {
     return policy.inlineInterval.clamp(3, 12);
   }
 
-  static int totalItemCount(int articleCount) {
+  static int totalItemCount(int articleCount) =>
+      totalItemCountWithInterval(articleCount, interval);
+
+  static int totalItemCountWithInterval(int articleCount, int interval) {
     if (articleCount <= 0) return 0;
     final ads = (articleCount - 1) ~/ interval;
     return articleCount + ads;
   }
 
-  static bool isAdSlot(int listIndex) {
+  static bool isAdSlot(int listIndex) =>
+      isAdSlotWithInterval(listIndex, interval);
+
+  static bool isAdSlotWithInterval(int listIndex, int interval) {
     if (listIndex <= 0) return false;
     return listIndex % (interval + 1) == interval;
   }

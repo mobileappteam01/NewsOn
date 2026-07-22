@@ -196,6 +196,20 @@
       "description": "Master switch for all voice/audio: listen buttons, audio player, background music settings, news reading (listen) mode, and voice search",
       "valueType": "BOOLEAN"
     },
+    "detail_carousel_ads_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Show Inshorts-style Sponsored ad pages between articles in the news detail swipe carousel",
+      "valueType": "BOOLEAN"
+    },
+    "detail_carousel_ad_interval": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Insert a detail-carousel ad after every N articles (allowed range 3–8)",
+      "valueType": "NUMBER"
+    },
     "language_version": {
       "defaultValue": {
         "value": "1.0.3"

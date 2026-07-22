@@ -36,6 +36,9 @@ class ForYouService {
 
     debugPrint('📰 Fetching For You feed page=$page limit=$limit');
 
+    // Wait for Firestore endpoints if cold-start raced ahead of download.
+    await _apiService.ensureEndpoint(_module, _endpointKey);
+
     final response = await _apiService.get(
       _module,
       _endpointKey,

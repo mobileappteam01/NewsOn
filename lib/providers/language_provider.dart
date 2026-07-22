@@ -114,7 +114,10 @@ class LanguageProvider extends ChangeNotifier {
     final isSupported = supportedLanguages.values.any(
       (supportedLocale) => supportedLocale.languageCode == locale.languageCode,
     );
-    if (isSupported) {
+    // Also accept known UI language codes so Malayalam etc. work even if
+    // Remote Config language list has not loaded yet.
+    const knownUiCodes = {'en', 'ta', 'hi', 'ml', 'te', 'kn', 'es', 'fr'};
+    if (isSupported || knownUiCodes.contains(locale.languageCode)) {
       _locale = locale;
       await StorageService.saveLanguage(locale.languageCode);
       notifyListeners();
@@ -129,9 +132,26 @@ class LanguageProvider extends ChangeNotifier {
     if (supportedLanguages.containsKey(languageName)) {
       final locale = supportedLanguages[languageName]!;
       await setLocale(locale);
-    } else {
-      debugPrint('⚠️ Unsupported language: $languageName');
+      return;
     }
+
+    // Fallback: resolve from dynamic service / news constants by name
+    final dynamicService = DynamicLocalizationService();
+    final match = dynamicService.supportedLanguages
+        .where((l) => l.name == languageName)
+        .toList();
+    if (match.isNotEmpty) {
+      await setLocale(Locale(match.first.code));
+      return;
+    }
+
+    final fromNews = NewsLanguageConstants.findByName(languageName);
+    if (fromNews != null) {
+      await setLocale(Locale(fromNews.code));
+      return;
+    }
+
+    debugPrint('⚠️ Unsupported language: $languageName');
   }
 
   /// Set news language only (affects news API fetch). Does not change app UI language.

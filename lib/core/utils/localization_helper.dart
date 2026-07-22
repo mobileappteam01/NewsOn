@@ -1,40 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../data/services/dynamic_localization_service.dart';
+import '../../providers/dynamic_language_provider.dart';
+import '../../providers/language_provider.dart';
 
 /// Helper class for easy access to localized strings
 /// This provides a convenient way to access AppLocalizations throughout the app
 /// Now supports dynamic translations from Firebase for languages without ARB files
 class LocalizationHelper {
+  /// Locales that have generated ARB / AppLocalizations classes.
+  static const Set<String> arbLanguageCodes = {'en', 'es', 'fr', 'hi', 'ta'};
+
   /// Get the current AppLocalizations instance from context
   /// Returns null if localization is not available (fallback to English strings)
   static AppLocalizations? of(BuildContext context) {
     return AppLocalizations.of(context);
   }
 
+  /// Subscribe to language providers so any widget that reads a localized
+  /// string rebuilds when the app UI language changes (ARB or dynamic).
+  static void _subscribeToLanguageChanges(BuildContext context) {
+    try {
+      Provider.of<LanguageProvider>(context, listen: true);
+      Provider.of<DynamicLanguageProvider>(context, listen: true);
+    } catch (_) {
+      // Providers may be unavailable in tests or very early bootstrap.
+    }
+  }
+
   /// Get localized string with fallback to English
-  /// Priority: Dynamic translations > ARB translations > Fallback
+  /// Priority: Dynamic translations (current UI language) > ARB > Fallback
   static String _getString(
     BuildContext context,
     String Function(AppLocalizations) getter,
     String fallback, {
     String? key,
   }) {
-    // First, try dynamic translations (for languages like Malayalam)
-    if (key != null) {
-      final dynamicService = DynamicLocalizationService();
-      if (dynamicService.isInitialized) {
-        final dynamicTranslation = dynamicService.translate(key);
-        if (dynamicTranslation != key) {
-          // Translation found in dynamic service
-          return dynamicTranslation;
-        }
+    _subscribeToLanguageChanges(context);
+
+    final dynamicService = DynamicLocalizationService();
+
+    // Dynamic / bundled translations are the source of truth for the selected
+    // UI language — especially for ml/te/kn which have no ARB files.
+    if (key != null && dynamicService.isInitialized) {
+      if (dynamicService.hasTranslation(key)) {
+        return dynamicService.translate(key);
+      }
+      // Non-ARB language with a missing key: prefer English dynamic, then fallback.
+      // Do NOT use ARB here — MaterialApp may be forced to Locale('en') while
+      // the user actually selected Malayalam/Telugu/Kannada.
+      if (!arbLanguageCodes.contains(dynamicService.currentLanguageCode)) {
+        final english = dynamicService.translateWithFallback(key);
+        if (english != key) return english;
+        return fallback;
       }
     }
 
-    // Fall back to ARB-based translations
+    // ARB-based translations (en/es/fr/hi/ta)
     final l10n = of(context);
     if (l10n != null) {
       try {
@@ -51,7 +76,10 @@ class LocalizationHelper {
   static String _getDynamic(String key, String fallback) {
     final dynamicService = DynamicLocalizationService();
     if (dynamicService.isInitialized) {
-      final translation = dynamicService.translate(key);
+      if (dynamicService.hasTranslation(key)) {
+        return dynamicService.translate(key);
+      }
+      final translation = dynamicService.translateWithFallback(key);
       if (translation != key) {
         return translation;
       }

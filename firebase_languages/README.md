@@ -133,9 +133,15 @@ Use `{paramName}` syntax for dynamic values:
 
 ## Files in This Directory
 
-- `en.json` - English translations
-- `ta.json` - Tamil translations
-- `README.md` - This file
+Upload these JSON files to Firebase Storage under `Languages/` (or `languages/`):
+
+- `en.json`, `ta.json`, `hi.json` — also shipped in `assets/languages/`
+- `ml.json`, `te.json`, `kn.json` — required for Malayalam / Telugu / Kannada UI
+- `README.md` — this guide
+
+The app loads `assets/languages/{code}.json` as a bundled base layer so bottom-nav
+and other UI strings still update offline even if Storage is unreachable or a
+partial cache exists on the device.
 
 ## How It Works
 

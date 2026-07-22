@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,9 +23,14 @@ class DynamicLocalizationService {
   factory DynamicLocalizationService() => _instance;
   DynamicLocalizationService._internal();
 
-  // Firebase instances
-  final FirebaseRemoteConfig _remoteConfig = FirebaseRemoteConfig.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // Firebase instances (lazy — avoids crashing before Firebase.initializeApp
+  // and allows bundled asset loading in unit tests).
+  FirebaseRemoteConfig? _remoteConfig;
+  FirebaseStorage? _storage;
+
+  FirebaseRemoteConfig get remoteConfig =>
+      _remoteConfig ??= FirebaseRemoteConfig.instance;
+  FirebaseStorage get storage => _storage ??= FirebaseStorage.instance;
 
   // Cache keys
   static const String _languagesKey = 'dynamic_languages';
@@ -119,8 +125,8 @@ class DynamicLocalizationService {
   Future<void> _fetchLanguagesFromRemoteConfig() async {
     try {
       // Get languages JSON from Remote Config
-      final languagesJson = _remoteConfig.getString('supported_languages');
-      final newVersion = _remoteConfig.getString('language_version');
+      final languagesJson = remoteConfig.getString('supported_languages');
+      final newVersion = remoteConfig.getString('language_version');
 
       if (languagesJson.isNotEmpty) {
         final List<dynamic> languagesList = jsonDecode(languagesJson);
@@ -178,26 +184,47 @@ class DynamicLocalizationService {
     }
   }
 
-  /// Load translations for a specific language
-  /// Downloads from Firebase Storage if not cached
-  Future<Map<String, String>> loadTranslations(String languageCode) async {
-    // Check in-memory cache first
-    if (_translationsCache.containsKey(languageCode)) {
-      debugPrint('📦 Using in-memory cached translations for $languageCode');
-      return _translationsCache[languageCode]!;
+  /// Load translations for a specific language.
+  /// Bundled assets are always the base layer so critical UI keys (bottom nav,
+  /// etc.) never go missing when a partial Firebase cache exists on device.
+  /// Order: bundled base ← disk overlay ← memory short-circuit ← remote refresh.
+  Future<Map<String, String>> loadTranslations(
+    String languageCode, {
+    bool forceReload = false,
+  }) async {
+    if (!forceReload) {
+      final memory = _translationsCache[languageCode];
+      if (memory != null && memory.isNotEmpty) {
+        debugPrint('📦 Using in-memory cached translations for $languageCode');
+        return memory;
+      }
+    } else {
+      _translationsCache.remove(languageCode);
     }
 
-    // Check local file cache
-    final cachedTranslations = await _loadTranslationsFromLocalCache(languageCode);
+    final bundled = await _loadBundledTranslations(languageCode);
+    final merged = <String, String>{...bundled};
+
+    final cachedTranslations =
+        await _loadTranslationsFromLocalCache(languageCode);
     if (cachedTranslations != null && cachedTranslations.isNotEmpty) {
-      _translationsCache[languageCode] = cachedTranslations;
-      debugPrint('📦 Loaded translations from local cache for $languageCode');
-      return cachedTranslations;
+      merged.addAll(cachedTranslations);
+      debugPrint(
+        '📦 Merged local cache over bundled for $languageCode '
+        '(${cachedTranslations.length} overlay keys)',
+      );
     }
 
-    // Download from Firebase Storage
+    if (merged.isNotEmpty) {
+      _translationsCache[languageCode] = merged;
+      _refreshTranslationsFromRemoteInBackground(languageCode);
+      return merged;
+    }
+
+    // No bundled or disk — try Firebase Storage directly
     try {
-      final translations = await _downloadTranslationsFromFirebase(languageCode);
+      final translations =
+          await _downloadTranslationsFromFirebase(languageCode);
       if (translations.isNotEmpty) {
         _translationsCache[languageCode] = translations;
         await _saveTranslationsToLocalCache(languageCode, translations);
@@ -208,44 +235,61 @@ class DynamicLocalizationService {
       debugPrint('⚠️ Error downloading translations for $languageCode: $e');
     }
 
-    // Fallback to bundled translations
-    final bundledTranslations = await _loadBundledTranslations(languageCode);
-    if (bundledTranslations.isNotEmpty) {
-      _translationsCache[languageCode] = bundledTranslations;
-      debugPrint('📦 Using bundled translations for $languageCode');
-      return bundledTranslations;
-    }
-
-    // Return empty map as last resort
     debugPrint('⚠️ No translations found for $languageCode');
     return {};
   }
 
+  void _refreshTranslationsFromRemoteInBackground(String languageCode) {
+    // Fire-and-forget; failures must not affect current UI language.
+    Future<void>(() async {
+      try {
+        final remote =
+            await _downloadTranslationsFromFirebase(languageCode);
+        if (remote.isEmpty) return;
+        final bundled = await _loadBundledTranslations(languageCode);
+        final merged = <String, String>{...bundled, ...remote};
+        _translationsCache[languageCode] = merged;
+        await _saveTranslationsToLocalCache(languageCode, remote);
+        debugPrint('☁️ Background-refreshed translations for $languageCode');
+      } catch (e) {
+        debugPrint(
+          '⚠️ Background translation refresh failed for $languageCode: $e',
+        );
+      }
+    });
+  }
+
   /// Download translations from Firebase Storage
-  Future<Map<String, String>> _downloadTranslationsFromFirebase(String languageCode) async {
-    try {
-      // Path in Firebase Storage: languages/en.json, languages/ta.json, etc.
-      final ref = _storage.ref('Languages/$languageCode.json');
-      
-      // Download to local file
-      final directory = await getApplicationDocumentsDirectory();
-      final localFile = File('${directory.path}/translations_$languageCode.json');
-      
-      await ref.writeToFile(localFile);
-      
-      // Read and parse the file
-      final jsonString = await localFile.readAsString();
-      final Map<String, dynamic> json = jsonDecode(jsonString);
-      
-      // Convert to Map<String, String>
-      final translations = json.map((key, value) => MapEntry(key, value.toString()));
-      
-      debugPrint('✅ Downloaded translations for $languageCode from Firebase Storage');
-      return translations;
-    } catch (e) {
-      debugPrint('⚠️ Error downloading translations from Firebase Storage: $e');
-      return {};
+  Future<Map<String, String>> _downloadTranslationsFromFirebase(
+    String languageCode,
+  ) async {
+    // Storage path casing differs across docs vs uploads — try both.
+    final candidates = <String>[
+      'Languages/$languageCode.json',
+      'languages/$languageCode.json',
+    ];
+
+    final directory = await getApplicationDocumentsDirectory();
+    final localFile =
+        File('${directory.path}/translations_$languageCode.json');
+
+    for (final path in candidates) {
+      try {
+        final ref = storage.ref(path);
+        await ref.writeToFile(localFile);
+        final jsonString = await localFile.readAsString();
+        final Map<String, dynamic> json = jsonDecode(jsonString);
+        final translations =
+            json.map((key, value) => MapEntry(key, value.toString()));
+        debugPrint(
+          '✅ Downloaded translations for $languageCode from $path',
+        );
+        return translations;
+      } catch (e) {
+        debugPrint('⚠️ Failed to download $path: $e');
+      }
     }
+    return {};
   }
 
   /// Load translations from local file cache
@@ -284,38 +328,85 @@ class DynamicLocalizationService {
     }
   }
 
-  /// Load bundled translations from assets (fallback)
-  Future<Map<String, String>> _loadBundledTranslations(String languageCode) async {
-    // This will use the existing ARB-based translations as fallback
-    // The actual implementation depends on how you want to handle this
-    // For now, return empty - the app will use the existing localization system
-    return {};
+  /// Load bundled translations from assets (offline / no-Firebase fallback)
+  Future<Map<String, String>> _loadBundledTranslations(
+    String languageCode,
+  ) async {
+    try {
+      final jsonString = await rootBundle.loadString(
+        'assets/languages/$languageCode.json',
+      );
+      final Map<String, dynamic> json = jsonDecode(jsonString);
+      final translations =
+          json.map((key, value) => MapEntry(key, value.toString()));
+      debugPrint(
+        '📦 Loaded ${translations.length} bundled strings for $languageCode',
+      );
+      return translations;
+    } catch (e) {
+      debugPrint('⚠️ No bundled translations for $languageCode: $e');
+      return {};
+    }
   }
 
-  /// Set current language
-  Future<void> setLanguage(String languageCode) async {
-    if (languageCode == _currentLanguageCode) {
-      debugPrint('🌐 Language already set to $languageCode');
-      return;
-    }
-
-    // Check if language is supported
-    final isSupported = _supportedLanguages.any((l) => l.code == languageCode);
+  /// Set current language. Always ensures translations for [languageCode] are loaded.
+  Future<void> setLanguage(
+    String languageCode, {
+    bool forceReload = false,
+  }) async {
+    // Allow switching even if Remote Config list is temporarily empty by
+    // accepting known bundled / news language codes.
+    final isSupported = _supportedLanguages.any((l) => l.code == languageCode) ||
+        _isKnownLanguageCode(languageCode);
     if (!isSupported) {
       debugPrint('⚠️ Language $languageCode is not supported');
       return;
     }
 
+    final alreadyCurrent = languageCode == _currentLanguageCode;
+    final existing = _translationsCache[languageCode];
+    if (alreadyCurrent &&
+        !forceReload &&
+        existing != null &&
+        existing.isNotEmpty) {
+      debugPrint('🌐 Language already set to $languageCode');
+      return;
+    }
+
     _currentLanguageCode = languageCode;
 
-    // Save to preferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selected_language_code', languageCode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('selected_language_code', languageCode);
+    } catch (e) {
+      debugPrint('⚠️ Could not persist language preference: $e');
+    }
 
-    // Load translations for new language
-    await loadTranslations(languageCode);
+    await loadTranslations(languageCode, forceReload: forceReload);
+
+    // Allow LocalizationHelper to use dynamic strings even if full Firebase
+    // initialize() has not completed yet (e.g. offline / slow start).
+    if (!_isInitialized) {
+      if (_supportedLanguages.isEmpty) {
+        _useDefaultLanguages();
+      }
+      _isInitialized = true;
+    }
 
     debugPrint('✅ Language changed to $languageCode');
+  }
+
+  bool _isKnownLanguageCode(String code) {
+    const known = {'en', 'ta', 'hi', 'ml', 'te', 'kn', 'es', 'fr'};
+    return known.contains(code);
+  }
+
+  /// Whether the current language has a translation for [key].
+  bool hasTranslation(String key) {
+    final translations = _translationsCache[_currentLanguageCode];
+    if (translations == null) return false;
+    return translations.containsKey(key) &&
+        (translations[key]?.isNotEmpty ?? false);
   }
 
   /// Get translation for a key

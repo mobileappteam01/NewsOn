@@ -108,6 +108,12 @@ class RemoteConfigModel {
   /// Master switch for all voice/audio: listen buttons, players, background music settings, etc.
   final bool enableVoiceFeatures;
 
+  /// Inshorts-style Sponsored pages in the news-detail swipe carousel.
+  final bool detailCarouselAdsEnabled;
+
+  /// Insert a detail-carousel ad after every N articles (3–8).
+  final int detailCarouselAdInterval;
+
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -206,6 +212,8 @@ class RemoteConfigModel {
     this.drawerMenu = const [],
     this.enableVoiceSearch = false,
     this.enableVoiceFeatures = true,
+    this.detailCarouselAdsEnabled = true,
+    this.detailCarouselAdInterval = 4,
   });
 
   // Helper method to convert hex string to Color
@@ -337,6 +345,8 @@ class RemoteConfigModel {
       'drawerMenu': drawerMenu,
       'enableVoiceSearch': enableVoiceSearch,
       'enableVoiceFeatures': enableVoiceFeatures,
+      'detailCarouselAdsEnabled': detailCarouselAdsEnabled,
+      'detailCarouselAdInterval': detailCarouselAdInterval,
     };
   }
 
@@ -440,6 +450,17 @@ class RemoteConfigModel {
         json['enableVoiceFeatures'],
         defaultValue: true,
       ),
+      detailCarouselAdsEnabled: _parseBool(
+        json['detailCarouselAdsEnabled'],
+        defaultValue: true,
+      ),
+      detailCarouselAdInterval: () {
+        final raw = json['detailCarouselAdInterval'];
+        if (raw is int) return raw.clamp(3, 8);
+        if (raw is num) return raw.toInt().clamp(3, 8);
+        if (raw is String) return (int.tryParse(raw) ?? 4).clamp(3, 8);
+        return 4;
+      }(),
     );
   }
 

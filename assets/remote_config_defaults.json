@@ -45,5 +45,7 @@
   "long_animation_duration": 500,
   "splash_welcome_letter_spacing": 1.0,
   "splash_app_name_letter_spacing": 1.2,
-  "news_api_key": "YOUR_API_KEY"
+  "news_api_key": "YOUR_API_KEY",
+  "detail_carousel_ads_enabled": true,
+  "detail_carousel_ad_interval": 4
 }

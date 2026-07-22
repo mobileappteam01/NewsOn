@@ -15,6 +15,7 @@ class AppConstants {
   static const String categoriesCacheKey = 'categories_cache';
   static const String imageBaseUrlCacheKey = 'image_base_url_cache';
   static const String realtimeDbCacheKey = 'realtime_db_cache';
+  static const String apiEndpointsCacheKey = 'api_endpoints_cache';
   static const String bookmarkListCacheKey = 'bookmark_list_cache';
   static const String themeKey = 'theme_mode';
   static const String languageKey = 'language';

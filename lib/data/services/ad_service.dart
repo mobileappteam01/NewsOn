@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -76,6 +77,12 @@ class AdService {
   bool get isInitialized => _isInitialized;
   bool get isMobileAdsReady => _mobileAdsReady;
   AdPolicy get policy => _policy;
+
+  /// Test-only: override policy without Firebase.
+  @visibleForTesting
+  void applyPolicyForTest(AdPolicy policy) {
+    _policy = policy;
+  }
   bool get productionIdsMisconfigured => _productionIdsMisconfigured;
 
   /// Test units when Firebase / env / debug / session publisher-error fallback.
@@ -251,6 +258,9 @@ class AdService {
         );
       }
 
+      // Detail-carousel toggles live in Firebase Remote Config (override RTDB).
+      _applyDetailCarouselFromRemoteConfig();
+
       _productionIdsMisconfigured = _detectMisconfiguredIds();
 
       await _applyRequestConfiguration();
@@ -272,6 +282,10 @@ class AdService {
       debugPrint('📢 MobileAds ready: $_mobileAdsReady');
       debugPrint('📢 Using test ad units: $shouldUseTestAdUnits');
       debugPrint('📢 Inline interval: ${_policy.inlineInterval}');
+      debugPrint(
+        '📢 Detail carousel ads: ${_policy.detailCarouselAdsEnabled} '
+        '(every ${_policy.detailCarouselAdInterval})',
+      );
       if (_productionIdsMisconfigured) {
         debugPrint(
           '⚠️ Firebase ad IDs are identical for multiple formats — using '
@@ -388,6 +402,41 @@ class AdService {
     }
   }
 
+  /// Prefer Firebase Remote Config for detail-carousel ad flags.
+  void _applyDetailCarouselFromRemoteConfig() {
+    try {
+      final rc = FirebaseRemoteConfig.instance;
+      var enabled = _policy.detailCarouselAdsEnabled;
+      try {
+        enabled = rc.getBool('detail_carousel_ads_enabled');
+      } catch (_) {
+        final raw =
+            rc.getString('detail_carousel_ads_enabled').trim().toLowerCase();
+        if (raw == 'true' || raw == '1') enabled = true;
+        if (raw == 'false' || raw == '0') enabled = false;
+      }
+
+      var interval = _policy.detailCarouselAdInterval;
+      try {
+        final v = rc.getInt('detail_carousel_ad_interval');
+        if (v > 0) interval = v;
+      } catch (_) {
+        interval = int.tryParse(rc.getString('detail_carousel_ad_interval')) ??
+            interval;
+      }
+
+      _policy = _policy.copyWith(
+        detailCarouselAdsEnabled: enabled,
+        detailCarouselAdInterval: interval.clamp(3, 8),
+      );
+      debugPrint(
+        '📢 Remote Config detail carousel: enabled=$enabled interval=$interval',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Remote Config detail carousel unavailable: $e');
+    }
+  }
+
   bool _detectMisconfiguredIds() {
     // Banner + medium may share one Banner-format unit (common when only
     // Banner + Interstitial exist in AdMob). Only flag cross-format clashes.
@@ -419,6 +468,17 @@ class AdService {
   /// large banner on the Banner ad unit (matches your AdMob dashboard).
   AdSize get inlineFeedAdSize =>
       hasDedicatedMediumUnit ? AdSize.mediumRectangle : AdSize.largeBanner;
+
+  /// Width-aware size for feed / carousel slots so 320px creatives are not
+  /// requested inside padded lists on ~360dp phones (common load/clip failure).
+  AdSize resolveInlineFeedAdSize(int maxWidthPx) {
+    final width = maxWidthPx.clamp(160, 1200);
+    if (hasDedicatedMediumUnit && width >= 300) {
+      return AdSize.mediumRectangle;
+    }
+    // Adaptive inline banner on the Banner unit — fills available width.
+    return AdSize.getInlineAdaptiveBannerAdSize(width, 120);
+  }
 
   String get inlineFeedAdUnitId {
     if (hasDedicatedMediumUnit) return mediumRectangleAdUnitId;
@@ -493,12 +553,16 @@ class AdService {
     String? adUnitId,
     bool anchored = false,
     bool inlineFeed = false,
+    /// Logical pixels available for the creative (after list/slot padding).
+    int? maxContentWidth,
   }) {
     // Always sanitize — never request a known-invalid medium unit.
     var resolvedSize = size;
     var unitId = adUnitId;
     if (inlineFeed) {
-      resolvedSize = inlineFeedAdSize;
+      resolvedSize = maxContentWidth != null && maxContentWidth > 0
+          ? resolveInlineFeedAdSize(maxContentWidth)
+          : inlineFeedAdSize;
       unitId = inlineFeedAdUnitId;
     } else if (anchored) {
       unitId ??= anchoredBannerAdUnitId;
@@ -523,7 +587,9 @@ class AdService {
         '⚠️ Refusing invalid medium unit $unitId — using Banner instead',
       );
       unitId = bannerAdUnitId;
-      resolvedSize = AdSize.largeBanner;
+      resolvedSize = maxContentWidth != null && maxContentWidth > 0
+          ? resolveInlineFeedAdSize(maxContentWidth)
+          : AdSize.largeBanner;
     }
 
     debugPrint(
@@ -532,7 +598,7 @@ class AdService {
     );
 
     return BannerAd(
-      adUnitId: unitId,
+      adUnitId: unitId as String,
       request: const AdRequest(),
       size: resolvedSize,
       listener: listener,

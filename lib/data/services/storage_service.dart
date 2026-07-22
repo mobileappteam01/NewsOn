@@ -511,6 +511,42 @@ class StorageService {
     return [];
   }
 
+  // ==================== API Endpoints Cache ====================
+
+  /// Persist Firestore apiEndPoints map (`module/key` → path) for cold starts.
+  static Future<void> saveApiEndpointsCache(
+    Map<String, String> endpoints,
+  ) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      await _settingsBox!.put(
+        AppConstants.apiEndpointsCacheKey,
+        jsonEncode(endpoints),
+      );
+      debugPrint('💾 API endpoints cached (${endpoints.length} keys)');
+    } catch (e) {
+      debugPrint('❌ Error saving API endpoints cache: $e');
+    }
+  }
+
+  /// Load cached API endpoints map.
+  static Map<String, String> getApiEndpointsCache() {
+    if (_settingsBox == null) return {};
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.apiEndpointsCacheKey) as String?;
+      if (jsonString == null || jsonString.isEmpty) return {};
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) return {};
+      return decoded.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      );
+    } catch (e) {
+      debugPrint('❌ Error loading API endpoints cache: $e');
+    }
+    return {};
+  }
+
   // ==================== Cleanup ====================
 
   /// Close all boxes
