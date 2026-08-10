@@ -210,6 +210,48 @@
       "description": "Insert a detail-carousel ad after every N articles (allowed range 3–8)",
       "valueType": "NUMBER"
     },
+    "contact_email_visible": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Show email row on Contact Us screen",
+      "valueType": "BOOLEAN"
+    },
+    "contact_email": {
+      "defaultValue": {
+        "value": "info@pixindia.com"
+      },
+      "description": "Contact email address shown on Contact Us screen",
+      "valueType": "STRING"
+    },
+    "contact_phone_visible": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Show phone row on Contact Us screen",
+      "valueType": "BOOLEAN"
+    },
+    "contact_phone": {
+      "defaultValue": {
+        "value": "+91 99442 77553"
+      },
+      "description": "Contact phone number shown on Contact Us screen",
+      "valueType": "STRING"
+    },
+    "contact_website_visible": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Show website row on Contact Us screen",
+      "valueType": "BOOLEAN"
+    },
+    "contact_website": {
+      "defaultValue": {
+        "value": "www.newson.app"
+      },
+      "description": "Contact website shown on Contact Us screen",
+      "valueType": "STRING"
+    },
     "language_version": {
       "defaultValue": {
         "value": "1.0.3"

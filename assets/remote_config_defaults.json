@@ -47,5 +47,11 @@
   "splash_app_name_letter_spacing": 1.2,
   "news_api_key": "YOUR_API_KEY",
   "detail_carousel_ads_enabled": true,
-  "detail_carousel_ad_interval": 4
+  "detail_carousel_ad_interval": 4,
+  "contact_email_visible": true,
+  "contact_email": "newson2025@gmail.com",
+  "contact_phone_visible": true,
+  "contact_phone": "+91 99442 77553",
+  "contact_website_visible": true,
+  "contact_website": "www.newson.app"
 }

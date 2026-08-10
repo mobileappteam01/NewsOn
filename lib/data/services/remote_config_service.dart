@@ -218,6 +218,14 @@ class RemoteConfigService {
       'enable_voice_features': true,
       'detail_carousel_ads_enabled': true,
       'detail_carousel_ad_interval': 4,
+
+      // Contact Us
+      'contact_email_visible': true,
+      'contact_email': 'newson2025@gmail.com',
+      'contact_phone_visible': true,
+      'contact_phone': '+91 99442 77553',
+      'contact_website_visible': true,
+      'contact_website': 'www.newson.app',
     };
   }
 
@@ -396,6 +404,32 @@ class RemoteConfigService {
         } catch (_) {}
         final raw = _remoteConfig.getString('detail_carousel_ad_interval');
         return (int.tryParse(raw) ?? 4).clamp(3, 8);
+      }(),
+
+      // Contact Us
+      contactEmailVisible: _getRemoteConfigBool(
+        'contact_email_visible',
+        defaultValue: true,
+      ),
+      contactEmail: () {
+        final v = _remoteConfig.getString('contact_email').trim();
+        return v.isNotEmpty ? v : 'newson2025@gmail.com';
+      }(),
+      contactPhoneVisible: _getRemoteConfigBool(
+        'contact_phone_visible',
+        defaultValue: true,
+      ),
+      contactPhone: () {
+        final v = _remoteConfig.getString('contact_phone').trim();
+        return v.isNotEmpty ? v : '+91 99442 77553';
+      }(),
+      contactWebsiteVisible: _getRemoteConfigBool(
+        'contact_website_visible',
+        defaultValue: true,
+      ),
+      contactWebsite: () {
+        final v = _remoteConfig.getString('contact_website').trim();
+        return v.isNotEmpty ? v : 'www.newson.app';
       }(),
     );
   }

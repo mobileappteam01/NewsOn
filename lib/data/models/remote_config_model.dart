@@ -114,6 +114,14 @@ class RemoteConfigModel {
   /// Insert a detail-carousel ad after every N articles (3–8).
   final int detailCarouselAdInterval;
 
+  // Contact Us (Firebase Remote Config)
+  final bool contactEmailVisible;
+  final String contactEmail;
+  final bool contactPhoneVisible;
+  final String contactPhone;
+  final bool contactWebsiteVisible;
+  final String contactWebsite;
+
   RemoteConfigModel({
     // App Texts
     this.appName = 'NewsOn',
@@ -214,6 +222,12 @@ class RemoteConfigModel {
     this.enableVoiceFeatures = true,
     this.detailCarouselAdsEnabled = true,
     this.detailCarouselAdInterval = 4,
+    this.contactEmailVisible = true,
+    this.contactEmail = 'newson2025@gmail.com',
+    this.contactPhoneVisible = true,
+    this.contactPhone = '+91 99442 77553',
+    this.contactWebsiteVisible = true,
+    this.contactWebsite = 'www.newson.app',
   });
 
   // Helper method to convert hex string to Color
@@ -347,6 +361,12 @@ class RemoteConfigModel {
       'enableVoiceFeatures': enableVoiceFeatures,
       'detailCarouselAdsEnabled': detailCarouselAdsEnabled,
       'detailCarouselAdInterval': detailCarouselAdInterval,
+      'contactEmailVisible': contactEmailVisible,
+      'contactEmail': contactEmail,
+      'contactPhoneVisible': contactPhoneVisible,
+      'contactPhone': contactPhone,
+      'contactWebsiteVisible': contactWebsiteVisible,
+      'contactWebsite': contactWebsite,
     };
   }
 
@@ -461,6 +481,22 @@ class RemoteConfigModel {
         if (raw is String) return (int.tryParse(raw) ?? 4).clamp(3, 8);
         return 4;
       }(),
+      contactEmailVisible: _parseBool(
+        json['contactEmailVisible'],
+        defaultValue: true,
+      ),
+      contactEmail:
+          json['contactEmail'] as String? ?? 'newson2025@gmail.com',
+      contactPhoneVisible: _parseBool(
+        json['contactPhoneVisible'],
+        defaultValue: true,
+      ),
+      contactPhone: json['contactPhone'] as String? ?? '+91 99442 77553',
+      contactWebsiteVisible: _parseBool(
+        json['contactWebsiteVisible'],
+        defaultValue: true,
+      ),
+      contactWebsite: json['contactWebsite'] as String? ?? 'www.newson.app',
     );
   }
 
