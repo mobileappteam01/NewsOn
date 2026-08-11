@@ -319,10 +319,18 @@ class NewsOnApp extends StatelessWidget {
                     ...dynamicLanguageProvider.supportedLocales,
                 }.toList();
 
+                final isDarkApp = themeProvider.themeMode == ThemeMode.dark ||
+                    (themeProvider.themeMode == ThemeMode.system &&
+                        WidgetsBinding.instance.platformDispatcher
+                                .platformBrightness ==
+                            Brightness.dark);
+
                 return MaterialApp(
                   navigatorKey: appNavigatorKey,
                   title: configProvider.config.appName,
                   debugShowCheckedModeBanner: false,
+                  // Avoid a black/empty window behind the first Flutter frame.
+                  color: isDarkApp ? const Color(0xFF121212) : Colors.white,
                   theme: AppTheme.getLightTheme(configProvider.config),
                   darkTheme: AppTheme.getDarkTheme(configProvider.config),
                   themeMode: themeProvider.themeMode,

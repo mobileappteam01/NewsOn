@@ -6,6 +6,7 @@ import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/screens/auth/auth_screen.dart';
 import 'package:newson/screens/home/home_screen.dart';
+import 'package:newson/screens/splash/authenticated_logo_splash.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/bootstrap/app_bootstrap.dart';
@@ -13,14 +14,32 @@ import '../../data/services/deep_link_service.dart';
 import '../../data/services/user_service.dart';
 import '../../providers/remote_config_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+/// App cold-start entry.
+///
+/// - Logged in → [AuthenticatedLogoSplash] → Home
+/// - Logged out / first install → existing Get Started splash → Auth
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  Widget build(BuildContext context) {
+    // Session is loaded in main() before runApp — decide once, no welcome flash.
+    if (UserService().isLoggedIn) {
+      return const AuthenticatedLogoSplash();
+    }
+    return const _LoggedOutSplashScreen();
+  }
 }
 
-class _SplashScreenState extends State<SplashScreen>
+/// Existing first-install / signed-out splash (unchanged behavior).
+class _LoggedOutSplashScreen extends StatefulWidget {
+  const _LoggedOutSplashScreen();
+
+  @override
+  State<_LoggedOutSplashScreen> createState() => _LoggedOutSplashScreenState();
+}
+
+class _LoggedOutSplashScreenState extends State<_LoggedOutSplashScreen>
     with SingleTickerProviderStateMixin {
   bool _didNavigate = false;
   late AnimationController _controller;
@@ -35,16 +54,16 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 800),
     );
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
-    // Paint splash immediately — only animate in content.
+    // Paint splash content on the first frame — do not wait a frame to start.
+    _controller.value = 0.35;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.forward();
     });
 
-    // Share link cold start: wait until bootstrap/API ready, then continue.
     if (DeepLinkService.instance.hasPendingArticle) {
       unawaited(_goNextWhenReady());
     }
@@ -62,10 +81,10 @@ class _SplashScreenState extends State<SplashScreen>
     if (_didNavigate || !mounted) return;
     _didNavigate = true;
 
-    final userService = UserService();
-    final token = userService.getToken();
+    final token = UserService().getToken();
 
     if (token != null && token.isNotEmpty) {
+      // Defensive: session appeared after this screen opened.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -98,6 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
         final theme = Theme.of(context);
 
         return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
           body: SafeArea(
             child: GestureDetector(
               onHorizontalDragEnd: _onHorizontalDragEnd,
@@ -114,13 +134,15 @@ class _SplashScreenState extends State<SplashScreen>
                               config.splashAnimatedGif,
                               BoxFit.cover,
                             )
-                          : Container(
-                              color: Colors.grey.shade200,
+                          : ColoredBox(
+                              color: theme.scaffoldBackgroundColor,
                               child: Center(
-                                child: Icon(
-                                  Icons.newspaper,
-                                  size: 64,
-                                  color: Colors.grey.shade400,
+                                child: Image.asset(
+                                  kNewsOnLogoAsset,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.contain,
+                                  gaplessPlayback: true,
                                 ),
                               ),
                             ),

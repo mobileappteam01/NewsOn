@@ -57,6 +57,7 @@ giveWidth(int value) {
 
 /// Bundled NewsOn logo, shown whenever a news image is missing or fails to load.
 const String kNewsOnLogoAsset = 'assets/images/newson.png';
+const String kNewsOnDarkLogoAsset = 'assets/images/News_on_dark_mode.png';
 
 /// Branded fallback shown instead of a broken/gallery icon for news images.
 Widget newsOnImageFallback({double? width, double? height}) {

@@ -3,34 +3,31 @@ import '../data/services/storage_service.dart';
 
 /// Provider for managing app theme
 class ThemeProvider with ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
+  late ThemeMode _themeMode;
 
   ThemeProvider() {
-    _loadThemeMode();
+    // Sync read — storage is already initialized in main() before runApp.
+    // Avoids a first-frame theme flash (empty/wrong colors).
+    _themeMode = _themeModeFromStorage();
   }
 
   ThemeMode get themeMode => _themeMode;
 
-  /// Load theme mode from storage
-  Future<void> _loadThemeMode() async {
-    final savedTheme = StorageService.getThemeMode();
-    switch (savedTheme) {
+  static ThemeMode _themeModeFromStorage() {
+    switch (StorageService.getThemeMode()) {
       case 'light':
-        _themeMode = ThemeMode.light;
-        break;
+        return ThemeMode.light;
       case 'dark':
-        _themeMode = ThemeMode.dark;
-        break;
+        return ThemeMode.dark;
       default:
-        _themeMode = ThemeMode.system;
+        return ThemeMode.system;
     }
-    notifyListeners();
   }
 
   /// Set theme mode
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    
+
     String modeString;
     switch (mode) {
       case ThemeMode.light:
@@ -42,7 +39,7 @@ class ThemeProvider with ChangeNotifier {
       default:
         modeString = 'system';
     }
-    
+
     await StorageService.saveThemeMode(modeString);
     notifyListeners();
   }
