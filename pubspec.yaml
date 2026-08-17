@@ -17,9 +17,9 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # For IOS
-# version: 1.0.0+2
+# version: 1.0.1+4
 # For Android
-version: 0.0.2+5 
+version: 0.0.3+6
 
 environment:
 
@@ -131,6 +131,8 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/newson.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
+  # App Store requires iPad icons (152 / 167) when TARGETED_DEVICE_FAMILY includes iPad.
+  remove_alpha_ios: true
  
   
 
