@@ -184,6 +184,14 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.skip, 'Skip', key: 'skip');
   }
 
+  /// iOS guest browse CTA (App Store Guideline 5.1.1(v)).
+  static String continueWithoutSigningIn(BuildContext context) => _getString(
+        context,
+        (l10n) => l10n.skip,
+        'Continue without signing in',
+        key: 'continueWithoutSigningIn',
+      );
+
   /// Get localized string for continue
   static String continueText(BuildContext context) {
     return _getString(context, (l10n) => l10n.continueText, 'Continue',
@@ -1369,6 +1377,9 @@ class LocalizationHelper {
   static String sponsored(BuildContext context) =>
       _getString(context, (l10n) => l10n.sponsored, 'Sponsored',
           key: 'sponsored');
+
+  static String adLabel(BuildContext context) =>
+      _getString(context, (l10n) => l10n.sponsored, 'Ad', key: 'adLabel');
 
   static String deleteAccount(BuildContext context) => _getString(context,
       (l10n) => l10n.deleteAccount, 'Delete Account', key: 'deleteAccount');

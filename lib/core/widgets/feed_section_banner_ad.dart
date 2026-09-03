@@ -8,22 +8,17 @@ import '../../data/services/ad_service.dart';
 import 'dailyhunt_ad_frame.dart';
 import 'live_banner_ad_cache.dart';
 
-/// In-feed banner every N articles in Today / category / search lists.
-class InlineFeedAd extends StatefulWidget {
-  const InlineFeedAd({
-    super.key,
-    required this.slotIndex,
-    this.cacheKeyPrefix = 'inline_feed_ad',
-  });
+/// Full-width banner between Breaking News and Today News (Dailyhunt-style).
+class FeedSectionBannerAd extends StatefulWidget {
+  const FeedSectionBannerAd({super.key});
 
-  final int slotIndex;
-  final String cacheKeyPrefix;
+  static const String cacheId = 'home_section_banner_ad';
 
   @override
-  State<InlineFeedAd> createState() => _InlineFeedAdState();
+  State<FeedSectionBannerAd> createState() => _FeedSectionBannerAdState();
 }
 
-class _InlineFeedAdState extends State<InlineFeedAd>
+class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
     with AutomaticKeepAliveClientMixin {
   BannerAd? _bannerAd;
   AdSize? _adSize;
@@ -33,16 +28,8 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   int _noFillRetries = 0;
 
   static const int _maxRetries = 6;
-  static const int _maxNoFillRetries = 5;
-
-  String get _cacheId => '${widget.cacheKeyPrefix}_${widget.slotIndex}';
-
-  /// Reserve space while loading so list layout stays stable.
-  double get _placeholderHeight {
-    final adService = AdService();
-    if (adService.hasDedicatedMediumUnit) return 258;
-    return 108;
-  }
+  static const int _maxNoFillRetries = 4;
+  static const double _loadingHeight = 90;
 
   @override
   bool get wantKeepAlive => true;
@@ -54,7 +41,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   }
 
   Future<void> _bootstrap() async {
-    final adopted = LiveBannerAdCache.instance.adopt(_cacheId);
+    final adopted = LiveBannerAdCache.instance.adopt(FeedSectionBannerAd.cacheId);
     if (adopted != null && mounted) {
       setState(() {
         _bannerAd = adopted.ad;
@@ -63,30 +50,17 @@ class _InlineFeedAdState extends State<InlineFeedAd>
       });
       return;
     }
-    _scheduleInitialLoad();
-  }
-
-  void _scheduleInitialLoad() {
-    // First slots load quickly; later slots stagger to avoid WebView overload.
-    final delayMs = widget.slotIndex == 0
-        ? 0
-        : widget.slotIndex == 1
-            ? 400
-            : 350 * widget.slotIndex;
-    if (delayMs == 0) {
-      _startLoad();
-    } else {
-      Future.delayed(Duration(milliseconds: delayMs), () {
-        if (mounted && !_gaveUp && _bannerAd == null) _startLoad();
-      });
-    }
+    await _startLoad();
   }
 
   Future<void> _startLoad() async {
-    if (!mounted || _gaveUp || _isLoading || _bannerAd != null) return;
+    if (!mounted || _gaveUp || _isLoading) return;
 
     final adService = AdService();
-    if (!adService.policy.enabled) return;
+    if (!adService.policy.enabled ||
+        !adService.policy.homeSectionBannerEnabled) {
+      return;
+    }
 
     await adService.initialize();
     if (!mounted || _gaveUp) return;
@@ -102,11 +76,15 @@ class _InlineFeedAdState extends State<InlineFeedAd>
       await adService.runExclusiveBannerLoad(() async {
         if (!mounted || _gaveUp) return;
 
-        final widthPx = (MediaQuery.sizeOf(context).width - 32).truncate();
-        final completer = Completer<void>();
+        final widthPx = MediaQuery.sizeOf(context).width.truncate();
+        final size = await AdService.anchoredAdaptiveSize(widthPx) ??
+            AdSize.getInlineAdaptiveBannerAdSize(widthPx, 60);
 
+        if (!mounted || _gaveUp) return;
+
+        final completer = Completer<void>();
         final banner = adService.createBannerAd(
-          inlineFeed: true,
+          size: size,
           maxContentWidth: widthPx,
           listener: BannerAdListener(
             onAdLoaded: (ad) {
@@ -116,7 +94,11 @@ class _InlineFeedAdState extends State<InlineFeedAd>
                 completer.complete();
                 return;
               }
-              LiveBannerAdCache.instance.store(_cacheId, loaded, loaded.size);
+              LiveBannerAdCache.instance.store(
+                FeedSectionBannerAd.cacheId,
+                loaded,
+                loaded.size,
+              );
               setState(() {
                 _bannerAd = loaded;
                 _adSize = loaded.size;
@@ -130,8 +112,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
             onAdFailedToLoad: (ad, error) async {
               ad.dispose();
               debugPrint(
-                '❌ Inline feed ad slot ${widget.slotIndex} failed: '
-                '${error.message} (${error.code})',
+                '❌ Home section banner failed: ${error.message} (${error.code})',
               );
 
               if (!mounted) {
@@ -182,15 +163,15 @@ class _InlineFeedAdState extends State<InlineFeedAd>
         }
       });
     } catch (e) {
-      debugPrint('❌ Inline feed ad slot ${widget.slotIndex} error: $e');
+      debugPrint('❌ Home section banner load error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _scheduleRetry({required bool isNoFill}) {
     final delay = isNoFill
-        ? Duration(milliseconds: 2000 + _noFillRetries * 1200)
-        : Duration(milliseconds: 1000 + _retryCount * 700);
+        ? Duration(milliseconds: 2500 + _noFillRetries * 1500)
+        : Duration(milliseconds: 1200 + _retryCount * 800);
     Future.delayed(delay, () {
       if (mounted && !_gaveUp && _bannerAd == null) _startLoad();
     });
@@ -199,7 +180,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   @override
   void dispose() {
     if (_bannerAd != null) {
-      LiveBannerAdCache.instance.detach(_cacheId);
+      LiveBannerAdCache.instance.detach(FeedSectionBannerAd.cacheId);
     }
     super.dispose();
   }
@@ -207,12 +188,15 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    if (!AdService().policy.enabled) return const SizedBox.shrink();
+    final policy = AdService().policy;
+    if (!policy.enabled || !policy.homeSectionBannerEnabled) {
+      return const SizedBox.shrink();
+    }
     if (_gaveUp && _bannerAd == null) return const SizedBox.shrink();
 
     if (_bannerAd != null && _adSize != null) {
       return DailyhuntAdFrame(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
         child: Center(
           child: SizedBox(
             width: _adSize!.width.toDouble(),
@@ -225,9 +209,9 @@ class _InlineFeedAdState extends State<InlineFeedAd>
 
     if (_isLoading) {
       return DailyhuntAdFrame(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
         child: SizedBox(
-          height: _placeholderHeight,
+          height: _loadingHeight,
           child: const Center(
             child: SizedBox(
               width: 22,

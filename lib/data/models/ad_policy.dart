@@ -6,14 +6,15 @@ class AdPolicy {
     this.enabled = true,
     this.useTestAds = false,
     this.inlineInterval = 5,
-    this.anchorBannerEnabled = true,
+    this.anchorBannerEnabled = false,
     this.interstitialEnabled = false,
     this.interstitialMinSeconds = 120,
     this.interstitialMinArticlesRead = 2,
     this.interstitialMaxPerSession = 4,
-    this.forYouBlockAdsEnabled = true,
+    this.forYouBlockAdsEnabled = false,
     this.searchInlineEnabled = true,
-    this.bookmarksAnchorEnabled = true,
+    this.bookmarksAnchorEnabled = false,
+    this.homeSectionBannerEnabled = true,
     this.detailCarouselAdsEnabled = true,
     this.detailCarouselAdInterval = 4,
   });
@@ -31,6 +32,8 @@ class AdPolicy {
   final bool forYouBlockAdsEnabled;
   final bool searchInlineEnabled;
   final bool bookmarksAnchorEnabled;
+  /// Banner between Breaking News and Today News on the Home Today tab.
+  final bool homeSectionBannerEnabled;
   /// Inshorts-style full-page ads between detail carousel articles.
   final bool detailCarouselAdsEnabled;
   /// Insert an ad page after every N articles (3–8).
@@ -94,6 +97,10 @@ class AdPolicy {
         map['bookmarks_anchor_enabled'],
         defaults.bookmarksAnchorEnabled,
       ),
+      homeSectionBannerEnabled: parseBool(
+        map['home_section_banner_enabled'],
+        defaults.homeSectionBannerEnabled,
+      ),
       detailCarouselAdsEnabled: parseBool(
         map['detail_carousel_ads_enabled'],
         defaults.detailCarouselAdsEnabled,
@@ -117,6 +124,7 @@ class AdPolicy {
     bool? forYouBlockAdsEnabled,
     bool? searchInlineEnabled,
     bool? bookmarksAnchorEnabled,
+    bool? homeSectionBannerEnabled,
     bool? detailCarouselAdsEnabled,
     int? detailCarouselAdInterval,
   }) {
@@ -137,6 +145,8 @@ class AdPolicy {
       searchInlineEnabled: searchInlineEnabled ?? this.searchInlineEnabled,
       bookmarksAnchorEnabled:
           bookmarksAnchorEnabled ?? this.bookmarksAnchorEnabled,
+      homeSectionBannerEnabled:
+          homeSectionBannerEnabled ?? this.homeSectionBannerEnabled,
       detailCarouselAdsEnabled:
           detailCarouselAdsEnabled ?? this.detailCarouselAdsEnabled,
       detailCarouselAdInterval:

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import '../services/storage_service.dart';
 import '../../core/constants/app_constants.dart';
@@ -11,6 +13,7 @@ class UserService {
 
   String? _token;
   Map<String, dynamic>? _userData;
+  bool _guestBrowse = false;
 
   /// Initialize user service - Load from storage
   Future<void> initialize() async {
@@ -36,9 +39,20 @@ class UserService {
         }
       }
 
+      final guestRaw =
+          StorageService.getSetting(AppConstants.guestBrowseKey);
+      _guestBrowse = guestRaw == true || guestRaw == 'true';
+
       if (_token != null && _token!.isNotEmpty) {
+        // Real session wins over guest browse.
+        if (_guestBrowse) {
+          _guestBrowse = false;
+          await StorageService.saveSetting(AppConstants.guestBrowseKey, false);
+        }
         debugPrint('✅ User session loaded from storage');
         debugPrint('   User: ${_userData?['nickName'] ?? _userData?['email']}');
+      } else if (_guestBrowse && Platform.isIOS) {
+        debugPrint('✅ iOS guest browse mode restored');
       }
     } catch (e) {
       debugPrint('❌ Error initializing UserService: $e');
@@ -51,6 +65,7 @@ class UserService {
     required Map<String, dynamic> userData,
   }) async {
     try {
+      await clearGuestBrowse();
       _token = token;
       // Preserve auth provider across profile refreshes.
       // Priority:
@@ -124,6 +139,31 @@ class UserService {
   /// Check if user is logged in
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
+  /// iOS-only guest browse (no account). Android always false.
+  bool get isGuestBrowse =>
+      Platform.isIOS && !isLoggedIn && _guestBrowse;
+
+  /// Allow Home / news without login on iOS (App Store Guideline 5.1.1(v)).
+  bool get canBrowseWithoutAccount => isLoggedIn || isGuestBrowse;
+
+  /// Persist guest browse for iOS only. No-op on Android.
+  Future<void> enableGuestBrowse() async {
+    if (!Platform.isIOS) return;
+    _guestBrowse = true;
+    await StorageService.saveSetting(AppConstants.guestBrowseKey, true);
+    debugPrint('✅ iOS guest browse enabled');
+  }
+
+  Future<void> clearGuestBrowse() async {
+    if (!_guestBrowse) {
+      await StorageService.saveSetting(AppConstants.guestBrowseKey, false);
+      return;
+    }
+    _guestBrowse = false;
+    await StorageService.saveSetting(AppConstants.guestBrowseKey, false);
+    debugPrint('🗑️ iOS guest browse cleared');
+  }
+
   /// Clear user data and token (logout)
   Future<void> clearUserData() async {
     _token = null;
@@ -132,6 +172,8 @@ class UserService {
     await StorageService.saveSetting(AppConstants.userTokenKey, null);
     await StorageService.saveSetting(AppConstants.userDataKey, null);
     await StorageService.saveAuthProvider(null);
+    // Keep guest flag cleared on logout so Auth still shows; user can Skip again on iOS.
+    await clearGuestBrowse();
 
     debugPrint('🗑️ User data cleared');
   }

@@ -17,6 +17,7 @@ import '../../providers/remote_config_provider.dart';
 /// App cold-start entry.
 ///
 /// - Logged in → [AuthenticatedLogoSplash] → Home
+/// - iOS guest browse → [AuthenticatedLogoSplash] → Home (no account)
 /// - Logged out / first install → existing Get Started splash → Auth
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -24,7 +25,8 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Session is loaded in main() before runApp — decide once, no welcome flash.
-    if (UserService().isLoggedIn) {
+    final userService = UserService();
+    if (userService.isLoggedIn || userService.isGuestBrowse) {
       return const AuthenticatedLogoSplash();
     }
     return const _LoggedOutSplashScreen();
@@ -85,6 +87,16 @@ class _LoggedOutSplashScreenState extends State<_LoggedOutSplashScreen>
 
     if (token != null && token.isNotEmpty) {
       // Defensive: session appeared after this screen opened.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(selectedCategories: []),
+        ),
+      );
+      if (DeepLinkService.instance.hasPendingArticle) {
+        DeepLinkService.instance.processPendingLink(navigationReady: true);
+      }
+    } else if (UserService().isGuestBrowse) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

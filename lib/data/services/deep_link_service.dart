@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import '../../core/constants/deep_link_constants.dart';
 import '../../core/navigation/app_navigator.dart';
 import '../../core/utils/connectivity_helper.dart';
 import '../../screens/auth/auth_screen.dart';
+import '../../screens/home/home_screen.dart';
 import '../../screens/news_detail/news_detail_screen.dart';
 import '../models/news_article.dart';
 import 'api_service.dart';
@@ -18,7 +20,8 @@ import 'user_service.dart';
 /// Handles share / deep links (Instagram-style).
 ///
 /// - App installed + logged in → [NewsDetailScreen] for the shared article.
-/// - App installed + not logged in → [AuthScreen], then article after login.
+/// - App installed + not logged in (Android) → [AuthScreen], then article after login.
+/// - App installed + not logged in (iOS) → guest browse → article (Guideline 5.1.1(v)).
 /// - Play Store is only in share text for users without the app (not handled here).
 class DeepLinkService {
   DeepLinkService._();
@@ -153,9 +156,27 @@ class DeepLinkService {
       }
 
       if (!_userService.isLoggedIn) {
-        debugPrint('🔗 Not logged in — routing to AuthScreen');
-        _navigateToLogin();
-        return;
+        if (Platform.isIOS) {
+          // News is not account-based — allow shared articles without login on iOS.
+          if (!_userService.isGuestBrowse) {
+            await _userService.enableGuestBrowse();
+          }
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null && !_homeSeeded) {
+            navigator.pushAndRemoveUntil(
+              MaterialPageRoute<void>(
+                builder: (_) => const HomeScreen(selectedCategories: []),
+              ),
+              (route) => false,
+            );
+            _homeSeeded = true;
+            _fromColdStart = false;
+          }
+        } else {
+          debugPrint('🔗 Not logged in — routing to AuthScreen');
+          _navigateToLogin();
+          return;
+        }
       }
 
       final navigator = appNavigatorKey.currentState;

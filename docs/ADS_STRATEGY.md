@@ -10,6 +10,7 @@
 
 ## Placements
 
+- **Home Today tab** — section banner between Breaking News and Today News (toggle via `home_section_banner_enabled`)
 - **Today feed** — MREC every 5 articles (configurable)
 - **Category feed** — same interval
 - **For You** — MREC after each spotlight block (mosaic + grid)
@@ -37,7 +38,8 @@
   "interstitial_max_per_session": 4,
   "for_you_block_ads_enabled": true,
   "search_inline_enabled": true,
-  "bookmarks_anchor_enabled": true
+  "bookmarks_anchor_enabled": true,
+  "home_section_banner_enabled": true
 }
 ```
 
@@ -78,7 +80,8 @@
   "interstitial_enabled": true,
   "interstitial_min_seconds": 120,
   "interstitial_min_articles_read": 2,
-  "interstitial_max_per_session": 4
+  "interstitial_max_per_session": 4,
+  "home_section_banner_enabled": true
 }
 ```
 

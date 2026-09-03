@@ -12,10 +12,12 @@ class LiveBannerAdCache {
   static final LiveBannerAdCache instance = LiveBannerAdCache._();
 
   /// Soft cap: enough for a typical session without stacking dozens of WebViews.
-  static const int maxEntries = 6;
+  static const int maxEntries = 12;
 
   final LinkedHashMap<String, LiveBannerAdEntry> _entries = LinkedHashMap();
   final Set<String> _attached = <String>{};
+
+  bool contains(String id) => _entries.containsKey(id);
 
   /// Re-attach a previously loaded creative for [id], if still cached.
   LiveBannerAdEntry? adopt(String id) {

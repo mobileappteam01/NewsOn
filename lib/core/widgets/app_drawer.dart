@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:newson/core/navigation/app_navigator.dart';
+import 'package:newson/core/utils/auth_navigation_helper.dart';
 import 'package:newson/core/utils/localization_helper.dart';
+import 'package:newson/data/services/user_service.dart';
 import 'package:newson/screens/category_selection/category_selection_screen.dart';
 import 'package:newson/screens/drawer_widgets/account_settings.dart';
 import 'package:newson/screens/drawer_widgets/application_settings.dart';
@@ -94,29 +97,40 @@ class AppDrawer extends StatelessWidget {
                             i,
                           ),
                           onTap: () {
+                            // Account Settings (0) and Bookmarks (2) need login.
+                            final needsLogin = (i == 0 || i == 2) &&
+                                !UserService().isLoggedIn;
                             Navigator.pop(context); // Close the drawer first
                             Future.delayed(
                               const Duration(milliseconds: 200),
                               () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (c) => i == 0
-                                        ? const AccountSettings()
-                                        : i == 1
-                                            ? const NotificationView()
-                                            : i == 2
-                                                ? BookMark()
-                                                : i == 3
-                                                    ? ApplicationSettings()
-                                                    : i == 4
-                                                        ? TermsAndConditions()
-                                                        : i == 5
-                                                            ? PrivacyPolicy()
-                                                            : const CategorySelectionScreen(
-                                                                isFromSideMenu:
-                                                                    true,
-                                                              ),
-                                  ),
+                                if (needsLogin) {
+                                  navigateToLoginForAccountFeatureGlobal();
+                                  return;
+                                }
+                                final navigator = appNavigatorKey.currentState;
+                                if (navigator == null) return;
+
+                                final Widget page;
+                                if (i == 0) {
+                                  page = const AccountSettings();
+                                } else if (i == 1) {
+                                  page = const NotificationView();
+                                } else if (i == 2) {
+                                  page = BookMark();
+                                } else if (i == 3) {
+                                  page = ApplicationSettings();
+                                } else if (i == 4) {
+                                  page = TermsAndConditions();
+                                } else if (i == 5) {
+                                  page = PrivacyPolicy();
+                                } else {
+                                  page = const CategorySelectionScreen(
+                                    isFromSideMenu: true,
+                                  );
+                                }
+                                navigator.push(
+                                  MaterialPageRoute(builder: (_) => page),
                                 );
                               },
                             );

@@ -12,8 +12,6 @@ import '../../../core/widgets/audio_mini_player.dart';
 import '../../../core/widgets/for_you_featured_mosaic.dart';
 import '../../../core/widgets/for_you_feed_shimmer.dart';
 import '../../../core/widgets/for_you_spotlight_card.dart';
-import '../../../core/widgets/inline_feed_ad.dart';
-import '../../../data/services/ad_service.dart';
 import '../../../core/widgets/news_share_bottom_sheet.dart';
 import '../../../data/models/news_article.dart';
 import '../../../data/models/remote_config_model.dart';
@@ -273,16 +271,6 @@ class _ForYouTabState extends State<ForYouTab>
           config: config,
           voiceEnabled: voiceEnabled,
           blockIndex: block.index,
-        ),
-      );
-    }
-
-    final adPolicy = AdService().policy;
-    if (adPolicy.enabled && adPolicy.forYouBlockAdsEnabled) {
-      widgets.add(
-        InlineFeedAd(
-          key: ValueKey('feed_ad_foryou_${block.index}'),
-          slotIndex: block.index,
         ),
       );
     }

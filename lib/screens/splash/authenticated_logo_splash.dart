@@ -79,7 +79,7 @@ class _AuthenticatedLogoSplashState extends State<AuthenticatedLogoSplash>
     if (_didNavigate || !mounted) return;
     _didNavigate = true;
 
-    if (!UserService().isLoggedIn) {
+    if (!UserService().canBrowseWithoutAccount) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const AuthScreen()),
       );

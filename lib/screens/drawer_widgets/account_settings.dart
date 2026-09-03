@@ -53,8 +53,17 @@ class _AccountSettingsState extends State<AccountSettings> {
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
-    _loadLocationData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!UserService().isLoggedIn) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AuthScreen()),
+        );
+        return;
+      }
+      _loadUserProfile();
+      _loadLocationData();
+    });
   }
 
   /// Load cities and countries dynamically

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
@@ -79,6 +81,12 @@ class _AuthScreenState extends State<AuthScreen>
   void dispose() {
     _loadingAnimationController.dispose();
     super.dispose();
+  }
+
+  /// App Store 5.1.1(v): allow browsing news without account (iOS only).
+  Future<void> _skipAsGuest() async {
+    if (_isLoading || !Platform.isIOS) return;
+    await navigateAsGuestBrowse(context);
   }
 
   Future<void> _completeOAuthSignIn(
@@ -352,6 +360,26 @@ class _AuthScreenState extends State<AuthScreen>
                         AppleSignInButton(
                           onPressed: _handleAppleSignIn,
                           isLoading: _isLoading,
+                        ),
+                      ],
+                      // iOS only — App Store Guideline 5.1.1(v): news is not
+                      // account-based and must be reachable without registration.
+                      if (Platform.isIOS) ...[
+                        giveHeight(8),
+                        TextButton(
+                          onPressed: _isLoading ? null : _skipAsGuest,
+                          child: Text(
+                            LocalizationHelper.continueWithoutSigningIn(
+                              context,
+                            ),
+                            style: GoogleFonts.roboto(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.secondary,
+                              decoration: TextDecoration.underline,
+                              decorationColor: theme.colorScheme.secondary,
+                            ),
+                          ),
                         ),
                       ],
                       giveHeight(16),

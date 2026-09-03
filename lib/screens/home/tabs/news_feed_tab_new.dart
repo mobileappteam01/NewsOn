@@ -1,5 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import 'package:newson/data/models/remote_config_model.dart';
 import 'package:newson/screens/news_detail/news_detail_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/ad_placement_helper.dart';
+import '../../../core/widgets/feed_section_banner_ad.dart';
 import '../../../core/widgets/inline_feed_ad.dart';
 import '../../../data/services/ad_service.dart';
 import '../../../providers/news_provider.dart';
@@ -163,6 +166,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         _todayNewsPage = 1;
         _hasMoreTodayNews = _allTodayNews.length == _newsLimit;
       });
+      _preloadTodayFeedAds();
     } catch (e) {
       debugPrint('⚠️ _loadInitialTodayNews: $e');
       if (!mounted) return;
@@ -180,8 +184,28 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
           _allTodayNews = cached;
           _hasMoreTodayNews = false;
         });
+        _preloadTodayFeedAds();
       }
     }
+  }
+
+  void _preloadTodayFeedAds() {
+    if (!mounted) return;
+    if (!AdPlacementHelper.shouldShowInlineAds(AdService().policy)) return;
+    if (_allTodayNews.length < AdPlacementHelper.interval + 1) return;
+
+    final widthPx = (MediaQuery.sizeOf(context).width - 32).truncate();
+    final slotsNeeded =
+        (_allTodayNews.length - 1) ~/ AdPlacementHelper.interval;
+    final preloadCount = slotsNeeded.clamp(1, 4);
+
+    unawaited(
+      AdService().preloadInlineFeedAds(
+        slotCount: preloadCount,
+        contentWidthPx: widthPx,
+        cacheKeyPrefix: 'inline_feed_today',
+      ),
+    );
   }
 
   Future<void> _loadMoreTodayNews() async {
@@ -719,6 +743,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
+                    // Dailyhunt-style banner between Breaking News and Today feed
+                    if (_selectedCategory == 'All' &&
+                        AdService().policy.enabled &&
+                        AdService().policy.homeSectionBannerEnabled)
+                      const SliverToBoxAdapter(
+                        child: FeedSectionBannerAd(),
+                      ),
+
                     // Heading - Category name or Date heading
                     SliverToBoxAdapter(
                       child: Padding(
@@ -806,13 +838,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     AdPlacementHelper.shouldShowInlineAds(
                                       AdService().policy,
                                     )) {
-                                  return InlineFeedAd(
-                                    key: ValueKey(
-                                      'feed_ad_cat_${AdPlacementHelper.adSlotIndex(index)}',
-                                    ),
-                                    slotIndex:
-                                        AdPlacementHelper.adSlotIndex(index),
-                                  );
+                                return InlineFeedAd(
+                                  key: ValueKey(
+                                    'feed_ad_cat_${AdPlacementHelper.adSlotIndex(index)}',
+                                  ),
+                                  slotIndex:
+                                      AdPlacementHelper.adSlotIndex(index),
+                                  cacheKeyPrefix: 'inline_feed_cat',
+                                );
                                 }
 
                                 final articleIndex =
@@ -1036,6 +1069,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                   ),
                                   slotIndex:
                                       AdPlacementHelper.adSlotIndex(index),
+                                  cacheKeyPrefix: 'inline_feed_today',
                                 );
                               }
 

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../models/ad_policy.dart';
+import '../../core/widgets/live_banner_ad_cache.dart';
 import 'ad_network_diagnostics.dart';
 
 /// Loads AdMob unit IDs from Firebase and picks the correct format per placement.
@@ -282,6 +283,9 @@ class AdService {
       debugPrint('📢 MobileAds ready: $_mobileAdsReady');
       debugPrint('📢 Using test ad units: $shouldUseTestAdUnits');
       debugPrint('📢 Inline interval: ${_policy.inlineInterval}');
+      debugPrint(
+        '📢 Home section banner: ${_policy.homeSectionBannerEnabled}',
+      );
       debugPrint(
         '📢 Detail carousel ads: ${_policy.detailCarouselAdsEnabled} '
         '(every ${_policy.detailCarouselAdInterval})',
@@ -610,6 +614,54 @@ class AdService {
     return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
       widthPx.truncate(),
     );
+  }
+
+  /// Warm inline feed slots before the user scrolls to them.
+  Future<void> preloadInlineFeedAds({
+    required int slotCount,
+    required int contentWidthPx,
+    String cacheKeyPrefix = 'inline_feed_ad',
+  }) async {
+    if (!policy.enabled || slotCount <= 0) return;
+    await initialize();
+    if (!await ensureMobileAdsReady()) return;
+
+    for (var slot = 0; slot < slotCount; slot++) {
+      final cacheId = '${cacheKeyPrefix}_$slot';
+      if (LiveBannerAdCache.instance.contains(cacheId)) continue;
+
+      await runExclusiveBannerLoad(() async {
+        final completer = Completer<void>();
+        final banner = createBannerAd(
+          inlineFeed: true,
+          maxContentWidth: contentWidthPx,
+          listener: BannerAdListener(
+            onAdLoaded: (ad) {
+              final loaded = ad as BannerAd;
+              LiveBannerAdCache.instance.store(
+                cacheId,
+                loaded,
+                loaded.size,
+              );
+              debugPrint('✅ Preloaded inline feed ad $cacheId');
+              completer.complete();
+            },
+            onAdFailedToLoad: (ad, error) {
+              ad.dispose();
+              debugPrint(
+                '⚠️ Preload inline $cacheId failed: ${error.message}',
+              );
+              completer.complete();
+            },
+          ),
+        );
+        banner.load();
+        await completer.future.timeout(
+          const Duration(seconds: 20),
+          onTimeout: () {},
+        );
+      });
+    }
   }
 }
 

@@ -55,14 +55,8 @@ class RegionApiService {
     required Map<String, String> queryParameters,
   }) async {
     try {
-      final token = _userService.getToken();
-      if (token == null || token.isEmpty) {
-        return const RegionListResponse(
-          success: false,
-          regions: [],
-          error: 'Please sign in to load regions',
-        );
-      }
+      // Public on backend for guest browse (App Store 5.1.1(v)); token optional.
+      final token = _userService.isLoggedIn ? _userService.getToken() : null;
 
       if (!_apiService.isInitialized) {
         await _apiService.initialize();

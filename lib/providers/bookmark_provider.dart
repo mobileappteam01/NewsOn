@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/utils/auth_navigation_helper.dart';
 import '../data/models/news_article.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/services/bookmark_api_service.dart';
@@ -186,6 +187,15 @@ class BookmarkProvider with ChangeNotifier {
 
   /// Toggle bookmark (syncs with API)
   Future<bool> toggleBookmark(NewsArticle article) async {
+    final currentlyBookmarked = isBookmarked(article);
+
+    // Account feature — guests / logged-out users must sign in (no local save).
+    if (!_userService.isLoggedIn) {
+      debugPrint('🔖 Bookmark requires login — opening AuthScreen');
+      navigateToLoginForAccountFeatureGlobal();
+      return currentlyBookmarked;
+    }
+
     try {
       debugPrint("theee article detailsss : ${article.toJson()}");
       // Backend BookmarkModel.news is ObjectId → newsarticles._id only.
@@ -199,13 +209,6 @@ class BookmarkProvider with ChangeNotifier {
 
       debugPrint('🔖 ToggleBookmark - newsId (_id): $newsId');
       debugPrint('🔖 ToggleBookmark - article.articleId: ${article.articleId}');
-      final currentlyBookmarked = isBookmarked(article);
-
-      // Check if user is authenticated
-      if (!_userService.isLoggedIn) {
-        // Use local storage only
-        return await _toggleBookmarkLocal(article);
-      }
 
       if (currentlyBookmarked) {
         // Remove bookmark via API
