@@ -7,10 +7,13 @@ import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
 import 'storage_service.dart';
+import '../../core/config/v2_api_config.dart';
+import 'v2_api_config_service.dart';
 
 /// Reusable API Service for making HTTP requests
-/// - Fetches base URL from Firebase Realtime Database (ipAddress)
-/// - Fetches endpoints from Firestore (apiEndPoints collection)
+/// - Fetches V1 base URL from Firebase Realtime Database (ipAddress)
+/// - Fetches V1 endpoints from Firestore (apiEndPoints collection; skips `v2` doc)
+/// - Loads isolated V2 host via [V2ApiConfigService] (`apiEndPoints/v2`)
 /// - Handles all HTTP methods with proper error handling
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -141,6 +144,15 @@ class ApiService {
         }
       }
 
+      // Step 4: Isolated V2 host config (soft-fail — must not block V1).
+      try {
+        await V2ApiConfigService.instance.initialize().timeout(
+          const Duration(seconds: 10),
+        );
+      } catch (e) {
+        debugPrint('⚠️ V2 API config init skipped: $e');
+      }
+
       if (_cachedBaseUrl != null && _cachedBaseUrl!.trim().isNotEmpty) {
         _isInitialized = true;
         debugPrint('✅ API Service initialized successfully');
@@ -162,17 +174,22 @@ class ApiService {
   }
 
   void _hydrateFromLocalCache() {
+    final fromDefine = _stagingBaseUrlOverride;
+    if (fromDefine != null) {
+      _cachedBaseUrl = fromDefine;
+    } else {
+      final cachedIp = StorageService.getRealtimeDbCache('ipAddress');
+      if (cachedIp != null) {
+        final asString = cachedIp.toString().trim();
+        if (asString.isNotEmpty) {
+          _cachedBaseUrl = asString;
+        }
+      }
+    }
+
     final cachedImageBase = StorageService.getImageBaseUrlCache();
     if (cachedImageBase != null && cachedImageBase.isNotEmpty) {
       _cachedImageBaseUrl = cachedImageBase;
-    }
-
-    final cachedIp = StorageService.getRealtimeDbCache('ipAddress');
-    if (cachedIp != null) {
-      final asString = cachedIp.toString().trim();
-      if (asString.isNotEmpty) {
-        _cachedBaseUrl = asString;
-      }
     }
 
     _hydrateEndpointsFromLocalCache();
@@ -182,12 +199,22 @@ class ApiService {
     final cached = StorageService.getApiEndpointsCache();
     if (cached.isEmpty) return;
     // Local cache is a base layer; never wipe fresher in-memory keys.
+    // Skip isolated V2 host doc keys so they never enter the V1 endpoint map.
     cached.forEach((key, value) {
+      if (_isV2ConfigEndpointKey(key)) return;
       _cachedEndpoints.putIfAbsent(key, () => value);
     });
     debugPrint(
       '📦 Hydrated ${_cachedEndpoints.length} API endpoints from local cache',
     );
+  }
+
+  static bool _isV2ConfigEndpointKey(String key) {
+    final lower = key.toLowerCase();
+    return lower == 'v2' ||
+        lower.startsWith('v2/') ||
+        lower == V2ApiConfigService.firestoreModule ||
+        lower.startsWith('${V2ApiConfigService.firestoreModule}/');
   }
 
   /// Ensure base URL + [module]/[endpointKey] are available before a request.
@@ -240,14 +267,35 @@ class ApiService {
   }
 
   /// Apply base URL known from bootstrap (Realtime DB / cache) without waiting.
+  ///
+  /// Also honors compile-time `--dart-define=NEWSON_API_BASE_URL=...` for
+  /// local/staging validation without changing production Firebase `ipAddress`.
   void applyKnownBaseUrl(String? url) {
+    final fromDefine = _stagingBaseUrlOverride;
+    if (fromDefine != null) {
+      _cachedBaseUrl = fromDefine;
+      return;
+    }
     final trimmed = url?.trim();
     if (trimmed == null || trimmed.isEmpty) return;
     _cachedBaseUrl = trimmed;
   }
 
+  /// Non-empty only when `--dart-define=NEWSON_API_BASE_URL=` is set.
+  static String? get _stagingBaseUrlOverride {
+    const raw = String.fromEnvironment('NEWSON_API_BASE_URL');
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   /// Fetch base URL from Firebase Realtime Database
   Future<void> _fetchBaseUrl() async {
+    final fromDefine = _stagingBaseUrlOverride;
+    if (fromDefine != null) {
+      _cachedBaseUrl = fromDefine;
+      debugPrint('✅ Base URL from NEWSON_API_BASE_URL: $_cachedBaseUrl');
+      return;
+    }
     try {
       final dbRef = _database.ref();
       final snapshot = await dbRef.child('ipAddress').get();
@@ -302,6 +350,10 @@ class ApiService {
       int endpointCount = 0;
       for (final doc in querySnapshot.docs) {
         final module = doc.id;
+        // V2 host config lives under apiEndPoints/v2 — loaded by V2ApiConfigService.
+        if (module.toLowerCase() == V2ApiConfigService.firestoreModule) {
+          continue;
+        }
         final data = doc.data();
 
         // Store all fields from each document as endpoints
@@ -313,6 +365,9 @@ class ApiService {
 
         debugPrint('✅ Loaded module "$module" with ${data.length} endpoints');
       }
+
+      // Drop any stale v2/* keys from older caches before persisting V1 map.
+      _cachedEndpoints.removeWhere((key, _) => _isV2ConfigEndpointKey(key));
 
       await StorageService.saveApiEndpointsCache(
         Map<String, String>.from(_cachedEndpoints),
@@ -404,7 +459,7 @@ class ApiService {
       return buildUrlWithPathSegment(module, endpointKey, pathSegment);
     } catch (_) {
       final baseUri = Uri.parse(getBaseUrl());
-      final domain = '${baseUri.scheme}://${baseUri.host}';
+      final domain = baseUri.origin;
       final path = fallbackRelativePath.startsWith('/')
           ? fallbackRelativePath
           : '/$fallbackRelativePath';
@@ -428,9 +483,9 @@ class ApiService {
       return endpoint;
     }
 
-    // Parse base URL to get domain
+    // Parse base URL to get origin (scheme+host+port — required for staging :8010).
     final baseUri = Uri.parse(baseUrl);
-    final domain = '${baseUri.scheme}://${baseUri.host}';
+    final domain = baseUri.origin;
 
     // If endpoint starts with /api/, use it directly with domain
     // This handles cases where endpoint is stored as full path like /api/bookmark/removeBookmark
@@ -863,6 +918,293 @@ class ApiService {
       return _handleDioError(e);
     } catch (e) {
       debugPrint('❌ DELETE Request Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
+  /// DELETE using an absolute-or-relative API path (bypasses Firestore endpoint keys).
+  /// Example: `/api/bookmark/removeAllBookmarks`
+  Future<ApiResponse> deleteByPath(
+    String relativeOrAbsolutePath, {
+    Map<String, String>? headers,
+    String? bearerToken,
+    Map<String, String>? queryParameters,
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    try {
+      final url = await _resolvePathUrlReady(
+        relativeOrAbsolutePath,
+        useV2Host: useV2Host,
+        baseUrlOverride: baseUrlOverride,
+      );
+
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+
+      debugPrint('🌐 DELETE (by path) Request: $url');
+      final response = await _dio.delete(
+        url,
+        queryParameters: queryParameters,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
+
+      return _handleDioResponse(response);
+    } on V2ApiConfigException {
+      rethrow;
+    } on DioException catch (e) {
+      debugPrint('❌ DELETE (by path) Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ DELETE (by path) Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
+  String _resolvePathUrl(
+    String relativeOrAbsolutePath, {
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) {
+    if (relativeOrAbsolutePath.startsWith('http://') ||
+        relativeOrAbsolutePath.startsWith('https://')) {
+      return relativeOrAbsolutePath;
+    }
+
+    final String base;
+    if (baseUrlOverride != null && baseUrlOverride.trim().isNotEmpty) {
+      base = baseUrlOverride.trim();
+    } else if (useV2Host) {
+      // Explicit V2 host — never fall back to V1 ipAddress / NEWSON_API_BASE_URL.
+      base = V2ApiConfigService.instance.requireBaseUrl();
+    } else {
+      base = getBaseUrl();
+    }
+
+    return joinApiBaseAndPath(base, relativeOrAbsolutePath);
+  }
+
+  /// Resolves path URL; when [useV2Host] awaits shared V2 config readiness first.
+  Future<String> _resolvePathUrlReady(
+    String relativeOrAbsolutePath, {
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    if (useV2Host &&
+        (baseUrlOverride == null || baseUrlOverride.trim().isEmpty)) {
+      await V2ApiConfigService.instance.ensureReady();
+    }
+    return _resolvePathUrl(
+      relativeOrAbsolutePath,
+      useV2Host: useV2Host,
+      baseUrlOverride: baseUrlOverride,
+    );
+  }
+
+  /// Joins an API origin with a relative path (preserves non-default ports).
+  /// Absolute http(s) paths are returned unchanged.
+  @visibleForTesting
+  static String joinApiBaseAndPath(String baseUrl, String relativeOrAbsolutePath) {
+    if (relativeOrAbsolutePath.startsWith('http://') ||
+        relativeOrAbsolutePath.startsWith('https://')) {
+      return relativeOrAbsolutePath;
+    }
+    final baseUri = Uri.parse(baseUrl.trim());
+    final domain = baseUri.origin;
+    final path = relativeOrAbsolutePath.startsWith('/')
+        ? relativeOrAbsolutePath
+        : '/$relativeOrAbsolutePath';
+    return '$domain$path';
+  }
+
+  /// GET by absolute-or-relative API path (bypasses Firestore endpoint keys).
+  ///
+  /// Set [useV2Host] to resolve against the isolated V2 Firebase base URL.
+  Future<ApiResponse> getByPath(
+    String relativeOrAbsolutePath, {
+    Map<String, String>? headers,
+    String? bearerToken,
+    Map<String, String>? queryParameters,
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    try {
+      final url = await _resolvePathUrlReady(
+        relativeOrAbsolutePath,
+        useV2Host: useV2Host,
+        baseUrlOverride: baseUrlOverride,
+      );
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+      debugPrint('🌐 GET (by path) Request: $url');
+      final response = await _dio.get(
+        url,
+        queryParameters: queryParameters,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
+      return _handleDioResponse(response);
+    } on V2ApiConfigException {
+      rethrow;
+    } on DioException catch (e) {
+      debugPrint('❌ GET (by path) Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ GET (by path) Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
+  /// POST by absolute-or-relative API path (bypasses Firestore endpoint keys).
+  Future<ApiResponse> postByPath(
+    String relativeOrAbsolutePath, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    String? bearerToken,
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    try {
+      final url = await _resolvePathUrlReady(
+        relativeOrAbsolutePath,
+        useV2Host: useV2Host,
+        baseUrlOverride: baseUrlOverride,
+      );
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+      debugPrint('🌐 POST (by path) Request: $url');
+      final response = await _dio.post(
+        url,
+        data: body,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
+      return _handleDioResponse(response);
+    } on V2ApiConfigException {
+      rethrow;
+    } on DioException catch (e) {
+      debugPrint('❌ POST (by path) Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ POST (by path) Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
+  /// PATCH by absolute-or-relative API path.
+  Future<ApiResponse> patchByPath(
+    String relativeOrAbsolutePath, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    String? bearerToken,
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    try {
+      final url = await _resolvePathUrlReady(
+        relativeOrAbsolutePath,
+        useV2Host: useV2Host,
+        baseUrlOverride: baseUrlOverride,
+      );
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+      debugPrint('🌐 PATCH (by path) Request: $url');
+      final response = await _dio.patch(
+        url,
+        data: body,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
+      return _handleDioResponse(response);
+    } on V2ApiConfigException {
+      rethrow;
+    } on DioException catch (e) {
+      debugPrint('❌ PATCH (by path) Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ PATCH (by path) Error: $e');
       return ApiResponse(
         success: false,
         data: null,
