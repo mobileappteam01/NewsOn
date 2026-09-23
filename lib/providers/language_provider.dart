@@ -8,10 +8,11 @@ import '../data/services/dynamic_localization_service.dart';
 /// - News language: drives only the language of news content (API fetch).
 class LanguageProvider extends ChangeNotifier {
   /// App UI language (used by MaterialApp, menus, labels, etc.)
-  Locale _locale = const Locale('ta'); // Default to Tamil
+  Locale _locale =
+      const Locale('en'); // Default to English when no preference saved
 
   /// News content language (used only for news API requests)
-  String _newsLanguageCode = 'ta';
+  String _newsLanguageCode = 'en';
 
   // Base supported languages (fallback if dynamic loading fails)
   final Map<String, Locale> _baseSupportedLanguages = {
@@ -53,12 +54,12 @@ class LanguageProvider extends ChangeNotifier {
   Map<String, Locale> get supportedLanguages {
     final dynamicService = DynamicLocalizationService();
     final Map<String, Locale> languages = Map.from(_baseSupportedLanguages);
-    
+
     // Add only active dynamic languages from Firebase (isActive=true)
     for (final lang in dynamicService.activeLanguages) {
       languages[lang.name] = Locale(lang.code);
     }
-    
+
     return languages;
   }
 
@@ -71,6 +72,11 @@ class LanguageProvider extends ChangeNotifier {
     _loadLanguage();
   }
 
+  /// Test-only constructor — skips StorageService I/O.
+  @visibleForTesting
+  LanguageProvider.forTest({String newsLanguageCode = 'en'})
+      : _newsLanguageCode = newsLanguageCode;
+
   Locale get locale => _locale;
   String get selectedLanguage => _getLanguageNameFromLocale(_locale);
 
@@ -81,7 +87,7 @@ class LanguageProvider extends ChangeNotifier {
         return entry.key;
       }
     }
-    return 'Tamil'; // Default fallback
+    return 'English'; // Default fallback when code is unrecognized
   }
 
   /// Load saved app and news language preferences
@@ -91,7 +97,7 @@ class LanguageProvider extends ChangeNotifier {
       if (savedAppCode.isNotEmpty) {
         final locale = supportedLanguages.values.firstWhere(
           (loc) => loc.languageCode == savedAppCode,
-          orElse: () => const Locale('ta'),
+          orElse: () => const Locale('en'),
         );
         _locale = locale;
       }
@@ -166,16 +172,27 @@ class LanguageProvider extends ChangeNotifier {
 
   /// Set news language by code (e.g. 'en', 'ta', 'hi').
   Future<void> setNewsLanguageByCode(String code) async {
-    final isSupported = newsLanguages.values
-        .any((loc) => loc.languageCode == code);
+    final isSupported =
+        newsLanguages.values.any((loc) => loc.languageCode == code);
     if (isSupported) {
       _newsLanguageCode = code;
-      await StorageService.saveNewsLanguage(code);
+      try {
+        await StorageService.saveNewsLanguage(code);
+      } catch (_) {
+        // Tests / offline — still update in-memory.
+      }
       notifyListeners();
       debugPrint('✅ News language changed to: $code');
     } else {
       debugPrint('⚠️ Unsupported news language code: $code');
     }
+  }
+
+  /// Test helper — update news language without StorageService.
+  @visibleForTesting
+  void setNewsLanguageCodeForTest(String code) {
+    _newsLanguageCode = code;
+    notifyListeners();
   }
 
   /// Display name for current news language (e.g. "English", "Tamil")
@@ -212,6 +229,6 @@ class LanguageProvider extends ChangeNotifier {
     if (localeCode.isNotEmpty) {
       return localeCode;
     }
-    return 'ta'; // Default to Tamil
+    return 'en'; // Default to English when empty
   }
 }

@@ -12,14 +12,15 @@ import '../models/language_model.dart';
 import '../../core/constants/news_language_constants.dart';
 
 /// Service for managing dynamic localization from Firebase
-/// 
+///
 /// This service:
 /// 1. Fetches available languages from Firebase Remote Config
 /// 2. Downloads translation files from Firebase Storage
 /// 3. Caches translations locally for offline use
 /// 4. Provides translations dynamically without app updates
 class DynamicLocalizationService {
-  static final DynamicLocalizationService _instance = DynamicLocalizationService._internal();
+  static final DynamicLocalizationService _instance =
+      DynamicLocalizationService._internal();
   factory DynamicLocalizationService() => _instance;
   DynamicLocalizationService._internal();
 
@@ -40,17 +41,18 @@ class DynamicLocalizationService {
   // In-memory cache
   List<LanguageModel> _supportedLanguages = [];
   Map<String, Map<String, String>> _translationsCache = {};
-  String _currentLanguageCode = 'ta'; // Default to Tamil
+  String _currentLanguageCode =
+      'en'; // Default to English when no preference saved
   String _languageVersion = '1.0.0';
   bool _isInitialized = false;
 
   // Getters
   List<LanguageModel> get supportedLanguages => _supportedLanguages;
-  
+
   /// Get only active languages (isActive = true) for display in language selector
-  List<LanguageModel> get activeLanguages => 
+  List<LanguageModel> get activeLanguages =>
       _supportedLanguages.where((lang) => lang.isActive).toList();
-  
+
   String get currentLanguageCode => _currentLanguageCode;
   bool get isInitialized => _isInitialized;
   String get languageVersion => _languageVersion;
@@ -76,7 +78,8 @@ class DynamicLocalizationService {
 
       _isInitialized = true;
       debugPrint('✅ DynamicLocalizationService initialized successfully');
-      debugPrint('🌐 Supported languages: ${_supportedLanguages.map((l) => l.code).toList()}');
+      debugPrint(
+          '🌐 Supported languages: ${_supportedLanguages.map((l) => l.code).toList()}');
       debugPrint('🌐 Current language: $_currentLanguageCode');
     } catch (e) {
       debugPrint('❌ Error initializing DynamicLocalizationService: $e');
@@ -104,11 +107,12 @@ class DynamicLocalizationService {
       // Load cached language version
       _languageVersion = prefs.getString(_languageVersionKey) ?? '1.0.0';
 
-      // Load saved current language
-      _currentLanguageCode = prefs.getString('selected_language_code') ?? 'ta';
+      // Load saved current language (missing key → English default)
+      _currentLanguageCode = prefs.getString('selected_language_code') ?? 'en';
 
       // Load cached translations for current language
-      final translationsJson = prefs.getString('$_translationsCachePrefix$_currentLanguageCode');
+      final translationsJson =
+          prefs.getString('$_translationsCachePrefix$_currentLanguageCode');
       if (translationsJson != null && translationsJson.isNotEmpty) {
         final Map<String, dynamic> translations = jsonDecode(translationsJson);
         _translationsCache[_currentLanguageCode] = translations.map(
@@ -135,9 +139,11 @@ class DynamicLocalizationService {
             .toList();
 
         // Check if version changed - need to refresh translations
-        final versionChanged = newVersion.isNotEmpty && newVersion != _languageVersion;
+        final versionChanged =
+            newVersion.isNotEmpty && newVersion != _languageVersion;
         if (versionChanged) {
-          debugPrint('🔄 Language version changed: $_languageVersion → $newVersion');
+          debugPrint(
+              '🔄 Language version changed: $_languageVersion → $newVersion');
           _languageVersion = newVersion;
           // Clear translations cache to force refresh
           _translationsCache.clear();
@@ -146,9 +152,11 @@ class DynamicLocalizationService {
         // Save to cache
         await _saveLanguagesToCache();
 
-        debugPrint('✅ Fetched ${_supportedLanguages.length} languages from Remote Config');
+        debugPrint(
+            '✅ Fetched ${_supportedLanguages.length} languages from Remote Config');
       } else {
-        debugPrint('⚠️ No languages found in Remote Config, using cached/defaults');
+        debugPrint(
+            '⚠️ No languages found in Remote Config, using cached/defaults');
         if (_supportedLanguages.isEmpty) {
           _useDefaultLanguages();
         }
@@ -175,7 +183,8 @@ class DynamicLocalizationService {
   Future<void> _saveLanguagesToCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final languagesJson = jsonEncode(_supportedLanguages.map((l) => l.toJson()).toList());
+      final languagesJson =
+          jsonEncode(_supportedLanguages.map((l) => l.toJson()).toList());
       await prefs.setString(_languagesKey, languagesJson);
       await prefs.setString(_languageVersionKey, _languageVersion);
       debugPrint('💾 Languages saved to cache');
@@ -243,8 +252,7 @@ class DynamicLocalizationService {
     // Fire-and-forget; failures must not affect current UI language.
     Future<void>(() async {
       try {
-        final remote =
-            await _downloadTranslationsFromFirebase(languageCode);
+        final remote = await _downloadTranslationsFromFirebase(languageCode);
         if (remote.isEmpty) return;
         final bundled = await _loadBundledTranslations(languageCode);
         final merged = <String, String>{...bundled, ...remote};
@@ -270,8 +278,7 @@ class DynamicLocalizationService {
     ];
 
     final directory = await getApplicationDocumentsDirectory();
-    final localFile =
-        File('${directory.path}/translations_$languageCode.json');
+    final localFile = File('${directory.path}/translations_$languageCode.json');
 
     for (final path in candidates) {
       try {
@@ -293,11 +300,13 @@ class DynamicLocalizationService {
   }
 
   /// Load translations from local file cache
-  Future<Map<String, String>?> _loadTranslationsFromLocalCache(String languageCode) async {
+  Future<Map<String, String>?> _loadTranslationsFromLocalCache(
+      String languageCode) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final localFile = File('${directory.path}/translations_$languageCode.json');
-      
+      final localFile =
+          File('${directory.path}/translations_$languageCode.json');
+
       if (await localFile.exists()) {
         final jsonString = await localFile.readAsString();
         final Map<String, dynamic> json = jsonDecode(jsonString);
@@ -310,18 +319,21 @@ class DynamicLocalizationService {
   }
 
   /// Save translations to local file cache
-  Future<void> _saveTranslationsToLocalCache(String languageCode, Map<String, String> translations) async {
+  Future<void> _saveTranslationsToLocalCache(
+      String languageCode, Map<String, String> translations) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final localFile = File('${directory.path}/translations_$languageCode.json');
-      
+      final localFile =
+          File('${directory.path}/translations_$languageCode.json');
+
       final jsonString = jsonEncode(translations);
       await localFile.writeAsString(jsonString);
-      
+
       // Also save to SharedPreferences for quick access
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_translationsCachePrefix$languageCode', jsonString);
-      
+      await prefs.setString(
+          '$_translationsCachePrefix$languageCode', jsonString);
+
       debugPrint('💾 Translations saved to local cache for $languageCode');
     } catch (e) {
       debugPrint('⚠️ Error saving translations to local cache: $e');
@@ -356,8 +368,9 @@ class DynamicLocalizationService {
   }) async {
     // Allow switching even if Remote Config list is temporarily empty by
     // accepting known bundled / news language codes.
-    final isSupported = _supportedLanguages.any((l) => l.code == languageCode) ||
-        _isKnownLanguageCode(languageCode);
+    final isSupported =
+        _supportedLanguages.any((l) => l.code == languageCode) ||
+            _isKnownLanguageCode(languageCode);
     if (!isSupported) {
       debugPrint('⚠️ Language $languageCode is not supported');
       return;
@@ -478,9 +491,10 @@ class DynamicLocalizationService {
   LanguageModel? getDefaultLanguage() {
     return _supportedLanguages.firstWhere(
       (l) => l.isDefault,
-      orElse: () => _supportedLanguages.isNotEmpty 
-          ? _supportedLanguages.first 
-          : LanguageModel(code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', isDefault: true),
+      orElse: () => _supportedLanguages.isNotEmpty
+          ? _supportedLanguages.first
+          : LanguageModel(
+              code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', isDefault: true),
     );
   }
 

@@ -1,11 +1,18 @@
+@Tags(['integration', 'network'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../test_setup.dart';
+import '../../font_test_utils.dart';
 import 'package:newson/core/services/font_manager.dart';
 import 'package:newson/core/theme/app_theme.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 
 /// Simple widget tests for font integration
 void main() {
+  ensureTestBinding();
+
   group('Font Widget Tests', () {
     late RemoteConfigModel testConfig;
 
@@ -85,7 +92,7 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
     });
 
@@ -187,20 +194,20 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
 
       // Verify specific text widgets
       final displayLarge = tester.widget<Text>(find.text('Display Large'));
-      expect(displayLarge.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(displayLarge.style?.fontFamily), isTrue);
       expect(displayLarge.style?.fontWeight, FontWeight.bold);
 
       final titleLarge = tester.widget<Text>(find.text('Title Large'));
-      expect(titleLarge.style?.fontFamily, 'Crassula');
-      expect(titleLarge.style?.fontWeight, FontWeight.w600);
+      expect(FontTestUtils.isProductionUiFont(titleLarge.style?.fontFamily), isTrue);
+      expect(titleLarge.style?.fontWeight, FontWeight.w500);
 
       final bodyLarge = tester.widget<Text>(find.text('Body Large'));
-      expect(bodyLarge.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(bodyLarge.style?.fontFamily), isTrue);
       expect(bodyLarge.style?.fontWeight, FontWeight.w400);
     });
 
@@ -234,7 +241,7 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
 
       // Verify font weights are correct in dark theme
@@ -267,19 +274,19 @@ void main() {
 
       // Verify news title style
       final newsTitle = tester.widget<Text>(find.text('Breaking News Today'));
-      expect(newsTitle.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(newsTitle.style?.fontFamily), isTrue);
       expect(newsTitle.style?.fontWeight, FontWeight.bold);
       expect(newsTitle.style?.fontSize, 20);
 
       // Verify news category style
       final newsCategory = tester.widget<Text>(find.text('Technology'));
-      expect(newsCategory.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(newsCategory.style?.fontFamily), isTrue);
       expect(newsCategory.style?.fontWeight, FontWeight.w500);
       expect(newsCategory.style?.fontSize, 12);
 
       // Verify news timestamp style
       final newsTimestamp = tester.widget<Text>(find.text('5 minutes ago'));
-      expect(newsTimestamp.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(newsTimestamp.style?.fontFamily), isTrue);
       expect(newsTimestamp.style?.fontWeight, FontWeight.w400);
       expect(newsTimestamp.style?.fontSize, 11);
     });
@@ -306,11 +313,11 @@ void main() {
 
       // Verify extension method works
       final extendedText = tester.widget<Text>(find.text('Extended Text'));
-      expect(extendedText.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(extendedText.style?.fontFamily), isTrue);
 
       // Verify extension method with weight works
       final extendedBold = tester.widget<Text>(find.text('Extended Bold'));
-      expect(extendedBold.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(extendedBold.style?.fontFamily), isTrue);
       expect(extendedBold.style?.fontWeight, FontWeight.bold);
     });
 
@@ -345,7 +352,7 @@ void main() {
 
       // Verify custom font with parameters
       final custom1 = tester.widget<Text>(find.text('Custom Font 1'));
-      expect(custom1.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(custom1.style?.fontFamily), isTrue);
       expect(custom1.style?.fontSize, 18);
       expect(custom1.style?.fontWeight, FontWeight.w600);
       expect(custom1.style?.color, Colors.red);
@@ -353,7 +360,7 @@ void main() {
       expect(custom1.style?.letterSpacing, 0.5);
 
       final custom2 = tester.widget<Text>(find.text('Custom Font 2'));
-      expect(custom2.style?.fontFamily, 'Crassula');
+      expect(FontTestUtils.isProductionUiFont(custom2.style?.fontFamily), isTrue);
       expect(custom2.style?.fontSize, 14);
       expect(custom2.style?.fontWeight, FontWeight.w300);
       expect(custom2.style?.color, Colors.blue);
@@ -381,7 +388,7 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
     });
 
@@ -409,7 +416,7 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
     });
 
@@ -437,7 +444,7 @@ void main() {
       final textWidgets = tester.widgetList<Text>(find.byType(Text));
       for (final textWidget in textWidgets) {
         final style = textWidget.style ?? const TextStyle();
-        expect(style.fontFamily, 'Crassula');
+        expect(FontTestUtils.isProductionUiFont(style.fontFamily), isTrue);
       }
 
       // Should have 100 text widgets

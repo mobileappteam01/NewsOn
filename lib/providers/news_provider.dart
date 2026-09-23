@@ -14,7 +14,8 @@ import 'language_provider.dart';
 class NewsProvider with ChangeNotifier {
   final NewsRepository _repository;
   LanguageProvider? _languageProvider;
-  String _currentLanguageCode = 'ta'; // Default to Tamil
+  String _currentLanguageCode =
+      'en'; // Default to English before LanguageProvider loads
 
   NewsProvider({NewsRepository? repository, LanguageProvider? languageProvider})
       : _repository = repository ?? NewsRepository(apiKey: ""),
@@ -149,13 +150,20 @@ class NewsProvider with ChangeNotifier {
   /// Fetch breaking/top news
   /// [limit] - Number of items to fetch (default: 10 for home page, 50 for View All)
   /// [page] - Page number for pagination (default: 1)
-  Future<void> fetchBreakingNews({int limit = 10, int page = 1}) async {
+  Future<void> fetchBreakingNews({
+    int limit = 10,
+    int page = 1,
+    bool forceNetwork = false,
+  }) async {
     try {
       _isLoading = true;
       _error = null;
+      if (forceNetwork) {
+        notifyListeners();
+      }
 
-      // Step 1: Load from cache first (skip when region filter is active)
-      if (page == 1 && !hasRegionFilter) {
+      // Step 1: Load from cache first (skip on force refresh / region filter)
+      if (page == 1 && !hasRegionFilter && !forceNetwork) {
         final cachedNews = StorageService.getBreakingNewsCache();
         if (cachedNews.isNotEmpty) {
           _breakingNews = cachedNews;
@@ -190,7 +198,7 @@ class NewsProvider with ChangeNotifier {
         } else {
           _breakingNews.addAll(response.results);
         }
-        
+
         _isLoading = false;
         debugPrint("✅ Breaking news fetched: ${_breakingNews.length} articles");
         notifyListeners();
@@ -340,6 +348,7 @@ class NewsProvider with ChangeNotifier {
     String categoryName, {
     int limit = 10,
     DateTime? date,
+    bool forceNetwork = false,
   }) async {
     if (_isLoadingCategoryNews) return;
 
@@ -348,7 +357,7 @@ class NewsProvider with ChangeNotifier {
       _currentCategory = categoryName;
       _error = null;
 
-      if (!hasRegionFilter) {
+      if (!hasRegionFilter && !forceNetwork) {
         final cachedArticles = StorageService.getArticlesCache();
         if (cachedArticles.isNotEmpty) {
           _categoryNews = cachedArticles;
@@ -500,19 +509,8 @@ class NewsProvider with ChangeNotifier {
       _currentQuery = query;
       _currentCategory = null;
 
-      // Step 1: Load from cache first (for instant offline display)
-      if (refresh || _articles.isEmpty) {
-        final cachedArticles = StorageService.getArticlesCache();
-        if (cachedArticles.isNotEmpty) {
-          _articles = cachedArticles;
-          _isLoading = false;
-          notifyListeners(); // Show cached data immediately
-          debugPrint(
-            "📦 Loaded ${cachedArticles.length} search results from cache",
-          );
-        }
-      }
-
+      // Do NOT hydrate search from the general articles cache — wrong results
+      // and masks a real pull-to-refresh.
       notifyListeners();
 
       // Update language code from provider if available
@@ -659,14 +657,18 @@ class NewsProvider with ChangeNotifier {
     DateTime? date, {
     int limit = 5,
     int page = 1,
+    bool forceNetwork = false,
   }) async {
     try {
       _isLoadingToday = true;
       _error = null;
       _selectedDate = date ?? DateTime.now();
+      if (forceNetwork) {
+        notifyListeners();
+      }
 
-      // Step 1: Load from cache first (skip when region filter is active)
-      if (page == 1 && !hasRegionFilter) {
+      // Step 1: Load from cache first (skip on force refresh / region filter)
+      if (page == 1 && !hasRegionFilter && !forceNetwork) {
         final cachedNews = StorageService.getTodayNewsCache();
         if (cachedNews.isNotEmpty) {
           _todayNews = cachedNews;
@@ -678,7 +680,7 @@ class NewsProvider with ChangeNotifier {
 
       notifyListeners();
 
-      // Format date as YYYY-MM-DD  
+      // Format date as YYYY-MM-DD
       final dateString = _formatDate(_selectedDate!);
 
       // Update language code from provider if available

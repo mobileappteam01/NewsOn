@@ -1,7 +1,6 @@
 // ignore_for_file: deprecated_member_use, unused_local_variable, use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:newson/core/utils/localization_helper.dart';
-import 'package:newson/core/utils/shared_functions.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:provider/provider.dart';
 import '../../providers/news_provider.dart';
@@ -21,9 +20,18 @@ import '../../core/widgets/app_update_dialog.dart';
 import '../../data/services/deep_link_service.dart';
 import '../../core/utils/auth_navigation_helper.dart';
 import '../home/tabs/news_feed_tab_new.dart';
+import '../../features/home/presentation/v2_home_feed_tab.dart';
+import '../../features/home_v2/presentation/v2_reader_home.dart';
+import '../../features/home_v2/presentation/widgets/v2_bottom_navigation.dart';
+import '../../features/home_v2/presentation/widgets/v2_vintage_paper_background.dart';
+import '../../core/config/v2_feature_flags.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../features/notifications/data/notification_service.dart';
 import 'tabs/for_you_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
 import '../search/search_tab.dart';
+import '../../features/search/presentation/v2_search_tab.dart';
+import '../../features/for_you/presentation/v2_for_you_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedCategories;
@@ -63,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Initialize other providers
       await context.read<NewsProvider>().fetchBreakingNews();
       DeepLinkService.instance.processPendingLink(navigationReady: true);
+      V2NotificationService.instance.processPendingOpen(navigationReady: true);
       context.read<BookmarkProvider>().loadBookmarks();
       context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();
@@ -75,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Check for app updates
       _checkForAppUpdate();
+
+      AnalyticsService.instance.ensureSessionStarted();
     });
   }
 
@@ -119,6 +130,12 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint('✅ FCM Token updated successfully from Home Screen');
       } else {
         debugPrint('⚠️ FCM Token update failed: ${response.error}');
+      }
+
+      // Phase 7B — also register with V2 device registry when enabled.
+      if (mounted) {
+        final config = context.read<RemoteConfigProvider>().config;
+        await V2NotificationService.instance.onUserAuthenticated(config);
       }
     } catch (e) {
       debugPrint('❌ Error updating FCM Token from Home Screen: $e');
@@ -165,6 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           key: _scaffoldKey,
+          backgroundColor: V2FeatureFlags.v2Chrome(config) ||
+                  V2FeatureFlags.homeReader(config)
+              ? V2VintagePaperBackground.stageBaseFor(theme.brightness)
+              : theme.scaffoldBackgroundColor,
           drawer: AppDrawer(
             onNavigate: (index) {
               setState(() {
@@ -178,23 +199,48 @@ class _HomeScreenState extends State<HomeScreen> {
               IndexedStack(
                 index: _currentIndex,
                 children: [
-                  NewsFeedTabNew(
-                    key: const ValueKey('news_feed_tab'),
-                    selectedCategories: widget.selectedCategories,
-                    newsList: newsList,
-                  ),
-                  const ForYouTab(),
+                  V2FeatureFlags.homeReader(config)
+                      ? V2ReaderHome(
+                          key: const ValueKey('v2_reader_home'),
+                          onOpenForYouTab: () {
+                            if (!ensureLoggedInForAccountFeature(context)) {
+                              return;
+                            }
+                            setState(() => _currentIndex = 1);
+                          },
+                        )
+                      : V2FeatureFlags.newsCuts(config)
+                          ? V2HomeFeedTab(
+                              key: const ValueKey('v2_news_feed_tab'),
+                              onOpenForYouTab: () {
+                                if (!ensureLoggedInForAccountFeature(
+                                    context)) {
+                                  return;
+                                }
+                                setState(() => _currentIndex = 1);
+                              },
+                            )
+                          : NewsFeedTabNew(
+                              key: const ValueKey('news_feed_tab'),
+                              selectedCategories: widget.selectedCategories,
+                              newsList: newsList,
+                            ),
+                  V2FeatureFlags.forYou(config)
+                      ? const V2ForYouTab()
+                      : const ForYouTab(),
                   const BookmarksTab(),
-                  const SearchTab(),
+                  V2FeatureFlags.search(config)
+                      ? const V2SearchTab()
+                      : const SearchTab(),
                 ],
               ),
 
               // Audio Mini Player (Spotify-like)
-              Positioned(
+              const Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: const AudioMiniPlayer(),
+                child: AudioMiniPlayer(),
               ),
 
               // Audio Loading Overlay (shows when generating audio)
@@ -272,13 +318,44 @@ class _HomeScreenState extends State<HomeScreen> {
               //   ),
             ],
           ),
-          bottomNavigationBar: _buildBottomBar(theme, config),
+          bottomNavigationBar: V2FeatureFlags.v2Chrome(config) ||
+                  V2FeatureFlags.homeReader(config)
+              ? _buildV2BottomBar()
+              : _buildLegacyBottomBar(theme, config),
         );
       },
     );
   }
 
-  Widget _buildBottomBar(ThemeData theme, RemoteConfigModel config) {
+  /// V2: Home · For You · Bookmarks · Search (floating pill).
+  ///
+  /// IndexedStack: 0 Home · 1 For You · 2 Bookmarks · 3 Search —
+  /// nav highlight matches stack index directly (Search is last).
+  Widget _buildV2BottomBar() {
+    return ColoredBox(
+      color: Colors.transparent,
+      child: V2FloatingBottomNav(
+        currentIndex: _currentIndex,
+        homeLabel: LocalizationHelper.home(context),
+        forYouLabel: LocalizationHelper.forYou(context),
+        bookmarksLabel: LocalizationHelper.bookmarks(context),
+        searchLabel: LocalizationHelper.v2Search(context),
+        onHome: () => setState(() => _currentIndex = 0),
+        onForYou: () {
+          if (!ensureLoggedInForAccountFeature(context)) return;
+          setState(() => _currentIndex = 1);
+        },
+        onBookmarks: () {
+          if (!ensureLoggedInForAccountFeature(context)) return;
+          setState(() => _currentIndex = 2);
+        },
+        onSearch: () => setState(() => _currentIndex = 3),
+      ),
+    );
+  }
+
+  /// V1 chrome preserved when V2 reader/chrome flags are off.
+  Widget _buildLegacyBottomBar(ThemeData theme, RemoteConfigModel config) {
     return Container(
       decoration: BoxDecoration(
         color: theme.brightness == Brightness.dark
@@ -298,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildBottomNavItem(
+              _legacyNavItem(
                 Icon(Icons.menu, color: theme.colorScheme.secondary),
                 LocalizationHelper.menu(context),
                 onTap: () => _scaffoldKey.currentState?.openDrawer(),
@@ -312,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _buildBottomNavItem(
+                        child: _legacyNavItem(
                           Icon(
                             Icons.calendar_today_outlined,
                             color: _currentIndex == 0
@@ -325,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Expanded(
-                        child: _buildBottomNavItem(
+                        child: _legacyNavItem(
                           Icon(
                             Icons.auto_awesome_outlined,
                             color: _currentIndex == 1
@@ -343,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Expanded(
-                        child: _buildBottomNavItem(
+                        child: _legacyNavItem(
                           Icon(
                             Icons.bookmark_border,
                             color: _currentIndex == 2
@@ -364,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              _buildBottomNavItem(
+              _legacyNavItem(
                 Icon(
                   Icons.search,
                   color: _currentIndex == 3
@@ -373,6 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 LocalizationHelper.search(context),
                 onTap: () => setState(() => _currentIndex = 3),
+                isSelected: _currentIndex == 3,
               ),
             ],
           ),
@@ -381,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNavItem(
+  Widget _legacyNavItem(
     Widget icon,
     String label, {
     required VoidCallback onTap,

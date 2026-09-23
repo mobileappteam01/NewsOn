@@ -184,7 +184,10 @@ class _BookmarksTabState extends State<BookmarksTab>
                         )
                         : RefreshIndicator(
                           onRefresh: () async {
-                            await bookmarkProvider.loadBookmarks(refresh: true);
+                            await bookmarkProvider.loadBookmarks(
+                              refresh: true,
+                              forceNetwork: true,
+                            );
                           },
                           child: ListView.builder(
                             itemCount:

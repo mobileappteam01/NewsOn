@@ -104,6 +104,15 @@ class NewsArticle {
   @HiveField(31)
   final String? newsId;
 
+  /// V2 NewsOn Cut summary from backend (~60 words). Not stored in Hive cache.
+  final String? v2Summary;
+
+  /// Backend summary lifecycle: available | pending | unavailable | failed.
+  final String? summaryStatus;
+
+  /// Optional backend publisher entity id (not Hive). Absent on legacy articles.
+  final String? publisherId;
+
   NewsArticle({
     this.articleId,
     required this.title,
@@ -137,6 +146,9 @@ class NewsArticle {
     this.descriptionAudioUrl,
     this.contentAudioUrl,
     this.newsId,
+    this.v2Summary,
+    this.summaryStatus,
+    this.publisherId,
   });
 
   /// Helper method to parse sentiment_stats which can be a String or Map
@@ -177,23 +189,26 @@ class NewsArticle {
         return categoryNames.map((e) => e.toString()).toList();
       }
     }
-    
+
     // Then try category field
     final category = json['category'];
     if (category == null) return null;
     if (category is! List) return null;
     if (category.isEmpty) return null;
-    
+
     // Check if it's the new object format or old string format
     final firstItem = category.first;
     if (firstItem is Map) {
       // New format: extract categoryName or name from each object
-      return category.map((e) {
-        if (e is Map) {
-          return (e['categoryName'] ?? e['name'] ?? '').toString();
-        }
-        return e.toString();
-      }).where((s) => s.isNotEmpty).toList();   
+      return category
+          .map((e) {
+            if (e is Map) {
+              return (e['categoryName'] ?? e['name'] ?? '').toString();
+            }
+            return e.toString();
+          })
+          .where((s) => s.isNotEmpty)
+          .toList();
     } else {
       // Old format: simple string list
       return category.map((e) => e.toString()).toList();
@@ -233,8 +248,7 @@ class NewsArticle {
       country: (json['country'] as List?)?.map((e) => e.toString()).toList(),
       category: _parseCategory(json),
       language: json['language'] as String?,
-      isBookmarked:
-          json['isBookmarked'] == true ||
+      isBookmarked: json['isBookmarked'] == true ||
           json['is_bookmarked'] == true ||
           false,
       bookmarkedAt: bookmarked,
@@ -248,12 +262,44 @@ class NewsArticle {
       aiRegion: _parseStringOrList(json['ai_region']),
       aiOrg: _parseStringOrList(json['ai_org']),
       aiSummary: json['ai_summary'] as String?,
+      v2Summary: (json['v2_summary'] ?? json['v2Summary'] ?? json['newson_cut'])
+          as String?,
+      summaryStatus:
+          (json['summary_status'] ?? json['summaryStatus']) as String?,
+      publisherId: () {
+        final direct = json['publisher_id'] ??
+            json['publisherId'] ??
+            json['sourceRefId'] ??
+            json['source_ref_id'];
+        if (direct is String && direct.trim().isNotEmpty) return direct.trim();
+        final nested = json['publisher'];
+        if (nested is Map) {
+          final nestedId = nested['_id'] ?? nested['id'] ?? nested['publisherId'];
+          if (nestedId is String && nestedId.trim().isNotEmpty) {
+            return nestedId.trim();
+          }
+        }
+        return null;
+      }(),
       duplicate: json['duplicate'] == true,
       titleAudioUrl: json['title_audio_url'] as String?,
       descriptionAudioUrl: json['description_audio_url'] as String?,
       contentAudioUrl: json['content_audio_url'] as String?,
-      // Mongo `_id` for bookmark APIs. Never use article_id as newsId.
-      newsId: json['_id'] as String?,
+      newsId: () {
+        final direct = json['_id'] ??
+            json['newsId'] ??
+            json['news_id'] ??
+            json['articleId'];
+        if (direct is String && direct.trim().isNotEmpty) return direct.trim();
+        final nested = json['news'];
+        if (nested is Map) {
+          final nestedId = nested['_id'] ?? nested['newsId'] ?? nested['id'];
+          if (nestedId is String && nestedId.trim().isNotEmpty) {
+            return nestedId.trim();
+          }
+        }
+        return null;
+      }(),
     );
   }
 
@@ -287,6 +333,9 @@ class NewsArticle {
       'ai_region': aiRegion,
       'ai_org': aiOrg,
       'ai_summary': aiSummary,
+      'v2_summary': v2Summary,
+      'summary_status': summaryStatus,
+      'publisher_id': publisherId,
       'duplicate': duplicate,
       'title_audio_url': titleAudioUrl,
       'description_audio_url': descriptionAudioUrl,
@@ -328,6 +377,9 @@ class NewsArticle {
     String? descriptionAudioUrl,
     String? contentAudioUrl,
     String? newsId,
+    String? v2Summary,
+    String? summaryStatus,
+    String? publisherId,
   }) {
     return NewsArticle(
       articleId: articleId ?? this.articleId,
@@ -362,6 +414,9 @@ class NewsArticle {
       descriptionAudioUrl: descriptionAudioUrl ?? this.descriptionAudioUrl,
       contentAudioUrl: contentAudioUrl ?? this.contentAudioUrl,
       newsId: newsId ?? this.newsId,
+      v2Summary: v2Summary ?? this.v2Summary,
+      summaryStatus: summaryStatus ?? this.summaryStatus,
+      publisherId: publisherId ?? this.publisherId,
     );
   }
 

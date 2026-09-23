@@ -1,6 +1,9 @@
+@Tags(['integration', 'platform'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
-import '../lib/core/services/voice_search_service.dart';
+import 'package:newson/core/services/voice_search_service.dart';
 
 /// Voice Search Test Suite
 /// Tests all scenarios for voice search to text and data filtering

@@ -85,7 +85,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get shareNewsCuriousCta => '🔥 पूरी कहानी जानने के लिए अभी NewsOn पर टैप करें 👇';
+  String get shareNewsCuriousCta =>
+      '🔥 पूरी कहानी जानने के लिए अभी NewsOn पर टैप करें 👇';
 
   @override
   String get newsFeed => 'समाचार फ़ीड';
@@ -130,7 +131,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get removedFromBookmarks => 'बुकमार्क से हटा दिया गया';
 
   @override
-  String get noInternetConnection => 'कोई इंटरनेट कनेक्शन नहीं। कृपया अपना नेटवर्क जांचें।';
+  String get noInternetConnection =>
+      'कोई इंटरनेट कनेक्शन नहीं। कृपया अपना नेटवर्क जांचें।';
 
   @override
   String get serverError => 'सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।';
@@ -153,7 +155,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get formSubmittedSuccessfully => 'फॉर्म सफलतापूर्वक सबमिट किया गया!';
 
   @override
-  String get pleaseFixErrorsBeforeSaving => 'सहेजने से पहले कृपया त्रुटियों को ठीक करें';
+  String get pleaseFixErrorsBeforeSaving =>
+      'सहेजने से पहले कृपया त्रुटियों को ठीक करें';
 
   @override
   String get accountSettings => 'खाता सेटिंग्स';
@@ -237,7 +240,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noNewsForDate => 'इस तारीख के लिए कोई समाचार नहीं मिला';
 
   @override
-  String get remoteConfigRefreshed => 'रिमोट कॉन्फ़िग सफलतापूर्वक रीफ्रेश किया गया!';
+  String get remoteConfigRefreshed =>
+      'रिमोट कॉन्फ़िग सफलतापूर्वक रीफ्रेश किया गया!';
 
   @override
   String failedToRefresh(String error) {
@@ -248,13 +252,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get welcomeTitleText => 'स्वागत है';
 
   @override
-  String get welcomeDescText => 'समाचार की दुनिया का अन्वेषण करने के लिए तैयार हो जाएं!';
+  String get welcomeDescText =>
+      'समाचार की दुनिया का अन्वेषण करने के लिए तैयार हो जाएं!';
 
   @override
   String get selectCategoryTitle => 'अपनी रुचियाँ चुनें';
 
   @override
-  String get selectCategoryDesc => 'वे श्रेणियाँ चुनें जिन्हें आप फॉलो करना चाहते हैं';
+  String get selectCategoryDesc =>
+      'वे श्रेणियाँ चुनें जिन्हें आप फॉलो करना चाहते हैं';
 
   @override
   String get menu => 'मेनू';
@@ -371,7 +377,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get version => 'संस्करण';
 
   @override
-  String get yourPersonalizedNewsApplication => 'आपका व्यक्तिगत समाचार अनुप्रयोग';
+  String get yourPersonalizedNewsApplication =>
+      'आपका व्यक्तिगत समाचार अनुप्रयोग';
 
   @override
   String get close => 'बंद करें';
@@ -419,7 +426,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get backgroundMusicSettings => 'पृष्ठभूमि संगीत';
 
   @override
-  String get backgroundMusicSettingsDescription => 'खबर सुनते समय पृष्ठभूमि संगीत बजाएं। नीचे बंद या वॉल्यूम समायोजित कर सकते हैं।';
+  String get backgroundMusicSettingsDescription =>
+      'खबर सुनते समय पृष्ठभूमि संगीत बजाएं। नीचे बंद या वॉल्यूम समायोजित कर सकते हैं।';
 
   @override
   String get enableBackgroundMusic => 'पृष्ठभूमि संगीत चालू करें';
@@ -440,7 +448,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get getInTouch => 'संपर्क में रहें';
 
   @override
-  String get contactSupportText => 'हमारे सामग्री और प्लेटफ़ॉर्म से संबंधित समर्थन, पूछताछ या फीडबैक के लिए, कृपया हमसे संपर्क करें।';
+  String get contactSupportText =>
+      'हमारे सामग्री और प्लेटफ़ॉर्म से संबंधित समर्थन, पूछताछ या फीडबैक के लिए, कृपया हमसे संपर्क करें।';
 
   @override
   String get email => 'ईमेल';
@@ -482,13 +491,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noBookmarks => 'कोई बुकमार्क नहीं';
 
   @override
-  String get bookmarksWillAppearHere => 'आपके द्वारा बुकमार्क किए गए लेख यहाँ दिखाई देंगे';
+  String get bookmarksWillAppearHere =>
+      'आपके द्वारा बुकमार्क किए गए लेख यहाँ दिखाई देंगे';
 
   @override
   String get errorLoadingBookmarks => 'बुकमार्क लोड करने में त्रुटि';
 
   @override
-  String get clearBookmarksMessage => 'इससे सभी सहेजे गए लेख हट जाएंगे। यह क्रिया पूर्ववत नहीं की जा सकती।';
+  String get clearBookmarksMessage =>
+      'इससे सभी सहेजे गए लेख हट जाएंगे। यह क्रिया पूर्ववत नहीं की जा सकती।';
 
   @override
   String errorPlayingAudio(String error) {
@@ -516,7 +527,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get enterKeywordsToFindArticles => 'लेख खोजने के लिए कीवर्ड दर्ज करें';
 
   @override
-  String get orTryVoiceSearch => 'या माइक्रोफ़ोन का उपयोग करके वॉइस खोज आज़माएं';
+  String get orTryVoiceSearch =>
+      'या माइक्रोफ़ोन का उपयोग करके वॉइस खोज आज़माएं';
 
   @override
   String get tryDifferentKeywords => 'अलग कीवर्ड आज़माएं या अपनी वर्तनी जांचें';
@@ -554,7 +566,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get agreeToTermsPrivacy => 'जारी रखकर, आप हमारी शर्तों और गोपनीयता नीति से सहमत होते हैं';
+  String get agreeToTermsPrivacy =>
+      'जारी रखकर, आप हमारी शर्तों और गोपनीयता नीति से सहमत होते हैं';
 
   @override
   String get tapToPlayArticle => 'लेख चलाने के लिए टैप करें';
@@ -572,13 +585,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shareThisNews => 'यह समाचार साझा करें';
 
   @override
-  String get shareThisNewsSubtitle => 'NewsOn वाले मित्र लेख को ऐप में खोल सकते हैं';
+  String get shareThisNewsSubtitle =>
+      'NewsOn वाले मित्र लेख को ऐप में खोल सकते हैं';
 
   @override
   String get generatingAudio => 'ऑडियो बन रहा है...';
 
   @override
-  String get convertingTextToSpeech => 'ElevenLabs के साथ टेक्स्ट को स्पीच में बदला जा रहा है';
+  String get convertingTextToSpeech =>
+      'ElevenLabs के साथ टेक्स्ट को स्पीच में बदला जा रहा है';
 
   @override
   String get sponsored => 'प्रायोजित';
@@ -590,16 +605,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get deleteAccountTitle => 'खाता हटाएं?';
 
   @override
-  String get deleteAccountMessage => 'इससे आपका खाता और सभी संबंधित डेटा स्थायी रूप से हट जाएगा। यह क्रिया पूर्ववत नहीं की जा सकती।';
+  String get deleteAccountMessage =>
+      'इससे आपका खाता और सभी संबंधित डेटा स्थायी रूप से हट जाएगा। यह क्रिया पूर्ववत नहीं की जा सकती।';
 
   @override
   String get delete => 'हटाएं';
 
   @override
-  String get signInToReadSharedArticle => 'साझा किया गया लेख पढ़ने के लिए साइन इन करें';
+  String get signInToReadSharedArticle =>
+      'साझा किया गया लेख पढ़ने के लिए साइन इन करें';
 
   @override
-  String get pleaseWaitSettingUp => 'कृपया प्रतीक्षा करें, हम सब कुछ सेट कर रहे हैं';
+  String get pleaseWaitSettingUp =>
+      'कृपया प्रतीक्षा करें, हम सब कुछ सेट कर रहे हैं';
 
   @override
   String get signInWithApple => 'Apple से साइन इन करें';
@@ -622,5 +640,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get paused => 'रुका हुआ';
 
   @override
-  String get voiceFeaturesUnavailable => 'वॉइस और ऑडियो सुविधाएं वर्तमान में अनुपलब्ध हैं।';
+  String get voiceFeaturesUnavailable =>
+      'वॉइस और ऑडियो सुविधाएं वर्तमान में अनुपलब्ध हैं।';
 }

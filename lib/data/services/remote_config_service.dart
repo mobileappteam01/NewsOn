@@ -198,24 +198,56 @@ class RemoteConfigService {
 
       // Drawer Menu (as JSON string)
       'drawer_menu': jsonEncode([
-        {'title': 'Account settings', 'icon': 'Icons.lock_outline', 'route': '/account_settings'},
-        {'title': 'Notification inbox', 'icon': 'Icons.notifications', 'badgeCount': 2, 'route': '/notifications'},
-        {'title': 'Bookmark', 'icon': 'Icons.bookmark_border', 'route': '/bookmarks'},
-        {'title': 'Application settings', 'icon': 'Icons.settings', 'route': '/settings'},
-        {'title': 'Terms of use', 'icon': 'Icons.description_outlined', 'route': '/terms'},
-        {'title': 'Privacy policy', 'icon': 'Icons.privacy_tip_outlined', 'route': '/privacy'},
-        {'title': 'News categories', 'icon': 'Icons.list_alt_outlined', 'route': '/categories'},
+        {
+          'title': 'Account settings',
+          'icon': 'Icons.lock_outline',
+          'route': '/account_settings'
+        },
+        {
+          'title': 'Notification inbox',
+          'icon': 'Icons.notifications',
+          'badgeCount': 2,
+          'route': '/notifications'
+        },
+        {
+          'title': 'Bookmark',
+          'icon': 'Icons.bookmark_border',
+          'route': '/bookmarks'
+        },
+        {
+          'title': 'Application settings',
+          'icon': 'Icons.settings',
+          'route': '/settings'
+        },
+        {
+          'title': 'Terms of use',
+          'icon': 'Icons.description_outlined',
+          'route': '/terms'
+        },
+        {
+          'title': 'Privacy policy',
+          'icon': 'Icons.privacy_tip_outlined',
+          'route': '/privacy'
+        },
+        {
+          'title': 'News categories',
+          'icon': 'Icons.list_alt_outlined',
+          'route': '/categories'
+        },
       ]),
 
       // Dynamic Localization - Supported Languages
       // Add new languages here or update via Firebase Console
       // Set isActive=false to hide a language from the selector
-      'supported_languages': jsonEncode(NewsLanguageConstants.toRemoteConfigJson()),
+      'supported_languages':
+          jsonEncode(NewsLanguageConstants.toRemoteConfigJson()),
       'language_version': '1.0.3',
 
       // Feature flags
       'enable_voice_search': false,
       'enable_voice_features': true,
+      // Temporarily off — Breaking News currently duplicates Today News order.
+      'breaking_news_enabled': false,
       'detail_carousel_ads_enabled': true,
       'detail_carousel_ad_interval': 4,
 
@@ -226,6 +258,21 @@ class RemoteConfigService {
       'contact_phone': '+91 99442 77553',
       'contact_website_visible': true,
       'contact_website': 'www.newson.app',
+
+      // V2.0.0 feature flags — default OFF (preserve V1)
+      'v2_news_cuts_enabled': false,
+      'v2_new_article_detail_enabled': false,
+      'v2_full_article_enabled': false,
+      'v2_related_news_enabled': false,
+      'v2_page_turn_enabled': false,
+      'v2_news_cuts_label': 'NewsOn Cuts',
+      'v2_publisher_pages_enabled': false,
+      'v2_search_enabled': false,
+      'v2_for_you_enabled': false,
+      'v2_audio_enabled': false,
+      'v2_audio_generation_enabled': false,
+      'v2_notifications_enabled': false,
+      'v2_home_reader_enabled': false,
     };
   }
 
@@ -393,6 +440,10 @@ class RemoteConfigService {
         'enable_voice_features',
         defaultValue: true,
       ),
+      breakingNewsEnabled: _getRemoteConfigBool(
+        'breaking_news_enabled',
+        defaultValue: false,
+      ),
       detailCarouselAdsEnabled: _getRemoteConfigBool(
         'detail_carousel_ads_enabled',
         defaultValue: true,
@@ -430,6 +481,60 @@ class RemoteConfigService {
       contactWebsite: () {
         final v = _remoteConfig.getString('contact_website').trim();
         return v.isNotEmpty ? v : 'www.newson.app';
+      }(),
+
+      // V2.0.0 feature flags (default OFF)
+      v2NewsCutsEnabled: _getRemoteConfigBool(
+        'v2_news_cuts_enabled',
+        defaultValue: false,
+      ),
+      v2NewArticleDetailEnabled: _getRemoteConfigBool(
+        'v2_new_article_detail_enabled',
+        defaultValue: false,
+      ),
+      v2FullArticleEnabled: _getRemoteConfigBool(
+        'v2_full_article_enabled',
+        defaultValue: false,
+      ),
+      v2RelatedNewsEnabled: _getRemoteConfigBool(
+        'v2_related_news_enabled',
+        defaultValue: false,
+      ),
+      v2PageTurnEnabled: _getRemoteConfigBool(
+        'v2_page_turn_enabled',
+        defaultValue: false,
+      ),
+      v2PublisherPagesEnabled: _getRemoteConfigBool(
+        'v2_publisher_pages_enabled',
+        defaultValue: false,
+      ),
+      v2SearchEnabled: _getRemoteConfigBool(
+        'v2_search_enabled',
+        defaultValue: false,
+      ),
+      v2ForYouEnabled: _getRemoteConfigBool(
+        'v2_for_you_enabled',
+        defaultValue: false,
+      ),
+      v2AudioEnabled: _getRemoteConfigBool(
+        'v2_audio_enabled',
+        defaultValue: false,
+      ),
+      v2AudioGenerationEnabled: _getRemoteConfigBool(
+        'v2_audio_generation_enabled',
+        defaultValue: false,
+      ),
+      v2NotificationsEnabled: _getRemoteConfigBool(
+        'v2_notifications_enabled',
+        defaultValue: false,
+      ),
+      v2HomeReaderEnabled: _getRemoteConfigBool(
+        'v2_home_reader_enabled',
+        defaultValue: false,
+      ),
+      v2NewsCutsLabel: () {
+        final v = _remoteConfig.getString('v2_news_cuts_label').trim();
+        return v.isNotEmpty ? v : 'NewsOn Cuts';
       }(),
     );
   }

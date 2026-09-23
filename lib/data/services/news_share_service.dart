@@ -12,13 +12,20 @@ class NewsShareService {
   static String? articleIdFor(NewsArticle article) {
     final id = article.articleId?.trim();
     if (id != null && id.isNotEmpty) return id;
+    final newsId = article.newsId?.trim();
+    if (newsId != null && newsId.isNotEmpty) return newsId;
     return null;
   }
 
   /// Title, catchy CTA, and app deep link only (no description body).
+  ///
+  /// When [v2] is true, emits an explicit V2 share URL
+  /// (`https://api.newson.app/v2/article/{id}`) so deep-link handling skips
+  /// the V1 [NewsArticleResolver].
   static String buildShareText(
     NewsArticle article, {
     String? curiousCta,
+    bool v2 = false,
   }) {
     final id = articleIdFor(article);
     final buffer = StringBuffer();
@@ -28,7 +35,9 @@ class NewsShareService {
     if (id != null) {
       final cta =
           curiousCta ?? LocalizationHelper.shareNewsCuriousCtaFallback();
-      final httpsLink = DeepLinkConstants.buildHttpsDeepLink(id);
+      final httpsLink = v2
+          ? DeepLinkConstants.buildV2HttpsDeepLink(id)
+          : DeepLinkConstants.buildHttpsDeepLink(id);
       buffer.writeln();
       buffer.writeln(cta);
       buffer.writeln(httpsLink.toString());
@@ -40,25 +49,28 @@ class NewsShareService {
   static Future<void> shareArticle(
     NewsArticle article, {
     String? curiousCta,
+    bool v2 = false,
   }) async {
     final id = articleIdFor(article);
     if (id == null) {
       debugPrint('⚠️ Cannot share: article has no articleId');
       await Share.share(
-        buildShareText(article, curiousCta: curiousCta),
+        buildShareText(article, curiousCta: curiousCta, v2: v2),
         subject: article.title,
       );
       return;
     }
 
-    final text = buildShareText(article, curiousCta: curiousCta);
-    final httpsUri = DeepLinkConstants.buildHttpsDeepLink(id);
+    final text = buildShareText(article, curiousCta: curiousCta, v2: v2);
+    final httpsUri = v2
+        ? DeepLinkConstants.buildV2HttpsDeepLink(id)
+        : DeepLinkConstants.buildHttpsDeepLink(id);
 
     await Share.share(
       text,
       subject: article.title,
     );
 
-    debugPrint('📤 Shared article $id → ${httpsUri.toString()}');
+    debugPrint('📤 Shared article $id → ${httpsUri.toString()} (v2=$v2)');
   }
 }

@@ -1,6 +1,9 @@
+@Tags(['integration', 'platform', 'performance'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
-import '../lib/core/services/voice_search_service.dart';
+import 'package:newson/core/services/voice_search_service.dart';
 
 /// Enhanced Voice Search Test Suite
 /// Tests all real-world voice search scenarios and edge cases

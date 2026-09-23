@@ -178,6 +178,7 @@ class _BookMarkState extends State<BookMark> {
                                       onRefresh: () async {
                                         await bookmarkProvider.loadBookmarks(
                                           refresh: true,
+                                          forceNetwork: true,
                                         );
                                       },
                                       child: ListView.builder(

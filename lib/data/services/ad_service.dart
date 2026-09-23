@@ -41,7 +41,8 @@ class AdService {
   /// JavascriptEngine" (error code 0).
   Future<void> _bannerLoadQueue = Future.value();
   static const Duration _postSdkWarmup = Duration(milliseconds: 800);
-  static const Duration _betweenBannerLoads = Duration(milliseconds: 350);
+  /// Small gap only — keep exclusive WebView safety without long visible waits.
+  static const Duration _betweenBannerLoads = Duration(milliseconds: 50);
 
   /// Google official test units — always work in development.
   /// https://developers.google.com/admob/android/test-ads
@@ -617,6 +618,9 @@ class AdService {
   }
 
   /// Warm inline feed slots before the user scrolls to them.
+  ///
+  /// Starts after a short delay so on-screen [InlineFeedAd] widgets can enqueue
+  /// on the exclusive load queue first (visible ads win over preload).
   Future<void> preloadInlineFeedAds({
     required int slotCount,
     required int contentWidthPx,
@@ -626,11 +630,19 @@ class AdService {
     await initialize();
     if (!await ensureMobileAdsReady()) return;
 
+    // Let first paint / visible slots claim the exclusive queue.
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!policy.enabled) return;
+
     for (var slot = 0; slot < slotCount; slot++) {
       final cacheId = '${cacheKeyPrefix}_$slot';
+      // Visible widget may have loaded (or be loading) this slot already.
       if (LiveBannerAdCache.instance.contains(cacheId)) continue;
 
       await runExclusiveBannerLoad(() async {
+        // Re-check after waiting in queue — avoid duplicate BannerAd for slot.
+        if (LiveBannerAdCache.instance.contains(cacheId)) return;
+
         final completer = Completer<void>();
         final banner = createBannerAd(
           inlineFeed: true,
@@ -638,6 +650,14 @@ class AdService {
           listener: BannerAdListener(
             onAdLoaded: (ad) {
               final loaded = ad as BannerAd;
+              // If a visible widget beat us, drop this preload creative.
+              if (LiveBannerAdCache.instance.contains(cacheId)) {
+                try {
+                  loaded.dispose();
+                } catch (_) {}
+                completer.complete();
+                return;
+              }
               LiveBannerAdCache.instance.store(
                 cacheId,
                 loaded,

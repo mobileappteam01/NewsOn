@@ -20,7 +20,7 @@ class FcmService {
     try {
       // Return cached token if available
       if (_cachedToken != null) {
-        debugPrint('✅ FCM Token (cached): $_cachedToken');
+        debugPrint('✅ FCM Token (cached, len=${_cachedToken!.length})');
         return _cachedToken;
       }
 
@@ -62,13 +62,13 @@ class FcmService {
           if (token != null && token.isNotEmpty) {
             _cachedToken = token;
             _isInitialized = true;
-            debugPrint('✅ FCM Token fetched: $token');
+            debugPrint('✅ FCM Token fetched (len=${token.length})');
 
             // Listen for token refresh (only set up once)
             if (!_isInitialized) {
               _firebaseMessaging.onTokenRefresh.listen((newToken) {
                 _cachedToken = newToken;
-                debugPrint('🔄 FCM Token refreshed: $newToken');
+                debugPrint('🔄 FCM Token refreshed (len=${newToken.length})');
               });
             }
 

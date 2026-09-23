@@ -1,3 +1,7 @@
+@Tags(['integration', 'platform'])
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newson/providers/audio_player_provider.dart';
 import 'package:newson/data/services/background_music_service.dart';
@@ -6,11 +10,13 @@ import 'package:newson/data/models/news_article.dart';
 /// Full integration tests for background music across all pages
 /// Tests complete synchronization between speech audio and background music
 void main() {
+  // Bounded for device/integration runs — must NOT run in default `flutter test`.
   group('Background Music Full Integration Tests', () {
     late AudioPlayerProvider audioProvider;
     late BackgroundMusicService backgroundService;
 
     setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
       audioProvider = AudioPlayerProvider();
       backgroundService = BackgroundMusicService();
     });

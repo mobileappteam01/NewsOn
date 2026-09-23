@@ -1,0 +1,21 @@
+# Default `flutter test` / `dart test` configuration.
+# Category C/D tests live under test/integration/ and are tagged.
+# They are excluded from the default fast suite.
+#
+# Run them explicitly:
+#   fvm flutter test --tags integration
+#   fvm flutter test --tags platform
+#   fvm flutter test --tags network
+#   fvm flutter test test/integration
+#
+# See docs/TESTING.md
+
+tags:
+  unit:
+  widget:
+  integration:
+  platform:
+  network:
+  performance:
+
+exclude_tags: integration || platform || network || performance

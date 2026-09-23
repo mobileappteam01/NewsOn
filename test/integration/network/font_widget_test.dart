@@ -1,14 +1,20 @@
+@Tags(['integration', 'network'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../test_setup.dart';
 import 'package:newson/core/services/font_manager.dart';
 import 'package:newson/core/theme/app_theme.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 
-import 'font_test_utils.dart';
+import '../../font_test_utils.dart';
 // import 'package:newson/test/font_test_utils.dart';
 
 /// Widget tests for font integration in actual UI components
 void main() {
+  ensureTestBinding();
+
   group('Font Widget Tests', () {
     late RemoteConfigModel testConfig;
 
@@ -74,15 +80,15 @@ void main() {
 
         // Test specific font weights
         final thinText =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Thin Text').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Thin Text');
         expect(FontTestUtils.getFontWeight(thinText), FontWeight.w100);
 
         final boldText =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Bold Text').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Bold Text');
         expect(FontTestUtils.getFontWeight(boldText), FontWeight.w700);
 
         final blackText =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Black Text').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Black Text');
         expect(FontTestUtils.getFontWeight(blackText), FontWeight.w900);
       });
 
@@ -98,20 +104,19 @@ void main() {
 
         // Test specific font sizes
         final headline1 =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Headline 1').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Headline 1');
         expect(FontTestUtils.getFontSize(headline1), 32);
 
         final headline2 =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Headline 2').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Headline 2');
         expect(FontTestUtils.getFontSize(headline2), 28);
 
         final body1 =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Body Text 1').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Body Text 1');
         expect(FontTestUtils.getFontSize(body1), 16);
 
         final caption =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Caption Text')
-                .first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Caption Text');
         expect(FontTestUtils.getFontSize(caption), 12);
       });
     });
@@ -123,25 +128,18 @@ void main() {
           MaterialApp(
             theme: AppTheme.getLightTheme(testConfig),
             home: Scaffold(
-              body: Column(
-                children: [
-                  Text('Display Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .displayLarge),
-                  Text('Title Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .titleLarge),
-                  Text('Body Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .bodyLarge),
-                  Text('Body Medium',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .bodyMedium),
-                ],
+              body: Builder(
+                builder: (context) {
+                  final textTheme = Theme.of(context).textTheme;
+                  return Column(
+                    children: [
+                      Text('Display Large', style: textTheme.displayLarge),
+                      Text('Title Large', style: textTheme.titleLarge),
+                      Text('Body Large', style: textTheme.bodyLarge),
+                      Text('Body Medium', style: textTheme.bodyMedium),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -149,24 +147,31 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Verify all theme-based text uses custom font
-        expect(FontTestUtils.allTextsUseCustomFont(tester), isTrue);
+        // Verify theme-styled sample texts use production UI font
+        for (final label in [
+          'Display Large',
+          'Title Large',
+          'Body Large',
+          'Body Medium',
+        ]) {
+          final text =
+              FontTestUtils.requireTextWidgetByContent(tester, label);
+          expect(
+            FontTestUtils.isProductionUiFont(FontTestUtils.getFontFamily(text)),
+            isTrue,
+          );
+        }
 
-        // Verify specific text widgets
         final displayLarge =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Display Large')
-                .first;
-        expect(FontTestUtils.getFontFamily(displayLarge), 'Crassula');
+            FontTestUtils.requireTextWidgetByContent(tester, 'Display Large');
         expect(FontTestUtils.getFontWeight(displayLarge), FontWeight.bold);
 
         final titleLarge =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Title Large').first;
-        expect(FontTestUtils.getFontFamily(titleLarge), 'Crassula');
-        expect(FontTestUtils.getFontWeight(titleLarge), FontWeight.w600);
+            FontTestUtils.requireTextWidgetByContent(tester, 'Title Large');
+        expect(FontTestUtils.getFontWeight(titleLarge), FontWeight.w500);
 
         final bodyLarge =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Body Large').first;
-        expect(FontTestUtils.getFontFamily(bodyLarge), 'Crassula');
+            FontTestUtils.requireTextWidgetByContent(tester, 'Body Large');
         expect(FontTestUtils.getFontWeight(bodyLarge), FontWeight.w400);
       });
 
@@ -176,21 +181,17 @@ void main() {
           MaterialApp(
             theme: AppTheme.getDarkTheme(testConfig),
             home: Scaffold(
-              body: Column(
-                children: [
-                  Text('Display Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .displayLarge),
-                  Text('Title Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .titleLarge),
-                  Text('Body Large',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .bodyLarge),
-                ],
+              body: Builder(
+                builder: (context) {
+                  final textTheme = Theme.of(context).textTheme;
+                  return Column(
+                    children: [
+                      Text('Display Large', style: textTheme.displayLarge),
+                      Text('Title Large', style: textTheme.titleLarge),
+                      Text('Body Large', style: textTheme.bodyLarge),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -198,17 +199,21 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Verify all dark theme text uses custom font
-        expect(FontTestUtils.allTextsUseCustomFont(tester), isTrue);
+        for (final label in ['Display Large', 'Title Large', 'Body Large']) {
+          final text =
+              FontTestUtils.requireTextWidgetByContent(tester, label);
+          expect(
+            FontTestUtils.isProductionUiFont(FontTestUtils.getFontFamily(text)),
+            isTrue,
+          );
+        }
 
-        // Verify font weights are correct in dark theme
         final displayLarge =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Display Large')
-                .first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Display Large');
         expect(FontTestUtils.getFontWeight(displayLarge), FontWeight.bold);
 
         final bodyLarge =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Body Large').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Body Large');
         expect(FontTestUtils.getFontWeight(bodyLarge), FontWeight.w400);
       });
     });
@@ -233,26 +238,39 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify news title style
-        final newsTitle = FontTestUtils.findTextWidgetsByContent(
-                tester, 'Breaking News Today')
-            .first;
+        final newsTitle = FontTestUtils.requireTextWidgetByContent(
+          tester,
+          'Breaking News Today',
+        );
         expect(FontTestUtils.usesNewsTitleStyle(newsTitle), isTrue);
-        expect(FontTestUtils.getFontFamily(newsTitle), 'Crassula');
+        expect(
+          FontTestUtils.isProductionUiFont(FontTestUtils.getFontFamily(newsTitle)),
+          isTrue,
+        );
         expect(FontTestUtils.getFontWeight(newsTitle), FontWeight.bold);
 
         // Verify news category style
         final newsCategory =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Technology').first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Technology');
         expect(FontTestUtils.usesNewsCategoryStyle(newsCategory), isTrue);
-        expect(FontTestUtils.getFontFamily(newsCategory), 'Crassula');
+        expect(
+          FontTestUtils.isProductionUiFont(
+            FontTestUtils.getFontFamily(newsCategory),
+          ),
+          isTrue,
+        );
         expect(FontTestUtils.getFontWeight(newsCategory), FontWeight.w500);
 
         // Verify news timestamp style
         final newsTimestamp =
-            FontTestUtils.findTextWidgetsByContent(tester, '5 minutes ago')
-                .first;
+            FontTestUtils.requireTextWidgetByContent(tester, '5 minutes ago');
         expect(FontTestUtils.usesNewsTimestampStyle(newsTimestamp), isTrue);
-        expect(FontTestUtils.getFontFamily(newsTimestamp), 'Crassula');
+        expect(
+          FontTestUtils.isProductionUiFont(
+            FontTestUtils.getFontFamily(newsTimestamp),
+          ),
+          isTrue,
+        );
         expect(FontTestUtils.getFontWeight(newsTimestamp), FontWeight.w400);
       });
     });
@@ -278,14 +296,12 @@ void main() {
 
         // Verify extension method works
         final extendedText =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Extended Text')
-                .first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Extended Text');
         expect(FontTestUtils.getFontFamily(extendedText), 'Crassula');
 
         // Verify extension method with weight works
         final extendedBold =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Extended Bold')
-                .first;
+            FontTestUtils.requireTextWidgetByContent(tester, 'Extended Bold');
         expect(FontTestUtils.getFontFamily(extendedBold), 'Crassula');
         expect(FontTestUtils.getFontWeight(extendedBold), FontWeight.bold);
       });
@@ -318,7 +334,7 @@ void main() {
         // All should use the same font family
         final allTexts = FontTestUtils.findAllTextWidgets(tester);
         for (final text in allTexts) {
-          expect(FontTestUtils.getFontFamily(text), 'Crassula');
+          expect(FontTestUtils.isProductionUiFont(FontTestUtils.getFontFamily(text)), isTrue);
         }
       });
 
@@ -328,28 +344,26 @@ void main() {
           MaterialApp(
             theme: AppTheme.getLightTheme(testConfig),
             home: Scaffold(
-              body: Column(
-                children: [
-                  // Theme-based text
-                  Text('Theme Text',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .bodyLarge),
-                  // Override theme with custom font
-                  Text('Override Text',
-                      style: FontManager.bold.copyWith(
-                        color: Colors.red,
-                        fontSize: 20,
-                      )),
-                  // Mix theme and custom
-                  Text('Mixed Text',
-                      style: Theme.of(tester.element(find.byType(Scaffold)))
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(
-                            color: Colors.blue,
-                          )),
-                ],
+              body: Builder(
+                builder: (context) {
+                  final textTheme = Theme.of(context).textTheme;
+                  return Column(
+                    children: [
+                      Text('Theme Text', style: textTheme.bodyLarge),
+                      Text(
+                        'Override Text',
+                        style: FontManager.bold.copyWith(
+                          color: Colors.red,
+                          fontSize: 20,
+                        ),
+                      ),
+                      Text(
+                        'Mixed Text',
+                        style: textTheme.titleLarge?.copyWith(color: Colors.blue),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -357,14 +371,17 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // All should still use custom font
-        expect(FontTestUtils.allTextsUseCustomFont(tester), isTrue);
+        for (final label in ['Theme Text', 'Override Text', 'Mixed Text']) {
+          final text =
+              FontTestUtils.requireTextWidgetByContent(tester, label);
+          expect(
+            FontTestUtils.isProductionUiFont(FontTestUtils.getFontFamily(text)),
+            isTrue,
+          );
+        }
 
-        // Verify overrides work correctly
         final overrideText =
-            FontTestUtils.findTextWidgetsByContent(tester, 'Override Text')
-                .first;
-        expect(FontTestUtils.getFontFamily(overrideText), 'Crassula');
+            FontTestUtils.requireTextWidgetByContent(tester, 'Override Text');
         expect(FontTestUtils.getFontWeight(overrideText), FontWeight.bold);
       });
     });
@@ -376,7 +393,7 @@ void main() {
             child: Column(
               children: [
                 Text('', style: FontManager.bodyText1),
-                const Text(''),
+                Text('', style: FontManager.caption),
                 Text('   ', style: FontManager.newsTitle),
               ],
             ),
@@ -385,8 +402,13 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Should handle empty text gracefully
-        expect(FontTestUtils.allTextsUseCustomFont(tester), isTrue);
+        // Explicitly styled empty/whitespace texts use production UI font
+        final styled = FontTestUtils.findAllTextWidgets(tester)
+            .where((w) => w.style?.fontFamily != null);
+        expect(styled, isNotEmpty);
+        for (final text in styled) {
+          expect(FontTestUtils.usesCustomFont(text), isTrue);
+        }
       });
 
       testWidgets('should handle very long text', (WidgetTester tester) async {

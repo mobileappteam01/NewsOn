@@ -274,6 +274,26 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
+  /// Persist submitted category IDs into local user data (source of truth for Home chips).
+  Future<void> _persistSelectedCategoryIds(
+      List<String> selectedCategoryIds) async {
+    try {
+      final token = _userService.getToken();
+      final existing = _userService.getUserData();
+      if (token == null || token.isEmpty || existing == null) {
+        debugPrint('⚠️ Cannot persist categories: missing local user session');
+        return;
+      }
+
+      final merged = Map<String, dynamic>.from(existing);
+      merged['category'] = List<String>.from(selectedCategoryIds);
+      await _userService.saveUserData(token: token, userData: merged);
+      debugPrint('✅ Local user categories updated: $selectedCategoryIds');
+    } catch (e) {
+      debugPrint('❌ Error persisting local category preferences: $e');
+    }
+  }
+
   Future<void> _selectCategories() async {
     if (_selectedCategoryIds.isEmpty) return;
 
@@ -331,6 +351,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
           Navigator.of(context).pop(); // Close loading dialog
 
           if (updateResponse.success) {
+            // Authoritative local merge: do not rely only on API response body.
+            await _persistSelectedCategoryIds(selectedCategoryIds);
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('✅ Categories updated successfully'),
@@ -338,8 +361,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                 duration: Duration(seconds: 2),
               ),
             );
-            // Navigate back
-            Navigator.of(context).pop();
+            // Signal Home to rebuild category chips from updated prefs.
+            Navigator.of(context).pop(true);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -573,8 +596,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                             _isAllSelected
                                                 ? LocalizationHelper
                                                     .deselectAll(context)
-                                                : LocalizationHelper
-                                                    .selectAll(context),
+                                                : LocalizationHelper.selectAll(
+                                                    context),
                                             style: GoogleFonts.roboto(
                                               color: _isAllSelected
                                                   ? config.primaryColorValue

@@ -120,7 +120,9 @@ class LocationService {
       }
 
       final userToken = _userService.getToken();
-      print('🔑 User token for fetching cities: $userToken');
+      debugPrint(
+        '🔑 Cities request auth token present=${userToken != null && userToken.isNotEmpty}',
+      );
 
       if (userToken == null || userToken.isEmpty) {
         debugPrint('⚠️ User not logged in - using default cities');
@@ -194,7 +196,9 @@ class LocationService {
       }
 
       final userToken = _userService.getToken();
-      print('🔑 User token for fetching countries: $userToken');
+      debugPrint(
+        '🔑 Countries request auth token present=${userToken != null && userToken.isNotEmpty}',
+      );
 
       if (userToken == null || userToken.isEmpty) {
         debugPrint('⚠️ User not logged in - using default countries');

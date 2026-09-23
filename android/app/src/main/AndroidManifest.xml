@@ -63,6 +63,16 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="newson" android:host="news"/>
             </intent-filter>
+            <!-- Deep link: newson://v2/article/{articleId} -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="newson"
+                    android:host="v2"
+                    android:pathPrefix="/article"/>
+            </intent-filter>
             <!-- HTTPS app link: https://api.newson.app/news/{articleId} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
@@ -72,6 +82,16 @@
                     android:scheme="https"
                     android:host="api.newson.app"
                     android:pathPrefix="/news"/>
+            </intent-filter>
+            <!-- HTTPS app link: https://api.newson.app/v2/article/{articleId} -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="api.newson.app"
+                    android:pathPrefix="/v2/article"/>
             </intent-filter>
         </activity>
 

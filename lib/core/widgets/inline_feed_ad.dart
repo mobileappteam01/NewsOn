@@ -32,16 +32,16 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   int _retryCount = 0;
   int _noFillRetries = 0;
 
-  static const int _maxRetries = 6;
-  static const int _maxNoFillRetries = 5;
+  static const int _maxRetries = 3;
+  static const int _maxNoFillRetries = 2;
 
   String get _cacheId => '${widget.cacheKeyPrefix}_${widget.slotIndex}';
 
-  /// Reserve space while loading so list layout stays stable.
+  /// Reserve space from first frame so news after the ad never jumps.
   double get _placeholderHeight {
     final adService = AdService();
     if (adService.hasDedicatedMediumUnit) return 258;
-    return 108;
+    return 120;
   }
 
   @override
@@ -60,6 +60,7 @@ class _InlineFeedAdState extends State<InlineFeedAd>
         _bannerAd = adopted.ad;
         _adSize = adopted.size;
         _gaveUp = false;
+        _isLoading = false;
       });
       return;
     }
@@ -67,19 +68,9 @@ class _InlineFeedAdState extends State<InlineFeedAd>
   }
 
   void _scheduleInitialLoad() {
-    // First slots load quickly; later slots stagger to avoid WebView overload.
-    final delayMs = widget.slotIndex == 0
-        ? 0
-        : widget.slotIndex == 1
-            ? 400
-            : 350 * widget.slotIndex;
-    if (delayMs == 0) {
-      _startLoad();
-    } else {
-      Future.delayed(Duration(milliseconds: delayMs), () {
-        if (mounted && !_gaveUp && _bannerAd == null) _startLoad();
-      });
-    }
+    // No artificial stagger — the exclusive banner queue already serializes
+    // loads. Visible slots should enqueue as soon as they mount.
+    _startLoad();
   }
 
   Future<void> _startLoad() async {
@@ -92,14 +83,22 @@ class _InlineFeedAdState extends State<InlineFeedAd>
     if (!mounted || _gaveUp) return;
 
     if (AdNetworkDiagnostics.isLikelyBlocked) {
-      if (mounted) setState(() => _gaveUp = true);
+      if (mounted) {
+        setState(() {
+          _gaveUp = true;
+          _isLoading = false;
+        });
+      }
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      await adService.runExclusiveBannerLoad(() async {
+      // Fire-and-forget style: do not block list scrolling on the ad queue.
+      unawaited(adService.runExclusiveBannerLoad(() async {
         if (!mounted || _gaveUp) return;
 
         final widthPx = (MediaQuery.sizeOf(context).width - 32).truncate();
@@ -176,11 +175,11 @@ class _InlineFeedAdState extends State<InlineFeedAd>
         await banner.load();
         if (!completer.isCompleted) {
           await completer.future.timeout(
-            const Duration(seconds: 25),
+            const Duration(seconds: 12),
             onTimeout: () {},
           );
         }
-      });
+      }));
     } catch (e) {
       debugPrint('❌ Inline feed ad slot ${widget.slotIndex} error: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -189,8 +188,8 @@ class _InlineFeedAdState extends State<InlineFeedAd>
 
   void _scheduleRetry({required bool isNoFill}) {
     final delay = isNoFill
-        ? Duration(milliseconds: 2000 + _noFillRetries * 1200)
-        : Duration(milliseconds: 1000 + _retryCount * 700);
+        ? Duration(milliseconds: 1800 + _noFillRetries * 800)
+        : Duration(milliseconds: 800 + _retryCount * 500);
     Future.delayed(delay, () {
       if (mounted && !_gaveUp && _bannerAd == null) _startLoad();
     });
@@ -204,41 +203,50 @@ class _InlineFeedAdState extends State<InlineFeedAd>
     super.dispose();
   }
 
+  Widget _reservedSlot({required bool showSpinner}) {
+    return DailyhuntAdFrame(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: SizedBox(
+        height: _placeholderHeight,
+        width: double.infinity,
+        child: showSpinner
+            ? const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : const SizedBox.expand(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Ads fully disabled via policy — no reserved slot.
     if (!AdService().policy.enabled) return const SizedBox.shrink();
-    if (_gaveUp && _bannerAd == null) return const SizedBox.shrink();
 
     if (_bannerAd != null && _adSize != null) {
       return DailyhuntAdFrame(
         margin: const EdgeInsets.only(bottom: 12),
-        child: Center(
-          child: SizedBox(
-            width: _adSize!.width.toDouble(),
-            height: _adSize!.height.toDouble(),
-            child: AdWidget(ad: _bannerAd!),
-          ),
-        ),
-      );
-    }
-
-    if (_isLoading) {
-      return DailyhuntAdFrame(
-        margin: const EdgeInsets.only(bottom: 12),
         child: SizedBox(
+          width: double.infinity,
           height: _placeholderHeight,
-          child: const Center(
+          child: Center(
             child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              width: _adSize!.width.toDouble(),
+              height: _adSize!.height.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
             ),
           ),
         ),
       );
     }
 
-    return const SizedBox.shrink();
+    // Loading, pending, OR permanent failure: keep reserved height so news
+    // below never jumps. Spinner only while still trying.
+    return _reservedSlot(showSpinner: !_gaveUp);
   }
 }

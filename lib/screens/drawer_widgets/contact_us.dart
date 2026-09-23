@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/localization_helper.dart';
 import '../../data/models/remote_config_model.dart';
@@ -45,6 +46,7 @@ class ContactUsScreen extends StatelessWidget {
                     title: items[i].title,
                     subtitle: items[i].value,
                     theme: theme,
+                    onTap: items[i].onTap,
                   ),
                 ],
               ],
@@ -62,11 +64,13 @@ class ContactUsScreen extends StatelessWidget {
     final items = <_ContactItemData>[];
 
     if (config.contactEmailVisible && config.contactEmail.trim().isNotEmpty) {
+      final email = config.contactEmail.trim();
       items.add(
         _ContactItemData(
           icon: Icons.email_outlined,
           title: LocalizationHelper.emailText(context),
-          value: config.contactEmail.trim(),
+          value: email,
+          onTap: () => _launchEmail(context, email),
         ),
       );
     }
@@ -81,11 +85,13 @@ class ContactUsScreen extends StatelessWidget {
     }
     if (config.contactWebsiteVisible &&
         config.contactWebsite.trim().isNotEmpty) {
+      final website = config.contactWebsite.trim();
       items.add(
         _ContactItemData(
           icon: Icons.language,
           title: LocalizationHelper.websiteText(context),
-          value: config.contactWebsite.trim(),
+          value: website,
+          onTap: () => _launchWebsite(context, website),
         ),
       );
     }
@@ -93,13 +99,79 @@ class ContactUsScreen extends StatelessWidget {
     return items;
   }
 
+  Future<void> _launchEmail(BuildContext context, String email) async {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty || !trimmed.contains('@')) {
+      return;
+    }
+
+    final uri = Uri(
+      scheme: 'mailto',
+      path: trimmed,
+    );
+    await _launchExternalUri(context, uri);
+  }
+
+  Future<void> _launchWebsite(BuildContext context, String website) async {
+    final normalized = _normalizeWebsiteUrl(website);
+    if (normalized == null) {
+      return;
+    }
+
+    final uri = Uri.tryParse(normalized);
+    if (uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https')) ||
+        uri.host.isEmpty) {
+      return;
+    }
+
+    await _launchExternalUri(context, uri);
+  }
+
+  /// Ensures a scheme for bare domains without creating `https://https://...`.
+  String? _normalizeWebsiteUrl(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return trimmed;
+    }
+
+    return 'https://$trimmed';
+  }
+
+  Future<void> _launchExternalUri(BuildContext context, Uri uri) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open link')),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error launching contact URI: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open link')),
+        );
+      }
+    }
+  }
+
   Widget _buildContactItem({
     required IconData icon,
     required String title,
     required String subtitle,
     required ThemeData theme,
+    VoidCallback? onTap,
   }) {
-    return Row(
+    final row = Row(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
@@ -128,6 +200,16 @@ class ContactUsScreen extends StatelessWidget {
         ),
       ],
     );
+
+    if (onTap == null) {
+      return row;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: row,
+    );
   }
 }
 
@@ -136,9 +218,11 @@ class _ContactItemData {
     required this.icon,
     required this.title,
     required this.value,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String value;
+  final VoidCallback? onTap;
 }

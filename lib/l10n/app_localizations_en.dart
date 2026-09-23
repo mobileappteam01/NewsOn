@@ -85,7 +85,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get shareNewsCuriousCta => '🔥 Wait — there\'s more to this story. Tap to read on NewsOn 👇';
+  String get shareNewsCuriousCta =>
+      '🔥 Wait — there\'s more to this story. Tap to read on NewsOn 👇';
 
   @override
   String get newsFeed => 'News Feed';
@@ -130,7 +131,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get removedFromBookmarks => 'Removed from bookmarks';
 
   @override
-  String get noInternetConnection => 'No internet connection. Please check your network.';
+  String get noInternetConnection =>
+      'No internet connection. Please check your network.';
 
   @override
   String get serverError => 'Server error. Please try again later.';
@@ -371,7 +373,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get version => 'Version';
 
   @override
-  String get yourPersonalizedNewsApplication => 'Your personalized news application';
+  String get yourPersonalizedNewsApplication =>
+      'Your personalized news application';
 
   @override
   String get close => 'Close';
@@ -419,7 +422,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backgroundMusicSettings => 'Background Music';
 
   @override
-  String get backgroundMusicSettingsDescription => 'Play background music while listening to news. You can turn it off or adjust the volume below.';
+  String get backgroundMusicSettingsDescription =>
+      'Play background music while listening to news. You can turn it off or adjust the volume below.';
 
   @override
   String get enableBackgroundMusic => 'Enable background music';
@@ -440,7 +444,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get getInTouch => 'Get in Touch';
 
   @override
-  String get contactSupportText => 'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.';
+  String get contactSupportText =>
+      'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.';
 
   @override
   String get email => 'Email';
@@ -482,13 +487,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noBookmarks => 'No Bookmarks';
 
   @override
-  String get bookmarksWillAppearHere => 'Articles you bookmark will appear here';
+  String get bookmarksWillAppearHere =>
+      'Articles you bookmark will appear here';
 
   @override
   String get errorLoadingBookmarks => 'Error loading bookmarks';
 
   @override
-  String get clearBookmarksMessage => 'This will remove all saved articles. This action cannot be undone.';
+  String get clearBookmarksMessage =>
+      'This will remove all saved articles. This action cannot be undone.';
 
   @override
   String errorPlayingAudio(String error) {
@@ -519,7 +526,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orTryVoiceSearch => 'Or try voice search using the microphone';
 
   @override
-  String get tryDifferentKeywords => 'Try different keywords or check your spelling';
+  String get tryDifferentKeywords =>
+      'Try different keywords or check your spelling';
 
   @override
   String sourceLabel(String source) {
@@ -554,7 +562,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get agreeToTermsPrivacy => 'By continuing, you agree to our Terms & Privacy Policy';
+  String get agreeToTermsPrivacy =>
+      'By continuing, you agree to our Terms & Privacy Policy';
 
   @override
   String get tapToPlayArticle => 'Tap to play article';
@@ -572,13 +581,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareThisNews => 'Share this news';
 
   @override
-  String get shareThisNewsSubtitle => 'Friends with NewsOn can open the article in the app';
+  String get shareThisNewsSubtitle =>
+      'Friends with NewsOn can open the article in the app';
 
   @override
   String get generatingAudio => 'Generating Audio...';
 
   @override
-  String get convertingTextToSpeech => 'Converting text to speech with ElevenLabs';
+  String get convertingTextToSpeech =>
+      'Converting text to speech with ElevenLabs';
 
   @override
   String get sponsored => 'Sponsored';
@@ -590,7 +601,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountTitle => 'Delete account?';
 
   @override
-  String get deleteAccountMessage => 'This will permanently delete your account and all associated data. This action cannot be undone.';
+  String get deleteAccountMessage =>
+      'This will permanently delete your account and all associated data. This action cannot be undone.';
 
   @override
   String get delete => 'Delete';
@@ -622,5 +634,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paused => 'Paused';
 
   @override
-  String get voiceFeaturesUnavailable => 'Voice and audio features are currently unavailable.';
+  String get voiceFeaturesUnavailable =>
+      'Voice and audio features are currently unavailable.';
 }

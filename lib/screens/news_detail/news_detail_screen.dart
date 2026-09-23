@@ -20,6 +20,9 @@ import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/audio_loading_overlay.dart';
 import '../../core/widgets/detail_carousel_ad_page.dart';
 import '../../core/utils/detail_carousel_ad_helper.dart';
+import '../../app/routing/v2_routes.dart';
+import '../../core/config/v2_feature_flags.dart';
+import '../../providers/remote_config_provider.dart';
 import '../../data/services/interaction_service.dart';
 
 class NewsDetailScreen extends StatefulWidget {
@@ -50,12 +53,29 @@ class NewsDetailScreen extends StatefulWidget {
   }
 
   /// Open detail with the exact list + index from the feed the user tapped.
+  /// Routes to V2 [ArticleDetailScreen] when Remote Config flag is enabled.
   static void open(
     BuildContext context, {
     required NewsArticle article,
     List<NewsArticle>? articles,
     int? initialIndex,
   }) {
+    try {
+      final config =
+          Provider.of<RemoteConfigProvider>(context, listen: false).config;
+      if (V2FeatureFlags.newArticleDetail(config)) {
+        V2Routes.openArticle(
+          context,
+          article: article,
+          articles: articles,
+          initialIndex: initialIndex,
+        );
+        return;
+      }
+    } catch (_) {
+      // Provider unavailable — fall through to V1.
+    }
+
     final snapshot = articles != null ? List<NewsArticle>.from(articles) : null;
     var index = initialIndex ??
         (snapshot != null ? indexOfArticle(snapshot, article) : 0);

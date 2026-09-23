@@ -196,6 +196,13 @@
       "description": "Master switch for all voice/audio: listen buttons, audio player, background music settings, news reading (listen) mode, and voice search",
       "valueType": "BOOLEAN"
     },
+    "breaking_news_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Show Breaking News carousel on Home. Set false when Breaking News duplicates Today News order.",
+      "valueType": "BOOLEAN"
+    },
     "detail_carousel_ads_enabled": {
       "defaultValue": {
         "value": "true"
@@ -247,7 +254,7 @@
     },
     "contact_website": {
       "defaultValue": {
-        "value": "www.newson.app"
+        "value": "https://newson.app"
       },
       "description": "Contact website shown on Contact Us screen",
       "valueType": "STRING"
@@ -272,6 +279,41 @@
       },
       "description": "Default background music volume 0.0-1.0 (user can override in Settings). App uses local storage; this is for reference/future use.",
       "valueType": "STRING"
+    },
+    "v2_search_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "V2.0.0 Search experience. Default false preserves V1 SearchTab.",
+      "valueType": "BOOLEAN"
+    },
+    "v2_for_you_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "V2.0.0 For You experience with cold-start fallback. Default false preserves V1 ForYouTab.",
+      "valueType": "BOOLEAN"
+    },
+    "v2_audio_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "V2.0.0 article audio (Listen). Default false leaves V1 voice unchanged.",
+      "valueType": "BOOLEAN"
+    },
+    "v2_audio_generation_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Allow client to POST V2 audio generation requests when status is unavailable/failed. Default false = cache-only retrieval.",
+      "valueType": "BOOLEAN"
+    },
+    "v2_notifications_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "V2.0.0 notification open routing + device registry. Default false preserves V1 FCM token behavior.",
+      "valueType": "BOOLEAN"
     }
   },
   "version": {

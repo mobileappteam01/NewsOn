@@ -12,6 +12,7 @@ import 'package:newson/screens/drawer_widgets/bookmark.dart';
 import 'package:newson/screens/drawer_widgets/privacy_policy.dart';
 import 'package:newson/screens/drawer_widgets/terms_and_conditions.dart';
 import 'package:newson/screens/drawer_widgets/contact_us.dart';
+import 'package:newson/screens/home/tabs/news_feed_tab_new.dart';
 import 'package:provider/provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -96,44 +97,50 @@ class AppDrawer extends StatelessWidget {
                             context,
                             i,
                           ),
-                          onTap: () {
+                          onTap: () async {
                             // Account Settings (0) and Bookmarks (2) need login.
-                            final needsLogin = (i == 0 || i == 2) &&
-                                !UserService().isLoggedIn;
+                            final needsLogin =
+                                (i == 0 || i == 2) && !UserService().isLoggedIn;
                             Navigator.pop(context); // Close the drawer first
-                            Future.delayed(
+                            await Future.delayed(
                               const Duration(milliseconds: 200),
-                              () {
-                                if (needsLogin) {
-                                  navigateToLoginForAccountFeatureGlobal();
-                                  return;
-                                }
-                                final navigator = appNavigatorKey.currentState;
-                                if (navigator == null) return;
-
-                                final Widget page;
-                                if (i == 0) {
-                                  page = const AccountSettings();
-                                } else if (i == 1) {
-                                  page = const NotificationView();
-                                } else if (i == 2) {
-                                  page = BookMark();
-                                } else if (i == 3) {
-                                  page = ApplicationSettings();
-                                } else if (i == 4) {
-                                  page = TermsAndConditions();
-                                } else if (i == 5) {
-                                  page = PrivacyPolicy();
-                                } else {
-                                  page = const CategorySelectionScreen(
-                                    isFromSideMenu: true,
-                                  );
-                                }
-                                navigator.push(
-                                  MaterialPageRoute(builder: (_) => page),
-                                );
-                              },
                             );
+                            if (needsLogin) {
+                              navigateToLoginForAccountFeatureGlobal();
+                              return;
+                            }
+                            final navigator = appNavigatorKey.currentState;
+                            if (navigator == null) return;
+
+                            final Widget page;
+                            if (i == 0) {
+                              page = const AccountSettings();
+                            } else if (i == 1) {
+                              page = const NotificationView();
+                            } else if (i == 2) {
+                              page = BookMark();
+                            } else if (i == 3) {
+                              page = ApplicationSettings();
+                            } else if (i == 4) {
+                              page = TermsAndConditions();
+                            } else if (i == 5) {
+                              page = PrivacyPolicy();
+                            } else {
+                              page = const CategorySelectionScreen(
+                                isFromSideMenu: true,
+                              );
+                            }
+
+                            final result = await navigator.push(
+                              MaterialPageRoute(builder: (_) => page),
+                            );
+
+                            // Refresh Home category chips after successful prefs update.
+                            if (page is CategorySelectionScreen &&
+                                result == true) {
+                              NewsFeedTabNew
+                                  .preferredCategoriesRevision.value++;
+                            }
                           },
                           iconColor: config.primaryColorValue,
                         ),

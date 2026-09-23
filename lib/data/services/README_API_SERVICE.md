@@ -183,3 +183,35 @@ Default headers (always included):
 - `Content-Type: application/json`
 - `Accept: application/json`
 
+## V2 API host (isolated)
+
+V2 features (Search, For You, Article Detail surfaces, Audio, Notifications APIs, Analytics when V2 is configured) resolve their **host** from a separate Firestore document. They do **not** use Realtime Database `ipAddress` and must **not** fall back to the V1 base URL.
+
+### Manual Firebase setup (create in Firebase Console — not auto-deployed)
+
+**Collection:** `apiEndPoints`  
+**Document ID:** `v2`  
+**Fields:**
+
+| Field | Type | Staging example value |
+|-------|------|------------------------|
+| `baseUrl` | string | `https://v2-api.newson.app` |
+| `enabled` | boolean | `true` |
+
+V1 modules (`auth`, `news`, `chooseCategory`, …) stay unchanged. The mobile client skips document `v2` when building the V1 endpoint map.
+
+### Optional local override
+
+```bash
+--dart-define=NEWSON_V2_API_BASE_URL=https://v2-api.newson.app
+```
+
+This mirrors V1’s `NEWSON_API_BASE_URL` and does not change production Firebase data.
+
+### Client behavior
+
+- Loaded during `ApiService.initialize()` via `V2ApiConfigService` (soft-fail so V1 still starts).
+- Cached in Hive under `v2_api_config_cache`.
+- V2 path calls use `getByPath(..., useV2Host: true)` (and post/patch/delete equivalents).
+- If a V2 feature runs while config is missing/disabled → `V2ApiConfigException` (no silent V1 routing).
+

@@ -117,18 +117,19 @@ class AppTheme {
   static ThemeData getDarkTheme(RemoteConfigModel config) => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        primaryColor: primaryRed,
+        primaryColor: config.primaryColorValue,
         scaffoldBackgroundColor: config.darkBackgroundColorValue,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: config.primaryColorValue,
-          brightness: Brightness.dark,
-          secondary: Color.fromARGB(
-            242,
-            255,
-            255,
-            255,
-          ), // ensures your grey tone stays secondary
-          tertiary: Color.fromARGB(255, 255, 255, 255),
+        // Use an explicit dark ColorScheme so brand red stays saturated.
+        // ColorScheme.fromSeed washes primary into a pale pink in dark mode.
+        colorScheme: ColorScheme.dark(
+          primary: config.primaryColorValue,
+          onPrimary: Colors.white,
+          secondary: const Color.fromARGB(242, 255, 255, 255),
+          tertiary: const Color.fromARGB(255, 255, 255, 255),
+          surface: cardBackground,
+          onSurface: textPrimary,
+          error: primaryRed,
+          onError: Colors.white,
         ),
         appBarTheme: AppBarTheme(
           backgroundColor: config.darkBackgroundColorValue,

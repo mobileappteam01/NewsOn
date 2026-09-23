@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:speech_to_text/speech_to_text.dart';
+
+import 'speech_recognition_engine.dart';
 
 /// Supported languages for voice search
 enum VoiceSearchLanguage {
@@ -13,18 +14,34 @@ enum VoiceSearchLanguage {
 /// Voice Search Service
 /// Handles speech recognition for voice-based search functionality with multilingual support
 class VoiceSearchService {
-  static final VoiceSearchService _instance = VoiceSearchService._internal();
-  factory VoiceSearchService() => _instance;
-  VoiceSearchService._internal();
+  static final VoiceSearchService _instance =
+      VoiceSearchService._(SpeechToTextEngine());
 
-  final SpeechToText _speechToText = SpeechToText();
+  factory VoiceSearchService() => _testOverride ?? _instance;
+
+  VoiceSearchService._(this._engine);
+
+  /// Test/DI constructor — does not replace the production singleton.
+  @visibleForTesting
+  factory VoiceSearchService.withEngine(SpeechRecognitionEngine engine) {
+    return VoiceSearchService._(engine);
+  }
+
+  static VoiceSearchService? _testOverride;
+
+  /// Override the singleton for tests. Pass null to restore production.
+  @visibleForTesting
+  static void debugOverrideInstance(VoiceSearchService? instance) {
+    _testOverride = instance;
+  }
+
+  final SpeechRecognitionEngine _engine;
   bool _isInitialized = false;
   bool _isListening = false;
   String _lastWords = '';
   String _errorText = '';
   VoiceSearchLanguage _currentLanguage = VoiceSearchLanguage.english;
 
-  // Getters
   bool get isInitialized => _isInitialized;
   bool get isListening => _isListening;
   String get lastWords => _lastWords;
@@ -34,16 +51,14 @@ class VoiceSearchService {
   /// Initialize speech recognition
   Future<bool> initialize({VoiceSearchLanguage? language}) async {
     try {
-      // Set language before initialization
       if (language != null) {
         _currentLanguage = language;
       }
 
-      // Initialize speech recognition - the package handles permissions internally
-      _isInitialized = await _speechToText.initialize(
-        onError: (error) {
-          _errorText = error.errorMsg;
-          debugPrint('Speech recognition error: ${error.errorMsg}');
+      _isInitialized = await _engine.initialize(
+        onError: (errorMsg) {
+          _errorText = errorMsg;
+          debugPrint('Speech recognition error: $errorMsg');
         },
         onStatus: (status) {
           debugPrint('Speech recognition status: $status');
@@ -71,25 +86,31 @@ class VoiceSearchService {
     try {
       debugPrint('Setting voice search language to: ${language.displayName}');
 
-      // Check if the language is available
-      final locales = await _speechToText.locales();
+      final locales = await _engine.locales();
       final targetLocale = locales.firstWhere(
         (locale) => locale.localeId == language.localeId,
         orElse: () => locales.firstWhere(
           (locale) =>
               locale.localeId.startsWith(language.localeId.split('_')[0]),
-          orElse: () => locales.first,
+          orElse: () => locales.isNotEmpty
+              ? locales.first
+              : SpeechLocaleInfo(
+                  localeId: language.localeId,
+                  name: language.displayName,
+                ),
         ),
       );
 
       if (targetLocale.localeId != language.localeId) {
         debugPrint(
-            'Warning: Exact locale ${language.localeId} not found, using ${targetLocale.localeId}');
+          'Warning: Exact locale ${language.localeId} not found, using ${targetLocale.localeId}',
+        );
       }
 
       _currentLanguage = language;
       debugPrint(
-          'Voice search language set to: ${language.displayName} (${targetLocale.localeId})');
+        'Voice search language set to: ${language.displayName} (${targetLocale.localeId})',
+      );
       return true;
     } catch (e) {
       _errorText = 'Failed to set language: $e';
@@ -101,13 +122,15 @@ class VoiceSearchService {
   /// Get available languages
   Future<List<VoiceSearchLanguage>> getAvailableLanguages() async {
     try {
-      final locales = await _speechToText.locales();
+      final locales = await _engine.locales();
       final availableLanguages = <VoiceSearchLanguage>[];
 
       for (final language in VoiceSearchLanguage.values) {
-        final hasLocale = locales.any((locale) =>
-            locale.localeId == language.localeId ||
-            locale.localeId.startsWith(language.localeId.split('_')[0]));
+        final hasLocale = locales.any(
+          (locale) =>
+              locale.localeId == language.localeId ||
+              locale.localeId.startsWith(language.localeId.split('_')[0]),
+        );
 
         if (hasLocale) {
           availableLanguages.add(language);
@@ -115,15 +138,16 @@ class VoiceSearchService {
       }
 
       debugPrint(
-          'Available voice search languages: ${availableLanguages.map((l) => l.displayName).join(', ')}');
+        'Available voice search languages: ${availableLanguages.map((l) => l.displayName).join(', ')}',
+      );
       return availableLanguages;
     } catch (e) {
       debugPrint('Failed to get available languages: $e');
-      return [VoiceSearchLanguage.english]; // Fallback to English
+      return [VoiceSearchLanguage.english];
     }
   }
 
-  /// Start listening for voice input with strict language enforcement and Tamil validation
+  /// Start listening for voice input with language enforcement
   Future<bool> startListening({
     Function(String)? onResult,
     Function(String)? onError,
@@ -137,7 +161,6 @@ class VoiceSearchService {
       await initialize(language: language);
     }
 
-    // Set language if provided and different from current
     if (language != null && language != _currentLanguage) {
       final languageSet = await setLanguage(language);
       if (!languageSet) {
@@ -157,36 +180,32 @@ class VoiceSearchService {
       _errorText = '';
       _lastWords = '';
 
-      // Enhanced listening parameters with language enforcement
       final silenceTimeoutMs = silenceTimeout?.inSeconds ?? 4;
       final maxDurationMs = maxListeningDuration?.inSeconds ?? 25;
 
       debugPrint(
-          '🎤 Starting voice search in ${_currentLanguage.displayName} language');
+        '🎤 Starting voice search in ${_currentLanguage.displayName} language',
+      );
       debugPrint('🔒 Language enforcement: ${_currentLanguage.localeId}');
 
-      await _speechToText.listen(
-        onResult: (result) {
-          _lastWords = result.recognizedWords;
+      await _engine.listen(
+        onResult: (words, isFinal) {
+          _lastWords = words;
           onResult?.call(_lastWords);
           debugPrint(
-              'Speech result in ${_currentLanguage.displayName}: ${result.recognizedWords} (final: ${result.finalResult})');
+            'Speech result in ${_currentLanguage.displayName}: $words (final: $isFinal)',
+          );
 
-          if (result.finalResult) {
+          if (isFinal) {
             _isListening = false;
             onListeningEnd?.call();
             debugPrint(
-                'Speech recognition ended with final result in ${_currentLanguage.displayName}');
+              'Speech recognition ended with final result in ${_currentLanguage.displayName}',
+            );
           }
         },
         listenFor: Duration(seconds: maxDurationMs),
         pauseFor: Duration(seconds: silenceTimeoutMs),
-        listenOptions: SpeechListenOptions(
-          partialResults: true,
-          cancelOnError: true,
-          listenMode: ListenMode.dictation,
-          autoPunctuation: true,
-        ),
         onSoundLevelChange: (level) {
           debugPrint('🔊 Sound level: $level');
         },
@@ -194,17 +213,19 @@ class VoiceSearchService {
 
       onListeningStart?.call();
       debugPrint(
-          '🎤 Started enhanced listening for speech in ${_currentLanguage.displayName}');
+        '🎤 Started enhanced listening for speech in ${_currentLanguage.displayName}',
+      );
       debugPrint(
-          '⏱️ Silence timeout: ${silenceTimeoutMs}s, Max duration: ${maxDurationMs}s');
+        '⏱️ Silence timeout: ${silenceTimeoutMs}s, Max duration: ${maxDurationMs}s',
+      );
 
-      // Enhanced timeout mechanism
       Future.delayed(Duration(seconds: maxDurationMs + 5), () {
         if (_isListening) {
           _isListening = false;
           onListeningEnd?.call();
           debugPrint(
-              '⏰ Speech recognition ended due to maximum timeout in ${_currentLanguage.displayName}');
+            '⏰ Speech recognition ended due to maximum timeout in ${_currentLanguage.displayName}',
+          );
         }
       });
 
@@ -218,12 +239,11 @@ class VoiceSearchService {
     }
   }
 
-  /// Stop listening
   Future<void> stopListening() async {
     if (!_isListening) return;
 
     try {
-      await _speechToText.stop();
+      await _engine.stop();
       _isListening = false;
       debugPrint('Stopped listening for speech');
     } catch (e) {
@@ -231,12 +251,11 @@ class VoiceSearchService {
     }
   }
 
-  /// Cancel listening
   Future<void> cancelListening() async {
     if (!_isListening) return;
 
     try {
-      await _speechToText.cancel();
+      await _engine.cancel();
       _isListening = false;
       debugPrint('Cancelled speech recognition');
     } catch (e) {
@@ -244,33 +263,28 @@ class VoiceSearchService {
     }
   }
 
-  /// Check if speech recognition is available
-  bool get isAvailable => _speechToText.isAvailable;
+  bool get isAvailable => _engine.isAvailable;
 
-  /// Get available locales
-  Future<List<LocaleName>> getAvailableLocales() async {
+  Future<List<SpeechLocaleInfo>> getAvailableLocales() async {
     if (!_isInitialized) {
       await initialize();
     }
-    return await _speechToText.locales();
+    return _engine.locales();
   }
 
-  /// Clear error text
   void clearError() {
     _errorText = '';
   }
 
-  /// Clear last words
   void clearLastWords() {
     _lastWords = '';
   }
 
-  /// Dispose resources
   void dispose() {
     if (_isListening) {
       cancelListening();
     }
-    _speechToText.stop();
+    _engine.stop();
   }
 }
 
@@ -305,14 +319,16 @@ enum VoiceSearchStatus {
 
 /// Voice search state model
 class VoiceSearchState extends ChangeNotifier {
-  final VoiceSearchService _service = VoiceSearchService();
+  VoiceSearchState({VoiceSearchService? service})
+      : _service = service ?? VoiceSearchService();
+
+  final VoiceSearchService _service;
 
   VoiceSearchStatus _status = VoiceSearchStatus.idle;
   String _currentText = '';
   String _errorText = '';
   double _confidenceLevel = 0.0;
 
-  // Getters
   VoiceSearchStatus get status => _status;
   String get currentText => _currentText;
   String get errorText => _errorText;
@@ -320,7 +336,6 @@ class VoiceSearchState extends ChangeNotifier {
   bool get isListening => _service.isListening;
   bool get isInitialized => _service.isInitialized;
 
-  /// Initialize voice search
   Future<bool> initialize() async {
     _status = VoiceSearchStatus.initializing;
     notifyListeners();
@@ -336,7 +351,6 @@ class VoiceSearchState extends ChangeNotifier {
     return success;
   }
 
-  /// Start voice search
   Future<bool> startListening() async {
     if (_status == VoiceSearchStatus.listening) return false;
 
@@ -350,7 +364,7 @@ class VoiceSearchState extends ChangeNotifier {
     _errorText = '';
     notifyListeners();
 
-    return await _service.startListening(
+    return _service.startListening(
       onResult: (result) {
         _currentText = result;
         _status = VoiceSearchStatus.processing;
@@ -372,7 +386,6 @@ class VoiceSearchState extends ChangeNotifier {
     );
   }
 
-  /// Stop voice search
   Future<void> stopListening() async {
     if (_status != VoiceSearchStatus.listening) return;
 
@@ -381,7 +394,6 @@ class VoiceSearchState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Cancel voice search
   Future<void> cancelListening() async {
     await _service.cancelListening();
     _status = VoiceSearchStatus.idle;
@@ -390,13 +402,11 @@ class VoiceSearchState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Clear current text
   void clearText() {
     _currentText = '';
     notifyListeners();
   }
 
-  /// Clear error
   void clearError() {
     _errorText = '';
     if (_status == VoiceSearchStatus.error) {
@@ -405,7 +415,6 @@ class VoiceSearchState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reset state
   void reset() {
     _status = VoiceSearchStatus.idle;
     _currentText = '';

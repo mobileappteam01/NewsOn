@@ -17,7 +17,11 @@ class LocalizationHelper {
   /// Get the current AppLocalizations instance from context
   /// Returns null if localization is not available (fallback to English strings)
   static AppLocalizations? of(BuildContext context) {
-    return AppLocalizations.of(context);
+    try {
+      return Localizations.of<AppLocalizations>(context, AppLocalizations);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Subscribe to language providers so any widget that reads a localized
@@ -647,6 +651,11 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.today, 'Today', key: 'today');
   }
 
+  /// Bottom-nav Home label (V2 chrome). Falls back to "Home" when no ARB key.
+  static String home(BuildContext context) {
+    return _getString(context, (_) => 'Home', 'Home', key: 'home');
+  }
+
   /// Get localized string for for later
   static String forLater(BuildContext context) {
     return _getString(context, (l10n) => l10n.forLater, 'For Later',
@@ -686,15 +695,19 @@ class LocalizationHelper {
   }
 
   static String contactUs(BuildContext context) {
-    return _getString(context, (l10n) => l10n.contactUs, 'Contact Us', key: 'contactUs');
+    return _getString(context, (l10n) => l10n.contactUs, 'Contact Us',
+        key: 'contactUs');
   }
 
   static String getInTouch(BuildContext context) {
-    return _getString(context, (l10n) => l10n.getInTouch, 'Get in Touch', key: 'getInTouch');
+    return _getString(context, (l10n) => l10n.getInTouch, 'Get in Touch',
+        key: 'getInTouch');
   }
 
   static String contactSupportText(BuildContext context) {
-    return _getString(context, (l10n) => l10n.contactSupportText, 'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.', key: 'contactSupportText');
+    return _getString(context, (l10n) => l10n.contactSupportText,
+        'For support, inquiries, or feedback regarding our content and platform, please reach out to us. We regularly update our news platform and value your communication.',
+        key: 'contactSupportText');
   }
 
   static String emailText(BuildContext context) {
@@ -706,7 +719,8 @@ class LocalizationHelper {
   }
 
   static String websiteText(BuildContext context) {
-    return _getString(context, (l10n) => l10n.website, 'Website', key: 'website');
+    return _getString(context, (l10n) => l10n.website, 'Website',
+        key: 'website');
   }
 
   /// Get localized drawer menu title based on route/index
@@ -1107,17 +1121,20 @@ class LocalizationHelper {
   }
 
   static String backgroundMusic(BuildContext context) {
-    return _getString(context, (l10n) => l10n.backgroundMusic,
-        'Background Music', key: 'backgroundMusic');
+    return _getString(
+        context, (l10n) => l10n.backgroundMusic, 'Background Music',
+        key: 'backgroundMusic');
   }
 
   static String backgroundMusicSettings(BuildContext context) {
-    return _getString(context, (l10n) => l10n.backgroundMusicSettings,
-        'Background Music', key: 'backgroundMusicSettings');
+    return _getString(
+        context, (l10n) => l10n.backgroundMusicSettings, 'Background Music',
+        key: 'backgroundMusicSettings');
   }
 
   static String backgroundMusicSettingsDescription(BuildContext context) {
-    return _getString(context,
+    return _getString(
+        context,
         (l10n) => l10n.backgroundMusicSettingsDescription,
         'Play background music while listening to news. You can turn it off or adjust the volume below.',
         key: 'backgroundMusicSettingsDescription');
@@ -1125,22 +1142,26 @@ class LocalizationHelper {
 
   static String enableBackgroundMusic(BuildContext context) {
     return _getString(context, (l10n) => l10n.enableBackgroundMusic,
-        'Enable background music', key: 'enableBackgroundMusic');
+        'Enable background music',
+        key: 'enableBackgroundMusic');
   }
 
   static String backgroundMusicVolume(BuildContext context) {
     return _getString(context, (l10n) => l10n.backgroundMusicVolume,
-        'Background music volume', key: 'backgroundMusicVolume');
+        'Background music volume',
+        key: 'backgroundMusicVolume');
   }
 
   static String backgroundMusicEnabled(BuildContext context) {
     return _getString(context, (l10n) => l10n.backgroundMusicEnabled,
-        'Background music enabled', key: 'backgroundMusicEnabled');
+        'Background music enabled',
+        key: 'backgroundMusicEnabled');
   }
 
   static String backgroundMusicDisabled(BuildContext context) {
     return _getString(context, (l10n) => l10n.backgroundMusicDisabled,
-        'Background music disabled', key: 'backgroundMusicDisabled');
+        'Background music disabled',
+        key: 'backgroundMusicDisabled');
   }
 
   static String selectRegion(BuildContext context) {
@@ -1194,8 +1215,9 @@ class LocalizationHelper {
     );
   }
 
-  static String noBookmarks(BuildContext context) => _getString(
-      context, (l10n) => l10n.noBookmarks, 'No Bookmarks', key: 'noBookmarks');
+  static String noBookmarks(BuildContext context) =>
+      _getString(context, (l10n) => l10n.noBookmarks, 'No Bookmarks',
+          key: 'noBookmarks');
 
   static String bookmarksWillAppearHere(BuildContext context) => _getString(
       context,
@@ -1204,9 +1226,7 @@ class LocalizationHelper {
       key: 'bookmarksWillAppearHere');
 
   static String errorLoadingBookmarks(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.errorLoadingBookmarks,
-      'Error loading bookmarks',
+      context, (l10n) => l10n.errorLoadingBookmarks, 'Error loading bookmarks',
       key: 'errorLoadingBookmarks');
 
   static String clearBookmarksMessage(BuildContext context) => _getString(
@@ -1247,18 +1267,19 @@ class LocalizationHelper {
       'No news available for this category',
       key: 'noNewsForThisCategory');
 
-  static String recentSearches(BuildContext context) => _getString(context,
-      (l10n) => l10n.recentSearches, 'Recent Searches', key: 'recentSearches');
+  static String recentSearches(BuildContext context) =>
+      _getString(context, (l10n) => l10n.recentSearches, 'Recent Searches',
+          key: 'recentSearches');
 
-  static String searchNewsHint(BuildContext context) => _getString(context,
-      (l10n) => l10n.searchNewsHint, 'Search news...', key: 'searchNewsHint');
+  static String searchNewsHint(BuildContext context) =>
+      _getString(context, (l10n) => l10n.searchNewsHint, 'Search news...',
+          key: 'searchNewsHint');
 
-  static String enterKeywordsToFindArticles(BuildContext context) =>
-      _getString(
-          context,
-          (l10n) => l10n.enterKeywordsToFindArticles,
-          'Enter keywords to find articles',
-          key: 'enterKeywordsToFindArticles');
+  static String enterKeywordsToFindArticles(BuildContext context) => _getString(
+      context,
+      (l10n) => l10n.enterKeywordsToFindArticles,
+      'Enter keywords to find articles',
+      key: 'enterKeywordsToFindArticles');
 
   static String orTryVoiceSearch(BuildContext context) => _getString(
       context,
@@ -1305,16 +1326,16 @@ class LocalizationHelper {
   static String justNow(BuildContext context) =>
       _getString(context, (l10n) => l10n.justNow, 'Just now', key: 'justNow');
 
-  static String selectAll(BuildContext context) => _getString(
-      context, (l10n) => l10n.selectAll, 'Select All', key: 'selectAll');
+  static String selectAll(BuildContext context) =>
+      _getString(context, (l10n) => l10n.selectAll, 'Select All',
+          key: 'selectAll');
 
-  static String deselectAll(BuildContext context) => _getString(
-      context, (l10n) => l10n.deselectAll, 'Deselect All', key: 'deselectAll');
+  static String deselectAll(BuildContext context) =>
+      _getString(context, (l10n) => l10n.deselectAll, 'Deselect All',
+          key: 'deselectAll');
 
   static String updatePreferences(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.updatePreferences,
-      'Update Preferences',
+      context, (l10n) => l10n.updatePreferences, 'Update Preferences',
       key: 'updatePreferences');
 
   static String categoriesSelectedCount(
@@ -1335,28 +1356,23 @@ class LocalizationHelper {
       key: 'agreeToTermsPrivacy');
 
   static String tapToPlayArticle(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.tapToPlayArticle,
-      'Tap to play article',
+      context, (l10n) => l10n.tapToPlayArticle, 'Tap to play article',
       key: 'tapToPlayArticle');
 
   static String selectNewsLanguage(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.selectNewsLanguage,
-      'Select News Language',
+      context, (l10n) => l10n.selectNewsLanguage, 'Select News Language',
       key: 'selectNewsLanguage');
 
   static String selectAppLanguage(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.selectAppLanguage,
-      'Select App Language',
+      context, (l10n) => l10n.selectAppLanguage, 'Select App Language',
       key: 'selectAppLanguage');
 
   static String submit(BuildContext context) =>
       _getString(context, (l10n) => l10n.submit, 'Submit', key: 'submit');
 
-  static String shareThisNews(BuildContext context) => _getString(context,
-      (l10n) => l10n.shareThisNews, 'Share this news', key: 'shareThisNews');
+  static String shareThisNews(BuildContext context) =>
+      _getString(context, (l10n) => l10n.shareThisNews, 'Share this news',
+          key: 'shareThisNews');
 
   static String shareThisNewsSubtitle(BuildContext context) => _getString(
       context,
@@ -1364,9 +1380,9 @@ class LocalizationHelper {
       'Friends with NewsOn can open the article in the app',
       key: 'shareThisNewsSubtitle');
 
-  static String generatingAudio(BuildContext context) => _getString(context,
-      (l10n) => l10n.generatingAudio, 'Generating Audio...',
-      key: 'generatingAudio');
+  static String generatingAudio(BuildContext context) =>
+      _getString(context, (l10n) => l10n.generatingAudio, 'Generating Audio...',
+          key: 'generatingAudio');
 
   static String convertingTextToSpeech(BuildContext context) => _getString(
       context,
@@ -1381,14 +1397,13 @@ class LocalizationHelper {
   static String adLabel(BuildContext context) =>
       _getString(context, (l10n) => l10n.sponsored, 'Ad', key: 'adLabel');
 
-  static String deleteAccount(BuildContext context) => _getString(context,
-      (l10n) => l10n.deleteAccount, 'Delete Account', key: 'deleteAccount');
+  static String deleteAccount(BuildContext context) =>
+      _getString(context, (l10n) => l10n.deleteAccount, 'Delete Account',
+          key: 'deleteAccount');
 
-  static String deleteAccountTitle(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.deleteAccountTitle,
-      'Delete account?',
-      key: 'deleteAccountTitle');
+  static String deleteAccountTitle(BuildContext context) =>
+      _getString(context, (l10n) => l10n.deleteAccountTitle, 'Delete account?',
+          key: 'deleteAccountTitle');
 
   static String deleteAccountMessage(BuildContext context) => _getString(
       context,
@@ -1405,22 +1420,16 @@ class LocalizationHelper {
       'Sign in to read the shared article',
       key: 'signInToReadSharedArticle');
 
-  static String pleaseWaitSettingUp(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.pleaseWaitSettingUp,
-      'Please wait while we set things up',
+  static String pleaseWaitSettingUp(BuildContext context) => _getString(context,
+      (l10n) => l10n.pleaseWaitSettingUp, 'Please wait while we set things up',
       key: 'pleaseWaitSettingUp');
 
-  static String signInWithApple(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.signInWithApple,
-      'Sign in with Apple',
-      key: 'signInWithApple');
+  static String signInWithApple(BuildContext context) =>
+      _getString(context, (l10n) => l10n.signInWithApple, 'Sign in with Apple',
+          key: 'signInWithApple');
 
   static String continueWithGoogle(BuildContext context) => _getString(
-      context,
-      (l10n) => l10n.continueWithGoogle,
-      'Continue with Google',
+      context, (l10n) => l10n.continueWithGoogle, 'Continue with Google',
       key: 'continueWithGoogle');
 
   static String failedToLoadCategories(BuildContext context) => _getString(
@@ -1450,4 +1459,365 @@ class LocalizationHelper {
       (l10n) => l10n.voiceFeaturesUnavailable,
       'Voice and audio features are currently unavailable.',
       key: 'voiceFeaturesUnavailable');
+
+  // —— V2.0.0 NewsOn Cuts / Article experience ——
+  // Prefer dynamic translation keys; ARB getters may not exist yet.
+
+  static String v2NewsOnCut(BuildContext context) =>
+      _getString(context, (l10n) => 'NewsOn Cuts', 'NewsOn Cuts',
+          key: 'v2NewsOnCut');
+
+  static String v2NewsOnCutsSubtitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Short AI-generated summary',
+        'Short AI-generated summary',
+        key: 'v2NewsOnCutsSubtitle',
+      );
+  static String v2SummaryComingSoon(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Summary coming soon',
+        'Summary coming soon',
+        key: 'v2SummaryComingSoon',
+      );
+
+  static String v2SummaryUnavailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Summary unavailable',
+        'Summary unavailable',
+        key: 'v2SummaryUnavailable',
+      );
+
+  /// Detail-page empty body (never reuse summary-unavailable copy).
+  static String v2ArticleContentUnavailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Unable to load article content',
+        'Unable to load article content',
+        key: 'v2ArticleContentUnavailable',
+      );
+
+  static String v2ArticleContentRetry(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Retry',
+        'Retry',
+        key: 'v2ArticleContentRetry',
+      );
+
+  static String v2ViewFullArticle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'View Full Article',
+        'View Full Article',
+        key: 'v2ViewFullArticle',
+      );
+
+  static String v2ReadFullStory(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Read Full Story',
+        'Read Full Story',
+        key: 'v2ReadFullStory',
+      );
+
+  static String v2RelatedNews(BuildContext context) =>
+      _getString(context, (l10n) => 'Related News', 'Related News',
+          key: 'v2RelatedNews');
+
+  static String v2NoRelatedNews(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No related news',
+        'No related news',
+        key: 'v2NoRelatedNews',
+      );
+
+  static String v2Retry(BuildContext context) =>
+      _getString(context, (l10n) => l10n.retry, 'Retry', key: 'retry');
+
+  static String v2Publisher(BuildContext context) =>
+      _getString(context, (l10n) => 'Publisher', 'Publisher',
+          key: 'v2Publisher');
+
+  static String v2Published(BuildContext context) =>
+      _getString(context, (l10n) => 'Published', 'Published',
+          key: 'v2Published');
+
+  static String v2OpenArticle(BuildContext context) =>
+      _getString(context, (l10n) => 'Open Article', 'Open Article',
+          key: 'v2OpenArticle');
+
+  static String v2Bookmark(BuildContext context) =>
+      _getString(context, (l10n) => 'Bookmark', 'Bookmark', key: 'v2Bookmark');
+
+  static String v2Share(BuildContext context) =>
+      _getString(context, (l10n) => 'Share', 'Share', key: 'v2Share');
+
+  static String v2UnderstandNewsFaster(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Understand News Faster',
+        'Understand News Faster',
+        key: 'v2UnderstandNewsFaster',
+      );
+
+  // —— V2.0.0 Home / Discovery ——
+
+  static String v2BreakingNews(BuildContext context) =>
+      _getString(context, (l10n) => l10n.breakingNews, 'Breaking News',
+          key: 'breakingNews');
+
+  static String v2Latest(BuildContext context) =>
+      _getString(context, (l10n) => 'Latest', 'Latest', key: 'v2Latest');
+
+  static String v2Explore(BuildContext context) =>
+      _getString(context, (l10n) => 'Explore', 'Explore', key: 'v2Explore');
+
+  static String v2ExploreAll(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Explore All',
+        'Explore All',
+        key: 'v2ExploreAll',
+      );
+
+  static String v2ViewAll(BuildContext context) =>
+      _getString(context, (l10n) => 'View All', 'View All', key: 'v2ViewAll');
+
+  static String v2NoNews(BuildContext context) =>
+      _getString(context, (l10n) => l10n.noNewsAvailable, 'No News',
+          key: 'noNewsAvailable');
+
+  static String v2Loading(BuildContext context) =>
+      _getString(context, (l10n) => l10n.loading, 'Loading', key: 'loading');
+
+  static String v2Updated(BuildContext context) =>
+      _getString(context, (l10n) => 'Updated', 'Updated', key: 'v2Updated');
+
+  static String v2ReadMore(BuildContext context) =>
+      _getString(context, (l10n) => 'Read More', 'Read More', key: 'v2ReadMore');
+
+  static String v2GlobalRegion(BuildContext context) =>
+      _getString(context, (l10n) => 'Global', 'Global', key: 'v2GlobalRegion');
+
+  static String v2Search(BuildContext context) =>
+      _getString(context, (l10n) => l10n.search, 'Search', key: 'search');
+
+  static String v2NewsLanguage(BuildContext context) => _getString(
+        context,
+        (l10n) => 'News language',
+        'News language',
+        key: 'v2NewsLanguage',
+      );
+
+  // —— V2.0.0 Publisher pages ——
+
+  static String v2VisitPublisher(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Visit Publisher',
+        'Visit Publisher',
+        key: 'v2VisitPublisher',
+      );
+
+  static String v2OriginalPublisher(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Original Publisher',
+        'Original Publisher',
+        key: 'v2OriginalPublisher',
+      );
+
+  static String v2LatestNews(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Latest News',
+        'Latest News',
+        key: 'v2LatestNews',
+      );
+
+  static String v2LatestFromPublisher(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Latest stories from this publisher',
+        'Latest stories from this publisher',
+        key: 'v2LatestFromPublisher',
+      );
+
+  static String v2NoStoriesAvailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No stories available in NewsOn right now.',
+        'No stories available in NewsOn right now.',
+        key: 'v2NoStoriesAvailable',
+      );
+
+  static String v2NoPublisherNews(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No news available from this publisher yet.',
+        'No news available from this publisher yet.',
+        key: 'v2NoPublisherNews',
+      );
+
+  static String v2PublisherUnavailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Publisher unavailable',
+        'Publisher unavailable',
+        key: 'v2PublisherUnavailable',
+      );
+
+  static String v2PublisherLoadError(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Could not load publisher',
+        'Could not load publisher',
+        key: 'v2PublisherLoadError',
+      );
+
+  // —— V2.0.0 Search + For You ——
+
+  static String v2SearchHint(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Search stories, sources, topics',
+        'Search stories, sources, topics',
+        key: 'v2SearchHint',
+      );
+
+  static String v2RecentSearches(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Recent searches',
+        'Recent searches',
+        key: 'v2RecentSearches',
+      );
+
+  static String v2ClearAll(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Clear all',
+        'Clear all',
+        key: 'v2ClearAll',
+      );
+
+  static String v2SearchTooShort(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Enter at least 2 characters',
+        'Enter at least 2 characters',
+        key: 'v2SearchTooShort',
+      );
+
+  static String v2SearchTooLong(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Search is too long',
+        'Search is too long',
+        key: 'v2SearchTooLong',
+      );
+
+  static String v2SearchFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Search failed. Try again.',
+        'Search failed. Try again.',
+        key: 'v2SearchFailed',
+      );
+
+  static String v2ForYouFallbackCopy(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Top stories for your region and language',
+        'Top stories for your region and language',
+        key: 'v2ForYouFallbackCopy',
+      );
+
+  static String v2ForYouLoadError(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Could not load For You. Pull to retry.',
+        'Could not load For You. Pull to retry.',
+        key: 'v2ForYouLoadError',
+      );
+
+  static String v2ForYouEmpty(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No stories available right now. Check back soon.',
+        'No stories available right now. Check back soon.',
+        key: 'v2ForYouEmpty',
+      );
+
+  // —— V2.0.0 Audio ——
+
+  static String v2AudioListen(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Listen',
+        'Listen',
+        key: 'v2AudioListen',
+      );
+
+  static String v2AudioPreparing(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Preparing audio...',
+        'Preparing audio...',
+        key: 'v2AudioPreparing',
+      );
+
+  static String v2AudioPause(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Pause',
+        'Pause',
+        key: 'v2AudioPause',
+      );
+
+  static String v2AudioResume(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Resume',
+        'Resume',
+        key: 'v2AudioResume',
+      );
+
+  static String v2AudioRetry(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Retry',
+        'Retry',
+        key: 'v2AudioRetry',
+      );
+
+  static String v2AudioUnavailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Audio unavailable',
+        'Audio unavailable',
+        key: 'v2AudioUnavailable',
+      );
+
+  static String v2AudioFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Audio failed',
+        'Audio failed',
+        key: 'v2AudioFailed',
+      );
+
+  static String v2AudioClose(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Close',
+        'Close',
+        key: 'v2AudioClose',
+      );
+
+  static String v2AudioSeek(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Seek',
+        'Seek',
+        key: 'v2AudioSeek',
+      );
+
+  // —— V2.0.0 Notifications ——
+
+  static String v2NotificationTitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Notification',
+        'Notification',
+        key: 'v2NotificationTitle',
+      );
+
+  static String v2NotificationOpen(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Open',
+        'Open',
+        key: 'v2NotificationOpen',
+      );
+
+  static String v2NotificationUnavailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No longer available',
+        'No longer available',
+        key: 'v2NotificationUnavailable',
+      );
+
+  static String v2NotificationRetry(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Retry',
+        'Retry',
+        key: 'v2NotificationRetry',
+      );
 }

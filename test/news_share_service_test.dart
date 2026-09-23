@@ -42,6 +42,24 @@ https://api.newson.app/news/930a8436b94a3e538164f95859055261''',
       );
     });
 
+    test('V2 share uses /v2/article/{id} URL', () {
+      final article = NewsArticle(
+        articleId: '6ab1d4fda5abc256076d157e',
+        newsId: '6ab1d4fda5abc256076d157e',
+        title: 'V2 headline',
+      );
+      final text = NewsShareService.buildShareText(
+        article,
+        curiousCta: 'Read on NewsOn',
+        v2: true,
+      );
+      expect(
+        text,
+        contains('https://api.newson.app/v2/article/6ab1d4fda5abc256076d157e'),
+      );
+      expect(text, isNot(contains('https://api.newson.app/news/')));
+    });
+
     test('with no articleId shares title only (no CTA/link)', () {
       final article = NewsArticle(
         title: 'Headline only',

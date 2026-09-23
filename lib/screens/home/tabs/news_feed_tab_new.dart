@@ -31,6 +31,7 @@ import '../../../widgets/news_grid_views.dart';
 import '../../../data/models/news_article.dart';
 import '../../../core/widgets/news_article_image.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/user_service.dart';
 import '../../view_all/breaking_news_view_all_screen.dart';
 import '../../view_all/today_news_view_all_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -38,6 +39,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 class NewsFeedTabNew extends StatefulWidget {
   final List<String> selectedCategories;
   final List newsList;
+
+  /// Bumped when side-menu category preferences change so keep-alive chips rebuild.
+  static final ValueNotifier<int> preferredCategoriesRevision =
+      ValueNotifier<int>(0);
 
   const NewsFeedTabNew({
     super.key,
@@ -78,9 +83,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   String? _lastNewsLanguageCode;
 
-  /// FAB refresh spinner — provider flags clear on cache hit, so we track the
-  /// full refresh sequence locally.
+  /// FAB / pull-to-refresh in progress — also drives empty-list shimmer.
   bool _isFabRefreshing = false;
+
+  /// Bumped on each visible-feed refresh so in-flight load-more results are ignored.
+  int _feedDataGeneration = 0;
+
+  /// Keeps the home section banner alive across pagination rebuilds.
+  final GlobalKey _sectionBannerKey = GlobalKey();
 
   @override
   void initState() {
@@ -110,7 +120,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       }
 
       await newsProvider.fetchCategories();
-      await newsProvider.fetchBreakingNews(limit: 10);
+      if (context.read<RemoteConfigProvider>().config.breakingNewsEnabled) {
+        await newsProvider.fetchBreakingNews(limit: 10);
+      }
       await _loadInitialTodayNews();
     });
   }
@@ -127,7 +139,31 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     }
   }
 
+  /// User preferred category IDs from local session.
+  ///
+  /// Returns null when preferences are missing/empty so Home keeps showing the
+  /// full catalog (legacy / guest / pre-preference users).
+  Set<String>? _userPreferredCategoryIds() {
+    final userData = UserService().getUserData();
+    final raw = userData?['category'];
+    if (raw is! List || raw.isEmpty) {
+      return null;
+    }
+
+    final ids = raw
+        .where((id) => id != null)
+        .map((id) => id.toString())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    if (ids.isEmpty) {
+      return null;
+    }
+    return ids;
+  }
+
   void _onScrollPagination() {
+    if (_isFabRefreshing) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
       if (_selectedCategory == 'All') {
@@ -142,9 +178,12 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     }
   }
 
-  Future<void> _loadInitialTodayNews({bool allowCacheFallback = true}) async {
+  Future<void> _loadInitialTodayNews({
+    bool allowCacheFallback = true,
+    bool forceNetwork = false,
+  }) async {
     // Today's cache is only valid for the current calendar day.
-    final canUseCache = allowCacheFallback && _isViewingToday;
+    final canUseCache = allowCacheFallback && !forceNetwork && _isViewingToday;
     try {
       final newsProvider = context.read<NewsProvider>();
 
@@ -152,6 +191,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         _selectedDate,
         limit: _newsLimit,
         page: 1,
+        forceNetwork: forceNetwork,
       );
 
       if (!mounted) return;
@@ -197,7 +237,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     final widthPx = (MediaQuery.sizeOf(context).width - 32).truncate();
     final slotsNeeded =
         (_allTodayNews.length - 1) ~/ AdPlacementHelper.interval;
-    final preloadCount = slotsNeeded.clamp(1, 4);
+    final preloadCount = slotsNeeded.clamp(1, 2);
 
     unawaited(
       AdService().preloadInlineFeedAds(
@@ -209,7 +249,9 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   }
 
   Future<void> _loadMoreTodayNews() async {
-    if (_isLoadingMoreToday || !_hasMoreTodayNews) return;
+    if (_isFabRefreshing || _isLoadingMoreToday || !_hasMoreTodayNews) return;
+
+    final generation = _feedDataGeneration;
 
     setState(() {
       _isLoadingMoreToday = true;
@@ -238,6 +280,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       );
 
       if (!mounted) return;
+      // Stale after refresh — do not append onto the new page-1 list.
+      if (generation != _feedDataGeneration || _isFabRefreshing) return;
 
       setState(() {
         _allTodayNews.addAll(response.results);
@@ -247,6 +291,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       });
     } catch (e) {
       if (!mounted) return;
+      if (generation != _feedDataGeneration || _isFabRefreshing) return;
       setState(() {
         _isLoadingMoreToday = false;
       });
@@ -264,10 +309,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   Future<void> _loadInitialCategoryNews(
     String category, {
     bool allowCacheFallback = true,
+    bool forceNetwork = false,
   }) async {
     // Cached category articles are not date-specific, so only fall back to
     // them when the user is viewing today's feed.
-    final canUseCache = allowCacheFallback && _isViewingToday;
+    final canUseCache = allowCacheFallback && !forceNetwork && _isViewingToday;
     try {
       final newsProvider = context.read<NewsProvider>();
 
@@ -275,6 +321,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
         category,
         limit: _newsLimit,
         date: _selectedDate,
+        forceNetwork: forceNetwork,
       );
 
       if (!mounted) return;
@@ -311,7 +358,11 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
   }
 
   Future<void> _loadMoreCategoryNews() async {
-    if (_isLoadingMoreCategory || !_hasMoreCategoryNews) return;
+    if (_isFabRefreshing || _isLoadingMoreCategory || !_hasMoreCategoryNews) {
+      return;
+    }
+
+    final generation = _feedDataGeneration;
 
     setState(() {
       _isLoadingMoreCategory = true;
@@ -341,6 +392,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       );
 
       if (!mounted) return;
+      // Stale after refresh — do not append onto the new page-1 list.
+      if (generation != _feedDataGeneration || _isFabRefreshing) return;
 
       setState(() {
         _allCategoryNews.addAll(response.results);
@@ -350,6 +403,7 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
       });
     } catch (e) {
       if (!mounted) return;
+      if (generation != _feedDataGeneration || _isFabRefreshing) return;
       setState(() {
         _isLoadingMoreCategory = false;
       });
@@ -455,15 +509,16 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     final theme = Theme.of(context);
     final remoteConfig = context.read<RemoteConfigProvider>().config;
 
-    // Use Consumer to rebuild when NewsProvider changes
-    // The key on NewsFeedTabNew in IndexedStack ensures stable widget identity
-    return Consumer<NewsProvider>(
-      builder: (context, newsProvider, child) {
-        // Show shimmer while breaking news is loading initially
-        if (newsProvider.isLoading && newsProvider.breakingNews.isEmpty) {
+    // Rebuild only when feed-relevant NewsProvider fields change. Ad widgets
+    // manage their own setState; unrelated provider notifies must not rebuild
+    // the entire Today/category SliverList.
+    return Selector<NewsProvider, _HomeFeedProviderSlice>(
+      selector: (_, provider) => _HomeFeedProviderSlice.from(provider),
+      builder: (context, slice, _) {
+        final newsProvider = context.read<NewsProvider>();
+        if (slice.showInitialShimmer) {
           return const NewsFeedShimmer();
         }
-
         return _buildScaffold(context, theme, remoteConfig, newsProvider);
       },
     );
@@ -563,22 +618,44 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                 ],
               ),
             ),
-            // Category tabs - Dynamic from API
+            // Category tabs - Dynamic from API, filtered by user preferences
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SizedBox(
                 height: 36,
-                child: Builder(
-                  builder: (context) {
-                    // Build category list: "All" + dynamic categories from API
+                child: ValueListenableBuilder<int>(
+                  valueListenable: NewsFeedTabNew.preferredCategoriesRevision,
+                  builder: (context, _, __) {
+                    // Build category list: "All" + catalog filtered by user prefs
                     final apiCategories = newsProvider.categories;
+                    final preferredIds = _userPreferredCategoryIds();
+                    final visibleCategories = preferredIds == null
+                        ? apiCategories
+                        : apiCategories
+                            .where((cat) => preferredIds.contains(cat.id))
+                            .toList(growable: false);
+
                     final categoryNames = <String>['All'];
-                    for (final cat in apiCategories) {
+                    for (final cat in visibleCategories) {
                       // Capitalize first letter for display
                       final displayName = cat.name.isNotEmpty
                           ? cat.name[0].toUpperCase() + cat.name.substring(1)
                           : cat.name;
                       categoryNames.add(displayName);
+                    }
+
+                    // If the active chip was deselected, fall back to All.
+                    if (_selectedCategory != 'All' &&
+                        !categoryNames.contains(_selectedCategory)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        if (_selectedCategory == 'All' ||
+                            categoryNames.contains(_selectedCategory)) {
+                          return;
+                        }
+                        setState(() => _selectedCategory = 'All');
+                        _loadInitialTodayNews();
+                      });
                     }
 
                     return ListView.builder(
@@ -651,104 +728,90 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
             Expanded(
               child: RefreshIndicator(
                 key: const ValueKey('news_feed_refresh_indicator'),
-                onRefresh: () async {
-                  // Refresh breaking news + the active view for the selected date
-                  await newsProvider.fetchBreakingNews();
-                  if (!mounted) return;
-                  if (_selectedCategory == 'All') {
-                    await _loadInitialTodayNews(allowCacheFallback: false);
-                  } else {
-                    await _loadInitialCategoryNews(
-                      _selectedCategory.toLowerCase(),
-                      allowCacheFallback: false,
-                    );
-                  }
-                },
+                onRefresh: _refreshVisibleFeed,
                 child: CustomScrollView(
                   key: const PageStorageKey('news_feed_scroll_view'),
                   controller: _scrollController,
                   physics:
                       const AlwaysScrollableScrollPhysics(), // Required for RefreshIndicator
                   slivers: [
-                    // Section title - Breaking News (Centered)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Text(
-                          LocalizationHelper.breakingNews(context),
-                          style: FontManager.headline3.copyWith(
-                            color: const Color(0xFFE31E24),
-                            fontSize: 24,
+                    // Breaking News — toggle via Firebase Remote Config
+                    if (remoteConfig.breakingNewsEnabled) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            LocalizationHelper.breakingNews(context),
+                            style: FontManager.headline3.copyWith(
+                              color: const Color(0xFFE31E24),
+                              fontSize: 24,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                    // Breaking News CarouselSlider
-                    if (newsProvider.isLoading &&
-                        newsProvider.breakingNews.isEmpty)
-                      SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: 220,
-                          child: _buildBreakingNewsShimmer(theme),
-                        ),
-                      )
-                    else
-                      SliverToBoxAdapter(
-                        child: CarouselSlider.builder(
-                          itemCount: newsProvider.breakingNews.isNotEmpty
-                              ? newsProvider.breakingNews.length.clamp(
-                                  0,
-                                  10,
-                                ) // Limit to 10 on home page
-                              : widget.newsList.length.clamp(0, 10),
-                          itemBuilder: (context, index, realIndex) {
-                            final articles = newsProvider
-                                    .breakingNews.isNotEmpty
-                                ? newsProvider.breakingNews.take(10).toList()
-                                : widget.newsList
-                                    .take(10)
-                                    .map((e) => _mapToArticle(e))
-                                    .toList();
-                            final article = articles[index];
-                            return _buildBreakingNewsCard(
-                              context,
-                              article,
-                              remoteConfig,
-                              index,
-                              articles,
-                            );
-                          },
-                          options: CarouselOptions(
-                            height:
-                                220, // Reduced height for rectangular layout
-                            viewportFraction:
-                                0.90, // Increased for better visibility
-                            initialPage: 0,
-                            enableInfiniteScroll: false,
-                            reverse: false,
-                            autoPlay: false,
-                            enlargeCenterPage:
-                                false, // Disabled for rectangular cards
-                            onPageChanged: (index, reason) {
-                              // Optional: Handle page change
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                      if (newsProvider.isLoading &&
+                          newsProvider.breakingNews.isEmpty)
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: 220,
+                            child: _buildBreakingNewsShimmer(theme),
+                          ),
+                        )
+                      else
+                        // Breaking News CarouselSlider
+                        SliverToBoxAdapter(
+                          child: CarouselSlider.builder(
+                            itemCount: newsProvider.breakingNews.isNotEmpty
+                                ? newsProvider.breakingNews.length.clamp(
+                                    0,
+                                    10,
+                                  )
+                                : widget.newsList.length.clamp(0, 10),
+                            itemBuilder: (context, index, realIndex) {
+                              final articles = newsProvider
+                                      .breakingNews.isNotEmpty
+                                  ? newsProvider.breakingNews.take(10).toList()
+                                  : widget.newsList
+                                      .take(10)
+                                      .map((e) => _mapToArticle(e))
+                                      .toList();
+                              final article = articles[index];
+                              return _buildBreakingNewsCard(
+                                context,
+                                article,
+                                remoteConfig,
+                                index,
+                                articles,
+                              );
                             },
-                            scrollDirection: Axis.horizontal,
+                            options: CarouselOptions(
+                              height: 220,
+                              viewportFraction: 0.90,
+                              initialPage: 0,
+                              enableInfiniteScroll: false,
+                              reverse: false,
+                              autoPlay: false,
+                              enlargeCenterPage: false,
+                              onPageChanged: (index, reason) {},
+                              scrollDirection: Axis.horizontal,
+                            ),
                           ),
                         ),
-                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    ],
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                    // Dailyhunt-style banner between Breaking News and Today feed
+                    // Dailyhunt-style banner (stable key — survives pagination rebuilds)
                     if (_selectedCategory == 'All' &&
                         AdService().policy.enabled &&
                         AdService().policy.homeSectionBannerEnabled)
-                      const SliverToBoxAdapter(
-                        child: FeedSectionBannerAd(),
+                      SliverToBoxAdapter(
+                        child: FeedSectionBannerAd(
+                          key: _sectionBannerKey,
+                        ),
                       ),
 
                     // Heading - Category name or Date heading
@@ -770,7 +833,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                     // Category news or Today's news list items
                     if (_selectedCategory != 'All')
                       // Show category news when a category is selected
-                      if (newsProvider.isLoadingCategoryNews &&
+                      if ((newsProvider.isLoadingCategoryNews ||
+                              _isFabRefreshing) &&
                           _allCategoryNews.isEmpty)
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -838,14 +902,14 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                                     AdPlacementHelper.shouldShowInlineAds(
                                       AdService().policy,
                                     )) {
-                                return InlineFeedAd(
-                                  key: ValueKey(
-                                    'feed_ad_cat_${AdPlacementHelper.adSlotIndex(index)}',
-                                  ),
-                                  slotIndex:
-                                      AdPlacementHelper.adSlotIndex(index),
-                                  cacheKeyPrefix: 'inline_feed_cat',
-                                );
+                                  return InlineFeedAd(
+                                    key: ValueKey(
+                                      'feed_ad_cat_${AdPlacementHelper.adSlotIndex(index)}',
+                                    ),
+                                    slotIndex:
+                                        AdPlacementHelper.adSlotIndex(index),
+                                    cacheKeyPrefix: 'inline_feed_cat',
+                                  );
                                 }
 
                                 final articleIndex =
@@ -1003,7 +1067,8 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
                         )
                     else
                     // Show today's news when "All" is selected
-                    if (newsProvider.isLoadingToday && _allTodayNews.isEmpty)
+                    if ((newsProvider.isLoadingToday || _isFabRefreshing) &&
+                        _allTodayNews.isEmpty)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         sliver: SliverList(
@@ -1456,32 +1521,65 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
     );
   }
 
-  /// Build refresh button
-  Future<void> _refreshFeedFromFab() async {
+  /// Shared Home feed refresh (FAB + pull-to-refresh).
+  /// Scroll to top → clear visible list → shimmer → fetch page 1 → replace.
+  Future<void> _refreshVisibleFeed() async {
     if (_isFabRefreshing || !mounted) return;
 
-    setState(() => _isFabRefreshing = true);
+    final refreshingToday = _selectedCategory == 'All';
+    _feedDataGeneration++;
+
+    setState(() {
+      _isFabRefreshing = true;
+      if (refreshingToday) {
+        _allTodayNews = [];
+        _todayNewsPage = 1;
+        _hasMoreTodayNews = true;
+        _isLoadingMoreToday = false;
+      } else {
+        _allCategoryNews = [];
+        _categoryNewsPage = 1;
+        _hasMoreCategoryNews = true;
+        _isLoadingMoreCategory = false;
+      }
+    });
+
+    _scrollToTop();
+
     try {
       final newsProvider = context.read<NewsProvider>();
-      await newsProvider.fetchBreakingNews();
+      final remoteConfig = context.read<RemoteConfigProvider>().config;
+      if (remoteConfig.breakingNewsEnabled) {
+        await newsProvider.fetchBreakingNews(limit: 10, forceNetwork: true);
+      }
       if (!mounted) return;
 
-      if (_selectedCategory == 'All') {
-        await _loadInitialTodayNews(allowCacheFallback: false);
+      if (refreshingToday) {
+        await _loadInitialTodayNews(
+          allowCacheFallback: false,
+          forceNetwork: true,
+        );
       } else {
         await _loadInitialCategoryNews(
           _selectedCategory.toLowerCase(),
           allowCacheFallback: false,
+          forceNetwork: true,
         );
       }
+
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
     } catch (e) {
-      debugPrint('⚠️ FAB refresh failed: $e');
+      debugPrint('⚠️ Feed refresh failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isFabRefreshing = false);
       }
     }
   }
+
+  Future<void> _refreshFeedFromFab() => _refreshVisibleFeed();
 
   Widget _buildRefreshButton(
     BuildContext context,
@@ -2009,4 +2107,87 @@ class _NewsFeedTabNewState extends State<NewsFeedTabNew>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+/// Fields from [NewsProvider] that should rebuild the Home news feed UI.
+/// Used with [Selector] so unrelated provider notifies do not rebuild slivers.
+class _HomeFeedProviderSlice {
+  const _HomeFeedProviderSlice({
+    required this.showInitialShimmer,
+    required this.isLoading,
+    required this.isLoadingToday,
+    required this.isLoadingCategoryNews,
+    required this.hasRegionFilter,
+    required this.breakingCount,
+    required this.breakingHeadId,
+    required this.contentRevision,
+  });
+
+  factory _HomeFeedProviderSlice.from(NewsProvider provider) {
+    return _HomeFeedProviderSlice(
+      showInitialShimmer: provider.isLoading && provider.breakingNews.isEmpty,
+      isLoading: provider.isLoading,
+      isLoadingToday: provider.isLoadingToday,
+      isLoadingCategoryNews: provider.isLoadingCategoryNews,
+      hasRegionFilter: provider.hasRegionFilter,
+      breakingCount: provider.breakingNews.length,
+      breakingHeadId: provider.breakingNews.isEmpty
+          ? null
+          : (provider.breakingNews.first.articleId ??
+              provider.breakingNews.first.title),
+      contentRevision: Object.hash(
+        provider.todayNews.length,
+        provider.categoryNews.length,
+        Object.hashAll(
+          provider.todayNews.map(
+            (a) => Object.hash(a.articleId, a.isBookmarked),
+          ),
+        ),
+        Object.hashAll(
+          provider.categoryNews.map(
+            (a) => Object.hash(a.articleId, a.isBookmarked),
+          ),
+        ),
+        Object.hashAll(
+          provider.breakingNews.map(
+            (a) => Object.hash(a.articleId, a.isBookmarked),
+          ),
+        ),
+      ),
+    );
+  }
+
+  final bool showInitialShimmer;
+  final bool isLoading;
+  final bool isLoadingToday;
+  final bool isLoadingCategoryNews;
+  final bool hasRegionFilter;
+  final int breakingCount;
+  final String? breakingHeadId;
+  final int contentRevision;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _HomeFeedProviderSlice &&
+        showInitialShimmer == other.showInitialShimmer &&
+        isLoading == other.isLoading &&
+        isLoadingToday == other.isLoadingToday &&
+        isLoadingCategoryNews == other.isLoadingCategoryNews &&
+        hasRegionFilter == other.hasRegionFilter &&
+        breakingCount == other.breakingCount &&
+        breakingHeadId == other.breakingHeadId &&
+        contentRevision == other.contentRevision;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        showInitialShimmer,
+        isLoading,
+        isLoadingToday,
+        isLoadingCategoryNews,
+        hasRegionFilter,
+        breakingCount,
+        breakingHeadId,
+        contentRevision,
+      );
 }

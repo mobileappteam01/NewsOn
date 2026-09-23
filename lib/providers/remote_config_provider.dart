@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../core/utils/voice_features.dart';
 import '../data/models/remote_config_model.dart';
 import '../data/services/news_image_cache_service.dart';
@@ -10,9 +10,23 @@ import '../data/services/storage_service.dart';
 
 /// Provider for managing Remote Config state
 class RemoteConfigProvider extends ChangeNotifier {
-  final RemoteConfigService _remoteConfigService = RemoteConfigService();
+  RemoteConfigService? _remoteConfigService;
   RemoteConfigModel _config = RemoteConfigModel();
   bool _isInitialized = false;
+  final bool _firebaseDisabled;
+
+  RemoteConfigProvider() : _firebaseDisabled = false;
+
+  /// Test-only: seed config without touching Firebase Remote Config.
+  @visibleForTesting
+  RemoteConfigProvider.forTest(RemoteConfigModel config)
+      : _firebaseDisabled = true {
+    _applyConfig(config);
+    _isInitialized = true;
+  }
+
+  RemoteConfigService get _service =>
+      _remoteConfigService ??= RemoteConfigService();
 
   RemoteConfigModel get config => _config;
   bool get isInitialized => _isInitialized;
@@ -39,6 +53,7 @@ class RemoteConfigProvider extends ChangeNotifier {
   /// Initialize Remote Config
   /// Loads cached data immediately, then tries to fetch new data
   Future<void> initialize() async {
+    if (_firebaseDisabled) return;
     try {
       // Step 1: Try to load cached config first for immediate UI update
       try {
@@ -68,8 +83,8 @@ class RemoteConfigProvider extends ChangeNotifier {
       }
 
       // Step 2: Try to initialize and fetch new data (works offline with Firebase defaults)
-      await _remoteConfigService.initialize();
-      _applyConfig(_remoteConfigService.getConfig());
+      await _service.initialize();
+      _applyConfig(_service.getConfig());
       _isInitialized = true;
       unawaited(NewsImageCacheService.instance.prefetchRemoteConfig(_config));
       notifyListeners(); // Notify again with fresh data (if fetched) or defaults
@@ -95,14 +110,15 @@ class RemoteConfigProvider extends ChangeNotifier {
 
   /// Fetch and update config
   Future<void> fetchAndUpdate() async {
+    if (_firebaseDisabled) return;
     try {
-      final updated = await _remoteConfigService.fetchConfig();
+      final updated = await _service.fetchConfig();
       if (updated) {
-        _applyConfig(_remoteConfigService.getConfig());
+        _applyConfig(_service.getConfig());
         notifyListeners();
       }
     } catch (e) {
-      print('Error fetching config: $e');
+      debugPrint('Error fetching config: $e');
     }
   }
 
@@ -113,15 +129,24 @@ class RemoteConfigProvider extends ChangeNotifier {
 
   /// Force refresh config (bypasses minimum fetch interval)
   Future<void> forceRefresh() async {
+    if (_firebaseDisabled) return;
     try {
-      final updated = await _remoteConfigService.forceFetchConfig();
+      final updated = await _service.forceFetchConfig();
       if (updated) {
-        _applyConfig(_remoteConfigService.getConfig());
+        _applyConfig(_service.getConfig());
         notifyListeners();
-        print('✅ UI updated with new Remote Config values');
+        debugPrint('✅ UI updated with new Remote Config values');
       }
     } catch (e) {
-      print('❌ Error force refreshing config: $e');
+      debugPrint('❌ Error force refreshing config: $e');
     }
+  }
+
+  /// Test-only: inject a config snapshot without Firebase.
+  @visibleForTesting
+  void debugOverrideConfig(RemoteConfigModel config) {
+    _applyConfig(config);
+    _isInitialized = true;
+    notifyListeners();
   }
 }

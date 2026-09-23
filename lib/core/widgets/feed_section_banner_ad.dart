@@ -9,10 +9,16 @@ import 'dailyhunt_ad_frame.dart';
 import 'live_banner_ad_cache.dart';
 
 /// Full-width banner between Breaking News and Today News (Dailyhunt-style).
+///
+/// Uses a fixed reserved height so pagination / feed rebuilds do not jump the
+/// Today News list under the banner.
 class FeedSectionBannerAd extends StatefulWidget {
   const FeedSectionBannerAd({super.key});
 
   static const String cacheId = 'home_section_banner_ad';
+
+  /// Stable reserved height (adaptive banners typically land near this).
+  static const double reservedHeight = 100;
 
   @override
   State<FeedSectionBannerAd> createState() => _FeedSectionBannerAdState();
@@ -27,9 +33,8 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
   int _retryCount = 0;
   int _noFillRetries = 0;
 
-  static const int _maxRetries = 6;
-  static const int _maxNoFillRetries = 4;
-  static const double _loadingHeight = 90;
+  static const int _maxRetries = 3;
+  static const int _maxNoFillRetries = 2;
 
   @override
   bool get wantKeepAlive => true;
@@ -41,7 +46,8 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
   }
 
   Future<void> _bootstrap() async {
-    final adopted = LiveBannerAdCache.instance.adopt(FeedSectionBannerAd.cacheId);
+    final adopted =
+        LiveBannerAdCache.instance.adopt(FeedSectionBannerAd.cacheId);
     if (adopted != null && mounted) {
       setState(() {
         _bannerAd = adopted.ad;
@@ -73,7 +79,7 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
     setState(() => _isLoading = true);
 
     try {
-      await adService.runExclusiveBannerLoad(() async {
+      unawaited(adService.runExclusiveBannerLoad(() async {
         if (!mounted || _gaveUp) return;
 
         final widthPx = MediaQuery.sizeOf(context).width.truncate();
@@ -157,11 +163,11 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
         await banner.load();
         if (!completer.isCompleted) {
           await completer.future.timeout(
-            const Duration(seconds: 25),
+            const Duration(seconds: 12),
             onTimeout: () {},
           );
         }
-      });
+      }));
     } catch (e) {
       debugPrint('❌ Home section banner load error: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -170,8 +176,8 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
 
   void _scheduleRetry({required bool isNoFill}) {
     final delay = isNoFill
-        ? Duration(milliseconds: 2500 + _noFillRetries * 1500)
-        : Duration(milliseconds: 1200 + _retryCount * 800);
+        ? Duration(milliseconds: 2000 + _noFillRetries * 1000)
+        : Duration(milliseconds: 1000 + _retryCount * 600);
     Future.delayed(delay, () {
       if (mounted && !_gaveUp && _bannerAd == null) _startLoad();
     });
@@ -189,40 +195,38 @@ class _FeedSectionBannerAdState extends State<FeedSectionBannerAd>
   Widget build(BuildContext context) {
     super.build(context);
     final policy = AdService().policy;
+    // Ads / section banner disabled — no reserved slot.
     if (!policy.enabled || !policy.homeSectionBannerEnabled) {
       return const SizedBox.shrink();
     }
-    if (_gaveUp && _bannerAd == null) return const SizedBox.shrink();
 
-    if (_bannerAd != null && _adSize != null) {
-      return DailyhuntAdFrame(
-        margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-        child: Center(
-          child: SizedBox(
-            width: _adSize!.width.toDouble(),
-            height: _adSize!.height.toDouble(),
-            child: AdWidget(ad: _bannerAd!),
-          ),
-        ),
-      );
-    }
-
-    if (_isLoading) {
-      return DailyhuntAdFrame(
-        margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-        child: SizedBox(
-          height: _loadingHeight,
-          child: const Center(
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
+    return DailyhuntAdFrame(
+      margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+      child: SizedBox(
+        width: double.infinity,
+        height: FeedSectionBannerAd.reservedHeight,
+        child: _bannerAd != null && _adSize != null
+            ? Center(
+                child: SizedBox(
+                  width: _adSize!.width.toDouble(),
+                  height: _adSize!.height
+                      .toDouble()
+                      .clamp(0, FeedSectionBannerAd.reservedHeight),
+                  child: AdWidget(ad: _bannerAd!),
+                ),
+              )
+            // Loading OR permanent failure: keep reserved height so Today
+            // news below never jumps. Spinner only while still trying.
+            : _gaveUp
+                ? const SizedBox.expand()
+                : const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+      ),
+    );
   }
 }

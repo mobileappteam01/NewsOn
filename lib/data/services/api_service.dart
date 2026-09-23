@@ -22,6 +22,22 @@ class ApiService {
     _initializeDio();
   }
 
+  /// Log-safe header map: never includes Authorization / Bearer values.
+  static Map<String, String> headersForLog(Map<String, String> headers) {
+    final out = <String, String>{};
+    for (final e in headers.entries) {
+      final key = e.key.toLowerCase();
+      if (key == 'authorization' || key == 'proxy-authorization') {
+        out[e.key] = e.value.trim().isEmpty
+            ? '(empty)'
+            : 'Bearer token added to request';
+      } else {
+        out[e.key] = e.value;
+      }
+    }
+    return out;
+  }
+
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -826,7 +842,7 @@ class ApiService {
       final finalHeaders = <String, String>{};
       if (headers != null) {
         finalHeaders.addAll(headers);
-        debugPrint('📋 Custom headers added: $headers');
+        debugPrint('📋 Custom headers added: ${headersForLog(headers)}');
       }
       if (bearerToken != null && bearerToken.isNotEmpty) {
         finalHeaders['Authorization'] = 'Bearer $bearerToken';
@@ -886,7 +902,7 @@ class ApiService {
       // Log the final URL that will be used
       debugPrint('🌐 Final DELETE URL: $finalUrl');
 
-      debugPrint('📤 Final DELETE headers: $finalHeaders');
+      debugPrint('📤 Final DELETE headers: ${headersForLog(finalHeaders)}');
       if (pathParameters != null) {
         debugPrint('📤 Path parameters: $pathParameters');
       }

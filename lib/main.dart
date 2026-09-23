@@ -15,6 +15,7 @@ import 'data/services/storage_service.dart';
 import 'data/services/api_service.dart';
 import 'data/services/user_service.dart';
 import 'data/services/fcm_service.dart';
+import 'features/notifications/data/notification_service.dart';
 import 'providers/news_provider.dart';
 import 'providers/bookmark_provider.dart';
 import 'providers/tts_provider.dart';
@@ -53,11 +54,14 @@ NewsProvider? _globalNewsProvider;
 
 Future<void> _warmOfflineMediaCaches() async {
   try {
+    // Small caps only — leave bandwidth for visible feed thumbs / ads / API.
     await NewsImageCacheService.instance.prefetchArticles(
       StorageService.getBreakingNewsCache(),
+      maxArticles: 4,
     );
     await NewsImageCacheService.instance.prefetchArticles(
       StorageService.getTodayNewsCache(),
+      maxArticles: 4,
     );
     final cachedConfig = StorageService.getRemoteConfigCache();
     if (cachedConfig != null) {
@@ -109,10 +113,12 @@ void main() async {
   );
 
   // Heavy / network work AFTER first frame so users never stare at a blank window.
-  unawaited(_bootstrapAfterFirstFrame(
-    remoteConfigProvider: remoteConfigProvider,
-    networkService: networkService,
-  ));
+  unawaited(
+    _bootstrapAfterFirstFrame(
+      remoteConfigProvider: remoteConfigProvider,
+      networkService: networkService,
+    ),
+  );
 }
 
 Future<void> _bootstrapAfterFirstFrame({
@@ -164,21 +170,35 @@ Future<void> _bootstrapAfterFirstFrame({
     ]);
 
     unawaited(
-      AdService().initialize().then((_) async {
-        await AdService().ensureMobileAdsReady();
-      }).catchError((e) {
-        debugPrint('❌ Ad Service: $e');
-      }),
+      AdService()
+          .initialize()
+          .then((_) async {
+            await AdService().ensureMobileAdsReady();
+          })
+          .catchError((e) {
+            debugPrint('❌ Ad Service: $e');
+          }),
     );
 
     unawaited(
-      FcmService().getToken().then((fcmToken) {
-        if (fcmToken != null) {
-          debugPrint('✅ FCM Token initialized: $fcmToken');
-        }
-      }).catchError((e) {
-        debugPrint('❌ FCM Service: $e');
-      }),
+      FcmService()
+          .getToken()
+          .then((fcmToken) {
+            if (fcmToken != null) {
+              debugPrint('✅ FCM Token initialized (len=${fcmToken.length})');
+            }
+          })
+          .catchError((e) {
+            debugPrint('❌ FCM Service: $e');
+          }),
+    );
+
+    unawaited(
+      V2NotificationService.instance
+          .initialize(config: remoteConfigProvider.config)
+          .catchError((e) {
+            debugPrint('⚠️ V2NotificationService init: $e');
+          }),
     );
 
     if (remoteConfigProvider.isVoiceFeaturesEnabled) {
@@ -189,11 +209,11 @@ Future<void> _bootstrapAfterFirstFrame({
         }),
       );
       unawaited(
-        NewsAudioCacheService.instance
-            .prefetchAllStoredNewsCaches()
-            .catchError((e) {
-          debugPrint('⚠️ News audio cache prefetch at startup: $e');
-        }),
+        NewsAudioCacheService.instance.prefetchAllStoredNewsCaches().catchError(
+          (e) {
+            debugPrint('⚠️ News audio cache prefetch at startup: $e');
+          },
+        ),
       );
     }
 
@@ -216,6 +236,7 @@ Future<void> _bootstrapAfterFirstFrame({
   } finally {
     AppBootstrap.markReady();
     DeepLinkService.instance.processPendingLink();
+    V2NotificationService.instance.processPendingOpen();
     debugPrint('✅ App bootstrap ready');
   }
 }
@@ -277,8 +298,9 @@ class NewsOnApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) {
             final provider = AudioPlayerProvider(
-              elevenLabsApiKey:
-                  elevenLabsAPIKey.isNotEmpty ? elevenLabsAPIKey : null,
+              elevenLabsApiKey: elevenLabsAPIKey.isNotEmpty
+                  ? elevenLabsAPIKey
+                  : null,
             );
             _globalAudioPlayerProvider = provider;
             return provider;
@@ -288,75 +310,93 @@ class NewsOnApp extends StatelessWidget {
       child: _DeepLinkBridge(
         child: _VoiceFeaturesBridge(
           child: _CompletedNewsBridge(
-            child: Consumer4<ThemeProvider, LanguageProvider,
-                DynamicLanguageProvider, RemoteConfigProvider>(
-              builder: (
-                context,
-                themeProvider,
-                languageProvider,
-                dynamicLanguageProvider,
-                configProvider,
-                child,
-              ) {
-                // Prefer dynamic provider code once initialized so ml/te/kn stay in sync
-                final requestedLocale = dynamicLanguageProvider.isInitialized
-                    ? dynamicLanguageProvider.locale
-                    : languageProvider.locale;
+            child:
+                Consumer4<
+                  ThemeProvider,
+                  LanguageProvider,
+                  DynamicLanguageProvider,
+                  RemoteConfigProvider
+                >(
+                  builder:
+                      (
+                        context,
+                        themeProvider,
+                        languageProvider,
+                        dynamicLanguageProvider,
+                        configProvider,
+                        child,
+                      ) {
+                        // Prefer dynamic provider code once initialized so ml/te/kn stay in sync
+                        final requestedLocale =
+                            dynamicLanguageProvider.isInitialized
+                            ? dynamicLanguageProvider.locale
+                            : languageProvider.locale;
 
-                final isArbSupported = AppLocalizations.supportedLocales.any(
-                  (l) => l.languageCode == requestedLocale.languageCode,
-                );
-                // Non-ARB languages (ml/te/kn) still need a valid MaterialApp locale;
-                // strings come from DynamicLocalizationService via LocalizationHelper.
-                final effectiveLocale =
-                    isArbSupported ? requestedLocale : const Locale('en');
+                        final isArbSupported = AppLocalizations.supportedLocales
+                            .any(
+                              (l) =>
+                                  l.languageCode ==
+                                  requestedLocale.languageCode,
+                            );
+                        // Non-ARB languages (ml/te/kn) still need a valid MaterialApp locale;
+                        // strings come from DynamicLocalizationService via LocalizationHelper.
+                        final effectiveLocale = isArbSupported
+                            ? requestedLocale
+                            : const Locale('en');
 
-                // Include all known UI languages so locale resolution stays stable.
-                final supportedLocales = <Locale>{
-                  ...AppLocalizations.supportedLocales,
-                  ...languageProvider.supportedLocales,
-                  if (dynamicLanguageProvider.isInitialized)
-                    ...dynamicLanguageProvider.supportedLocales,
-                }.toList();
+                        // Include all known UI languages so locale resolution stays stable.
+                        final supportedLocales = <Locale>{
+                          ...AppLocalizations.supportedLocales,
+                          ...languageProvider.supportedLocales,
+                          if (dynamicLanguageProvider.isInitialized)
+                            ...dynamicLanguageProvider.supportedLocales,
+                        }.toList();
 
-                final isDarkApp = themeProvider.themeMode == ThemeMode.dark ||
-                    (themeProvider.themeMode == ThemeMode.system &&
-                        WidgetsBinding.instance.platformDispatcher
-                                .platformBrightness ==
-                            Brightness.dark);
+                        final isDarkApp =
+                            themeProvider.themeMode == ThemeMode.dark ||
+                            (themeProvider.themeMode == ThemeMode.system &&
+                                WidgetsBinding
+                                        .instance
+                                        .platformDispatcher
+                                        .platformBrightness ==
+                                    Brightness.dark);
 
-                return MaterialApp(
-                  navigatorKey: appNavigatorKey,
-                  title: configProvider.config.appName,
-                  debugShowCheckedModeBanner: false,
-                  // Avoid a black/empty window behind the first Flutter frame.
-                  color: isDarkApp ? const Color(0xFF121212) : Colors.white,
-                  theme: AppTheme.getLightTheme(configProvider.config),
-                  darkTheme: AppTheme.getDarkTheme(configProvider.config),
-                  themeMode: themeProvider.themeMode,
-                  locale: effectiveLocale,
-                  localizationsDelegates: const [
-                    AppLocalizations.delegate,
-                    GlobalMaterialLocalizations.delegate,
-                    GlobalWidgetsLocalizations.delegate,
-                    GlobalCupertinoLocalizations.delegate,
-                  ],
-                  supportedLocales: supportedLocales,
-                  localeResolutionCallback: (locale, supportedLocales) {
-                    if (locale != null) {
-                      for (final supportedLocale in supportedLocales) {
-                        if (supportedLocale.languageCode ==
-                            locale.languageCode) {
-                          return supportedLocale;
-                        }
-                      }
-                    }
-                    return const Locale('en');
-                  },
-                  home: const SplashScreen(),
-                );
-              },
-            ),
+                        return MaterialApp(
+                          navigatorKey: appNavigatorKey,
+                          title: configProvider.config.appName,
+                          debugShowCheckedModeBanner: false,
+                          // Avoid a black/empty window behind the first Flutter frame.
+                          color: isDarkApp
+                              ? const Color(0xFF121212)
+                              : Colors.white,
+                          theme: AppTheme.getLightTheme(configProvider.config),
+                          darkTheme: AppTheme.getDarkTheme(
+                            configProvider.config,
+                          ),
+                          themeMode: themeProvider.themeMode,
+                          locale: effectiveLocale,
+                          localizationsDelegates: const [
+                            AppLocalizations.delegate,
+                            GlobalMaterialLocalizations.delegate,
+                            GlobalWidgetsLocalizations.delegate,
+                            GlobalCupertinoLocalizations.delegate,
+                          ],
+                          supportedLocales: supportedLocales,
+                          localeResolutionCallback: (locale, supportedLocales) {
+                            if (locale != null) {
+                              for (final supportedLocale in supportedLocales) {
+                                if (supportedLocale.languageCode ==
+                                    locale.languageCode) {
+                                  return supportedLocale;
+                                }
+                              }
+                            }
+                            return const Locale('en');
+                          },
+                          home: const SplashScreen(),
+                        );
+                      },
+                ),
           ),
         ),
       ),
@@ -465,7 +505,8 @@ class _CompletedNewsBridgeState extends State<_CompletedNewsBridge> {
         completed.markNewsCompleted(newsId, category);
       };
       debugPrint(
-          '🔄 [CompletedNewsBridge] setup done userId=${completed.userId ?? "null"}');
+        '🔄 [CompletedNewsBridge] setup done userId=${completed.userId ?? "null"}',
+      );
     });
   }
 
@@ -488,6 +529,13 @@ Future<void> fetchAllDBData() async {
   if (results[0] != null) {
     baseURL = results[0].toString();
     ApiService().applyKnownBaseUrl(baseURL);
+  }
+  // Staging/local override wins without changing Firebase production ipAddress.
+  const stagingBase = String.fromEnvironment('NEWSON_API_BASE_URL');
+  if (stagingBase.trim().isNotEmpty) {
+    baseURL = stagingBase.trim();
+    ApiService().applyKnownBaseUrl(baseURL);
+    debugPrint('✅ Using NEWSON_API_BASE_URL override: $baseURL');
   }
   if (results[1] != null) newsAPIKey = results[1].toString();
 

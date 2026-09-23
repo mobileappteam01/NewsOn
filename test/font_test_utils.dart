@@ -24,9 +24,17 @@ class FontTestUtils {
   }
 
   /// Verify that a Text widget uses the custom font
+  /// Production FontManager styles use GoogleFonts.openSans (family OpenSans*).
+  /// applyCustomFont / .crassula still set the registered Crassula asset family.
+  static bool isProductionUiFont(String? family) {
+    if (family == null) return false;
+    final f = family.toLowerCase();
+    return f.startsWith('opensans') || f == 'crassula';
+  }
+
   static bool usesCustomFont(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula';
+    return isProductionUiFont(style.fontFamily);
   }
 
   /// Verify that a Text widget uses the expected font weight
@@ -51,6 +59,17 @@ class FontTestUtils {
       }
       return widget.data?.contains(content) ?? false;
     }).toList();
+  }
+
+  /// Like [findTextWidgetsByContent] but asserts at least one match.
+  static Text requireTextWidgetByContent(WidgetTester tester, String content) {
+    final matches = findTextWidgetsByContent(tester, content);
+    expect(
+      matches,
+      isNotEmpty,
+      reason: 'Expected a Text widget containing "$content"',
+    );
+    return matches.first;
   }
 
   /// Find Text widgets using custom font
@@ -114,21 +133,21 @@ class FontTestUtils {
   /// Verify news-specific font styles
   static bool usesNewsTitleStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            style.fontWeight == FontWeight.bold &&
            (style.fontSize == 20 || style.fontSize == null); // null uses default
   }
 
   static bool usesNewsCategoryStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            style.fontWeight == FontWeight.w500 &&
            (style.fontSize == 12 || style.fontSize == null);
   }
 
   static bool usesNewsTimestampStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            style.fontWeight == FontWeight.w400 &&
            (style.fontSize == 11 || style.fontSize == null);
   }
@@ -136,21 +155,21 @@ class FontTestUtils {
   /// Verify heading styles
   static bool usesHeadlineStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            style.fontWeight == FontWeight.bold &&
            (style.fontSize != null && style.fontSize! >= 24);
   }
 
   static bool usesTitleStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            (style.fontWeight == FontWeight.w600 || style.fontWeight == FontWeight.w500) &&
            (style.fontSize != null && style.fontSize! >= 16 && style.fontSize! <= 20);
   }
 
   static bool usesBodyStyle(Text textWidget) {
     final style = textWidget.style ?? const TextStyle();
-    return style.fontFamily == 'Crassula' &&
+    return isProductionUiFont(style.fontFamily) &&
            style.fontWeight == FontWeight.w400 &&
            (style.fontSize != null && style.fontSize! >= 12 && style.fontSize! <= 16);
   }
@@ -161,7 +180,7 @@ class FontMatchers {
   /// Matcher for custom font family
   static Matcher usesCustomFont() => predicate(
     (Text widget) => FontTestUtils.usesCustomFont(widget),
-    'uses custom Crassula font',
+    'uses production UI font (OpenSans/Crassula)',
   );
 
   /// Matcher for specific font weight
@@ -216,12 +235,14 @@ class FontMatchers {
 /// Font test helper widget for testing
 class FontTestWidget extends StatelessWidget {
   final Widget child;
-  
-  const FontTestWidget({super.key, required this.child});
+  final ThemeData? theme;
+
+  const FontTestWidget({super.key, required this.child, this.theme});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: theme,
       home: Scaffold(
         body: child,
       ),

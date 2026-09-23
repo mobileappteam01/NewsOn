@@ -37,7 +37,7 @@ android {
         namespace = "com.app.newson"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -70,6 +70,8 @@ flutter {
 }
 
 dependencies {
+    // Android 12+ SplashScreen API (required for branded system splash on Pixel).
+    implementation("androidx.core:core-splashscreen:1.0.1")
     // Helps AdMob banners use a stable system WebView (minSdk-friendly).
     // Do not add androidx.javascriptengine — it requires minSdk 26.
     implementation("androidx.webkit:webkit:1.12.1")

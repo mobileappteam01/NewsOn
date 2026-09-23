@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Solid fill only — logo is drawn by Flutter splash (correctly sized). -->
+<!-- Matches Flutter dark splash background so Android → Flutter handoff is seamless. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/black" />
+    <item android:drawable="@color/splash_background_dark" />
 </layer-list>

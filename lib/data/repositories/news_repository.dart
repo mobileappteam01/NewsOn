@@ -14,7 +14,13 @@ void _scheduleNewsAudioPrefetch(List<NewsArticle> articles) {
 }
 
 void _scheduleNewsImagePrefetch(List<NewsArticle> articles) {
-  unawaited(NewsImageCacheService.instance.prefetchArticles(articles));
+  // Near-visible warm only — do not stampede the full page-1 image set.
+  unawaited(
+    NewsImageCacheService.instance.prefetchArticles(
+      articles,
+      maxArticles: 5,
+    ),
+  );
 }
 
 List<NewsArticle> _withBookmarkFlags(List<NewsArticle> articles) {

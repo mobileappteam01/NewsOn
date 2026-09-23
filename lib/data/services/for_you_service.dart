@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/for_you_response.dart';
-import '../models/news_article.dart';
-import '../models/news_response.dart';
-import 'api_service.dart';
-import 'user_service.dart';
+import '../../../data/models/for_you_response.dart';
+import '../../../data/models/news_article.dart';
+import '../../../data/models/news_response.dart';
+import '../../../data/services/api_service.dart';
+import '../../../data/services/user_service.dart';
 
 /// Fetches personalized For You feed from backend (Firestore endpoint: news/forYou).
+///
+/// V1 path — preserved for V1 `ForYouProvider` / `ForYouTab`.
+/// V2 feed uses [V2ForYouApi] via `ForYouRepository`.
 class ForYouService {
   static final ForYouService _instance = ForYouService._internal();
   factory ForYouService() => _instance;

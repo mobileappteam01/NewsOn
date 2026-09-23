@@ -1,3 +1,6 @@
+@Tags(['integration', 'platform'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newson/data/services/background_music_service.dart';
 

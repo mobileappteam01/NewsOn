@@ -51,6 +51,30 @@ class StorageService {
     await _bookmarksBox!.delete(key);
   }
 
+  /// Remove by all known identity keys (newsId / articleId / title).
+  static Future<void> removeBookmarkForArticle(NewsArticle article) async {
+    if (_bookmarksBox == null) await initialize();
+    final keys = <String>{
+      if (article.newsId != null && article.newsId!.trim().isNotEmpty)
+        article.newsId!.trim(),
+      if (article.articleId != null && article.articleId!.trim().isNotEmpty)
+        article.articleId!.trim(),
+      if (article.title.trim().isNotEmpty) article.title.trim(),
+    };
+    for (final key in keys) {
+      await _bookmarksBox!.delete(key);
+    }
+  }
+
+  /// Replace Hive bookmark box with the authoritative server list.
+  static Future<void> replaceAllBookmarks(List<NewsArticle> bookmarks) async {
+    if (_bookmarksBox == null) await initialize();
+    await _bookmarksBox!.clear();
+    for (final article in bookmarks) {
+      await addBookmark(article);
+    }
+  }
+
   /// Check if article is bookmarked
   static bool isBookmarked(String key) {
     if (_bookmarksBox == null) return false;
@@ -103,8 +127,8 @@ class StorageService {
 
   /// Get language preference (app UI language)
   static String getLanguage() {
-    if (_settingsBox == null) return 'ta';
-    return _settingsBox!.get(AppConstants.languageKey, defaultValue: 'ta');
+    if (_settingsBox == null) return 'en';
+    return _settingsBox!.get(AppConstants.languageKey, defaultValue: 'en');
   }
 
   /// Save news language preference (language of news content only)
@@ -207,7 +231,8 @@ class StorageService {
   /// Get news reading mode preference
   static String getNewsReadingMode() {
     if (_settingsBox == null) {
-      debugPrint('⚠️ StorageService: Settings box is null, returning default reading mode: ${AppConstants.defaultReadingMode}');
+      debugPrint(
+          '⚠️ StorageService: Settings box is null, returning default reading mode: ${AppConstants.defaultReadingMode}');
       return AppConstants.defaultReadingMode;
     }
     final mode = _settingsBox!.get(
@@ -412,7 +437,8 @@ class StorageService {
     return null;
   }
 
-  static Future<void> saveCategoriesCache(List<CategoryModel> categories) async {
+  static Future<void> saveCategoriesCache(
+      List<CategoryModel> categories) async {
     if (_settingsBox == null) await initialize();
     try {
       final jsonList = categories.map((c) => c.toJson()).toList();
@@ -456,7 +482,8 @@ class StorageService {
     if (_settingsBox == null) await initialize();
     try {
       final jsonString = jsonEncode(data);
-      await _settingsBox!.put('${AppConstants.realtimeDbCacheKey}_$key', jsonString);
+      await _settingsBox!
+          .put('${AppConstants.realtimeDbCacheKey}_$key', jsonString);
       debugPrint('💾 Realtime DB data cached for key: $key');
     } catch (e) {
       debugPrint('❌ Error saving Realtime DB cache: $e');
@@ -467,8 +494,8 @@ class StorageService {
   static dynamic getRealtimeDbCache(String key) {
     if (_settingsBox == null) return null;
     try {
-      final jsonString =
-          _settingsBox!.get('${AppConstants.realtimeDbCacheKey}_$key') as String?;
+      final jsonString = _settingsBox!
+          .get('${AppConstants.realtimeDbCacheKey}_$key') as String?;
       if (jsonString != null) {
         return jsonDecode(jsonString);
       }
@@ -545,6 +572,38 @@ class StorageService {
       debugPrint('❌ Error loading API endpoints cache: $e');
     }
     return {};
+  }
+
+  // ==================== V2 API Config Cache ====================
+
+  /// Persist isolated V2 host config JSON (`baseUrl`, `enabled`).
+  static Future<void> saveV2ApiConfigCache(Map<String, dynamic> json) async {
+    if (_settingsBox == null) await initialize();
+    try {
+      await _settingsBox!.put(
+        AppConstants.v2ApiConfigCacheKey,
+        jsonEncode(json),
+      );
+      debugPrint('💾 V2 API config cached');
+    } catch (e) {
+      debugPrint('❌ Error saving V2 API config cache: $e');
+    }
+  }
+
+  /// Load cached V2 host config map, or null.
+  static Map<String, dynamic>? getV2ApiConfigCache() {
+    if (_settingsBox == null) return null;
+    try {
+      final jsonString =
+          _settingsBox!.get(AppConstants.v2ApiConfigCacheKey) as String?;
+      if (jsonString == null || jsonString.isEmpty) return null;
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) return null;
+      return Map<String, dynamic>.from(decoded);
+    } catch (e) {
+      debugPrint('❌ Error loading V2 API config cache: $e');
+    }
+    return null;
   }
 
   // ==================== Cleanup ====================

@@ -105,10 +105,12 @@ class UserService {
     }
   }
 
-  /// Get authentication token
+  /// Get authentication token.
+  /// Never logs the token value (security).
   String? getToken() {
-    debugPrint('🔐 Token: $_token');
-    return _token;
+    final t = _token;
+    debugPrint('🔐 Auth token present=${t != null && t.isNotEmpty}');
+    return t;
   }
 
   /// Get user data

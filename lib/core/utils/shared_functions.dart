@@ -60,24 +60,33 @@ const String kNewsOnLogoAsset = 'assets/images/newson.png';
 const String kNewsOnDarkLogoAsset = 'assets/images/News_on_dark_mode.png';
 
 /// Branded fallback shown instead of a broken/gallery icon for news images.
+/// Uses the light or dark NewsOn logo based on the active [Theme] brightness.
 Widget newsOnImageFallback({double? width, double? height}) {
-  return Container(
-    width: width ?? double.infinity,
-    height: height ?? 250,
-    color: Colors.grey.shade100,
-    alignment: Alignment.center,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Image.asset(
-        kNewsOnLogoAsset,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => Icon(
-          Icons.image_not_supported,
-          color: Colors.grey.shade400,
-          size: 40,
+  return Builder(
+    builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final logoAsset =
+          isDark ? kNewsOnDarkLogoAsset : kNewsOnLogoAsset;
+
+      return Container(
+        width: width ?? double.infinity,
+        height: height ?? 250,
+        color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Image.asset(
+            logoAsset,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Icon(
+              Icons.image_not_supported,
+              color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+              size: 40,
+            ),
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 

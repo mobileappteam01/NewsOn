@@ -5,6 +5,7 @@ import '../../../data/models/news_article.dart';
 import '../../../data/models/region_model.dart';
 import '../../../data/services/v2_api_config_service.dart';
 import '../../for_you/data/for_you_repository.dart';
+import '../../news/domain/news_summary.dart';
 
 enum V2ReaderStatus { idle, loading, ready, empty, error }
 
@@ -62,6 +63,8 @@ class V2ReaderController extends ChangeNotifier {
     V2ApiConfigService? configService,
   })  : _repository = repository ?? ForYouRepository(),
         _config = configService ?? V2ApiConfigService.instance;
+
+  static const int pageSize = 20;
 
   final ForYouRepository _repository;
   final V2ApiConfigService _config;
@@ -122,7 +125,7 @@ class V2ReaderController extends ChangeNotifier {
     fetchAttempts++;
     final page = await _repository.fetchPage(
       page: 1,
-      limit: 20,
+      limit: pageSize,
       newsLanguageCode: newsLanguageCode(),
       appliedRegion: appliedRegion(),
       // Reader is V2-only — never paint V1 cold-start as the home feed.
@@ -137,7 +140,7 @@ class V2ReaderController extends ChangeNotifier {
     } else {
       _state = _state.copyWith(
         status: V2ReaderStatus.ready,
-        articles: page.articles,
+        articles: _dedupeAppend(const [], page.articles),
         hasMore: page.hasMore,
         page: page.page,
         index: 0,
@@ -163,7 +166,7 @@ class V2ReaderController extends ChangeNotifier {
     }
     _state = _state.copyWith(index: _state.index + 1);
     notifyListeners();
-    if (_state.index >= _state.articles.length - 3 && _state.hasMore) {
+    if (_state.index >= _state.articles.length - 5 && _state.hasMore) {
       unawaitedLoadMore();
     }
     return true;
@@ -176,16 +179,42 @@ class V2ReaderController extends ChangeNotifier {
     return true;
   }
 
+  /// Sync visual page index from [TurnablePage] without flipping again.
+  bool setIndex(int index) {
+    if (index < 0 || index >= _state.articles.length) return false;
+    if (index == _state.index) return true;
+    _state = _state.copyWith(index: index);
+    notifyListeners();
+    if (_state.index >= _state.articles.length - 5 && _state.hasMore) {
+      unawaitedLoadMore();
+    }
+    return true;
+  }
+
+  /// Replace the in-memory article list for local demo paging only.
+  /// Does not touch the repository or analytics IDs (reuses real articles).
+  void replaceArticlesForDisplay(List<NewsArticle> articles) {
+    if (articles.isEmpty) return;
+    final nextIndex = _state.index.clamp(0, articles.length - 1);
+    _state = _state.copyWith(
+      status: V2ReaderStatus.ready,
+      articles: articles,
+      index: nextIndex,
+    );
+    notifyListeners();
+  }
+
   void unawaitedLoadMore() {
     if (_loadingMore || !_state.hasMore) return;
     _loadingMore = true;
+    final keepIndex = _state.index;
     () async {
       try {
         await _config.ensureReady();
         final nextPage = _state.page + 1;
         final page = await _repository.fetchPage(
           page: nextPage,
-          limit: 15,
+          limit: pageSize,
           newsLanguageCode: newsLanguageCode(),
           appliedRegion: appliedRegion(),
           allowColdStart: false,
@@ -193,11 +222,14 @@ class V2ReaderController extends ChangeNotifier {
         if (page.articles.isEmpty) {
           _state = _state.copyWith(hasMore: false);
         } else {
-          final merged = [..._state.articles, ...page.articles];
+          final merged = _dedupeAppend(_state.articles, page.articles);
+          // Preserve visible article while pageCount grows.
+          final safeIndex = keepIndex.clamp(0, merged.length - 1);
           _state = _state.copyWith(
             articles: merged,
             hasMore: page.hasMore,
             page: nextPage,
+            index: safeIndex,
           );
         }
       } catch (e) {
@@ -207,6 +239,32 @@ class V2ReaderController extends ChangeNotifier {
         notifyListeners();
       }
     }();
+  }
+
+  /// Append [incoming] skipping IDs already present in [existing].
+  @visibleForTesting
+  static List<NewsArticle> dedupeAppend(
+    List<NewsArticle> existing,
+    List<NewsArticle> incoming,
+  ) =>
+      _dedupeAppend(existing, incoming);
+
+  static List<NewsArticle> _dedupeAppend(
+    List<NewsArticle> existing,
+    List<NewsArticle> incoming,
+  ) {
+    final seen = <String>{
+      for (final a in existing)
+        if (a.analyticsNewsId.trim().isNotEmpty) a.analyticsNewsId,
+    };
+    final out = List<NewsArticle>.of(existing);
+    for (final a in incoming) {
+      final id = a.analyticsNewsId.trim();
+      if (id.isEmpty || seen.contains(id)) continue;
+      seen.add(id);
+      out.add(a);
+    }
+    return out;
   }
 
   /// Returns true once for this newsId (deduped for animation rebuilds).

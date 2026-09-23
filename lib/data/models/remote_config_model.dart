@@ -108,6 +108,9 @@ class RemoteConfigModel {
   /// Master switch for all voice/audio: listen buttons, players, background music settings, etc.
   final bool enableVoiceFeatures;
 
+  /// Home Breaking News carousel. Set false in Firebase to hide when it duplicates Today News.
+  final bool breakingNewsEnabled;
+
   /// Inshorts-style Sponsored pages in the news-detail swipe carousel.
   final bool detailCarouselAdsEnabled;
 
@@ -121,6 +124,24 @@ class RemoteConfigModel {
   final String contactPhone;
   final bool contactWebsiteVisible;
   final String contactWebsite;
+
+  // V2.0.0 feature flags (safe rollout — default OFF preserves V1)
+  final bool v2NewsCutsEnabled;
+  final bool v2NewArticleDetailEnabled;
+  final bool v2FullArticleEnabled;
+  final bool v2RelatedNewsEnabled;
+  final bool v2PageTurnEnabled;
+  final bool v2PublisherPagesEnabled;
+  final bool v2SearchEnabled;
+  final bool v2ForYouEnabled;
+  final bool v2AudioEnabled;
+  final bool v2AudioGenerationEnabled;
+  final bool v2NotificationsEnabled;
+  /// One-article-at-a-time V2 reader home (default OFF).
+  final bool v2HomeReaderEnabled;
+
+  /// Configurable Cuts product label (e.g. "NewsOn Cuts").
+  final String v2NewsCutsLabel;
 
   RemoteConfigModel({
     // App Texts
@@ -220,6 +241,7 @@ class RemoteConfigModel {
     this.drawerMenu = const [],
     this.enableVoiceSearch = false,
     this.enableVoiceFeatures = true,
+    this.breakingNewsEnabled = false,
     this.detailCarouselAdsEnabled = true,
     this.detailCarouselAdInterval = 4,
     this.contactEmailVisible = true,
@@ -228,6 +250,19 @@ class RemoteConfigModel {
     this.contactPhone = '+91 99442 77553',
     this.contactWebsiteVisible = true,
     this.contactWebsite = 'www.newson.app',
+    this.v2NewsCutsEnabled = false,
+    this.v2NewArticleDetailEnabled = false,
+    this.v2FullArticleEnabled = false,
+    this.v2RelatedNewsEnabled = false,
+    this.v2PageTurnEnabled = false,
+    this.v2PublisherPagesEnabled = false,
+    this.v2SearchEnabled = false,
+    this.v2ForYouEnabled = false,
+    this.v2AudioEnabled = false,
+    this.v2AudioGenerationEnabled = false,
+    this.v2NotificationsEnabled = false,
+    this.v2HomeReaderEnabled = false,
+    this.v2NewsCutsLabel = 'NewsOn Cuts',
   });
 
   // Helper method to convert hex string to Color
@@ -359,6 +394,7 @@ class RemoteConfigModel {
       'drawerMenu': drawerMenu,
       'enableVoiceSearch': enableVoiceSearch,
       'enableVoiceFeatures': enableVoiceFeatures,
+      'breakingNewsEnabled': breakingNewsEnabled,
       'detailCarouselAdsEnabled': detailCarouselAdsEnabled,
       'detailCarouselAdInterval': detailCarouselAdInterval,
       'contactEmailVisible': contactEmailVisible,
@@ -367,6 +403,19 @@ class RemoteConfigModel {
       'contactPhone': contactPhone,
       'contactWebsiteVisible': contactWebsiteVisible,
       'contactWebsite': contactWebsite,
+      'v2NewsCutsEnabled': v2NewsCutsEnabled,
+      'v2NewArticleDetailEnabled': v2NewArticleDetailEnabled,
+      'v2FullArticleEnabled': v2FullArticleEnabled,
+      'v2RelatedNewsEnabled': v2RelatedNewsEnabled,
+      'v2PageTurnEnabled': v2PageTurnEnabled,
+      'v2PublisherPagesEnabled': v2PublisherPagesEnabled,
+      'v2SearchEnabled': v2SearchEnabled,
+      'v2ForYouEnabled': v2ForYouEnabled,
+      'v2AudioEnabled': v2AudioEnabled,
+      'v2AudioGenerationEnabled': v2AudioGenerationEnabled,
+      'v2NotificationsEnabled': v2NotificationsEnabled,
+      'v2HomeReaderEnabled': v2HomeReaderEnabled,
+      'v2NewsCutsLabel': v2NewsCutsLabel,
     };
   }
 
@@ -430,11 +479,9 @@ class RemoteConfigModel {
           (json['splashButtonHeight'] as num?)?.toDouble() ?? 64.0,
       splashButtonBorderRadius:
           (json['splashButtonBorderRadius'] as num?)?.toDouble() ?? 40.0,
-      noInternetError:
-          json['noInternetError'] as String? ??
+      noInternetError: json['noInternetError'] as String? ??
           'No internet connection. Please check your network.',
-      serverError:
-          json['serverError'] as String? ??
+      serverError: json['serverError'] as String? ??
           'Server error. Please try again later.',
       unknownError:
           json['unknownError'] as String? ?? 'An unknown error occurred.',
@@ -453,8 +500,7 @@ class RemoteConfigModel {
       noResultsFound: json['noResultsFound'] as String?,
       noNewsForDate:
           json['noNewsForDate'] as String? ?? 'No news found for this date',
-      textSizePreviewText:
-          json['textSizePreviewText'] as String? ??
+      textSizePreviewText: json['textSizePreviewText'] as String? ??
           'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\nIt has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.\n\nLorem Ipsum is simply dummy text of the printing and typesetting industry.',
       getStartedImg: json['getStartedImg'] as String?,
       splashAnimatedGif: json['splashAnimatedGif'] as String?,
@@ -469,6 +515,10 @@ class RemoteConfigModel {
       enableVoiceFeatures: _parseBool(
         json['enableVoiceFeatures'],
         defaultValue: true,
+      ),
+      breakingNewsEnabled: _parseBool(
+        json['breakingNewsEnabled'],
+        defaultValue: false,
       ),
       detailCarouselAdsEnabled: _parseBool(
         json['detailCarouselAdsEnabled'],
@@ -485,8 +535,7 @@ class RemoteConfigModel {
         json['contactEmailVisible'],
         defaultValue: true,
       ),
-      contactEmail:
-          json['contactEmail'] as String? ?? 'newson2025@gmail.com',
+      contactEmail: json['contactEmail'] as String? ?? 'newson2025@gmail.com',
       contactPhoneVisible: _parseBool(
         json['contactPhoneVisible'],
         defaultValue: true,
@@ -497,6 +546,55 @@ class RemoteConfigModel {
         defaultValue: true,
       ),
       contactWebsite: json['contactWebsite'] as String? ?? 'www.newson.app',
+      v2NewsCutsEnabled: _parseBool(
+        json['v2NewsCutsEnabled'],
+        defaultValue: false,
+      ),
+      v2NewArticleDetailEnabled: _parseBool(
+        json['v2NewArticleDetailEnabled'],
+        defaultValue: false,
+      ),
+      v2FullArticleEnabled: _parseBool(
+        json['v2FullArticleEnabled'],
+        defaultValue: false,
+      ),
+      v2RelatedNewsEnabled: _parseBool(
+        json['v2RelatedNewsEnabled'],
+        defaultValue: false,
+      ),
+      v2PageTurnEnabled: _parseBool(
+        json['v2PageTurnEnabled'],
+        defaultValue: false,
+      ),
+      v2PublisherPagesEnabled: _parseBool(
+        json['v2PublisherPagesEnabled'],
+        defaultValue: false,
+      ),
+      v2SearchEnabled: _parseBool(
+        json['v2SearchEnabled'],
+        defaultValue: false,
+      ),
+      v2ForYouEnabled: _parseBool(
+        json['v2ForYouEnabled'],
+        defaultValue: false,
+      ),
+      v2AudioEnabled: _parseBool(
+        json['v2AudioEnabled'],
+        defaultValue: false,
+      ),
+      v2AudioGenerationEnabled: _parseBool(
+        json['v2AudioGenerationEnabled'],
+        defaultValue: false,
+      ),
+      v2NotificationsEnabled: _parseBool(
+        json['v2NotificationsEnabled'],
+        defaultValue: false,
+      ),
+      v2HomeReaderEnabled: _parseBool(
+        json['v2HomeReaderEnabled'],
+        defaultValue: false,
+      ),
+      v2NewsCutsLabel: json['v2NewsCutsLabel'] as String? ?? 'NewsOn Cuts',
     );
   }
 
@@ -517,7 +615,9 @@ class RemoteConfigModel {
   String getAppNameLogoForTheme(Brightness brightness) {
     if (brightness == Brightness.dark) {
       // Use dark theme logo if available, otherwise fall back to light theme logo
-      return darkThemeAppNameLogo.isNotEmpty ? darkThemeAppNameLogo : appNameLogo;
+      return darkThemeAppNameLogo.isNotEmpty
+          ? darkThemeAppNameLogo
+          : appNameLogo;
     }
     return appNameLogo;
   }

@@ -29,6 +29,10 @@ class AnalyticsService {
   final Map<String, DateTime> _recentKeys = {};
   bool _sessionStartSent = false;
 
+  /// After V2 returns 403 Invalid Token, skip bearer until token identity changes.
+  bool _skipBearerAfterInvalidToken = false;
+  String? _bearerIdentity;
+
   /// Test seam — inject ApiService without Firebase when validating payloads.
   @visibleForTesting
   void debugReset({ApiService? apiService, UserService? userService}) {
@@ -36,6 +40,8 @@ class AnalyticsService {
     _userService = userService;
     _recentKeys.clear();
     _sessionStartSent = false;
+    _skipBearerAfterInvalidToken = false;
+    _bearerIdentity = null;
   }
 
   String get sessionId => _session.sessionId;
@@ -78,7 +84,7 @@ class AnalyticsService {
       'eventName': eventName,
       'sessionId': sessionId,
       'timestamp': (timestamp ?? DateTime.now().toUtc()).toIso8601String(),
-      'platform': platform,
+      'platform': normalizePlatform(platform),
     };
 
     if (params == null || params.isEmpty) return body;
@@ -93,13 +99,22 @@ class AnalyticsService {
 
       switch (key) {
         case 'newsId':
-          body['newsId'] = asString;
+          // Backend requires Mongo ObjectId; never send titles/slugs.
+          if (RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(asString)) {
+            body['newsId'] = asString;
+          }
           break;
         case 'publisherId':
-          body['publisherId'] = asString;
+          if (RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(asString)) {
+            body['publisherId'] = asString;
+          } else {
+            metadata['publisherIdHint'] = asString;
+          }
           break;
         case 'categoryId':
-          body['categoryId'] = asString;
+          if (RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(asString)) {
+            body['categoryId'] = asString;
+          }
           break;
         case 'language':
         case 'newsLanguage':
@@ -128,11 +143,64 @@ class AnalyticsService {
     return body;
   }
 
+  /// Canonical platform tokens expected by V2 `/api/analytics/track`.
+  @visibleForTesting
+  static String normalizePlatform(String raw) {
+    final p = raw.trim().toLowerCase();
+    if (p == 'ios' || p == 'iphone' || p == 'ipad') return 'ios';
+    if (p == 'android') return 'android';
+    if (p == 'web' || p == 'fuchsia' || p == 'linux' || p == 'macos' || p == 'windows') {
+      return 'web';
+    }
+    // TargetPlatform.iOS.name == 'iOS' → ios after lowercasing above.
+    return 'android';
+  }
+
+  /// Optional JWT for analytics — anonymous when absent/rejected.
+  @visibleForTesting
+  static String? resolveOptionalBearer({
+    required bool isLoggedIn,
+    String? token,
+    required bool skipAfterInvalidToken,
+  }) {
+    if (skipAfterInvalidToken) return null;
+    if (!isLoggedIn) return null;
+    final t = token?.trim();
+    if (t == null || t.isEmpty) return null;
+    return t;
+  }
+
+  @visibleForTesting
+  static bool isInvalidTokenResponse({
+    required int? statusCode,
+    String? error,
+  }) {
+    if (statusCode != 403) return false;
+    final msg = (error ?? '').toLowerCase();
+    return msg.contains('invalid token') ||
+        msg.contains('invalid jwt') ||
+        msg.contains('jwt expired') ||
+        msg.contains('token expired') ||
+        msg.contains('unauthorized') ||
+        msg == 'access forbidden.';
+  }
+
+  /// Stable non-secret fingerprint so a new login clears the skip flag.
+  static String? _tokenIdentity(String? token) {
+    final t = token?.trim();
+    if (t == null || t.isEmpty) return null;
+    return '${t.length}:${t.hashCode}';
+  }
+
+  static String _runtimePlatform() =>
+      normalizePlatform(defaultTargetPlatform.name);
+
   Future<void> log(
     String event, {
     Map<String, dynamic>? params,
     String? dedupeKey,
     Duration? dedupeFor,
+    bool v2Only = false,
   }) async {
     try {
       ensureSessionStarted();
@@ -145,17 +213,52 @@ class AnalyticsService {
       final body = buildTrackBody(
         eventName: event,
         sessionId: _session.sessionId,
-        platform: defaultTargetPlatform.name,
+        platform: _runtimePlatform(),
         params: params,
       );
 
-      // Do not send userId — backend derives from JWT when present.
-      String? token;
-      try {
-        token = _users?.getToken();
-      } catch (_) {
-        token = null;
+      // Events that require newsId must have a Mongo ObjectId (not a title).
+      final needsNewsId = event == AnalyticsEvents.newsOpen ||
+          event == AnalyticsEvents.newsImpression ||
+          event == AnalyticsEvents.summaryView ||
+          event == AnalyticsEvents.fullArticleClick ||
+          event == AnalyticsEvents.forYouImpression ||
+          event == AnalyticsEvents.bookmark ||
+          event == AnalyticsEvents.share ||
+          event == AnalyticsEvents.audioClick;
+      if (needsNewsId && body['newsId'] == null) {
+        debugPrint(
+          '📊 Analytics skipped ($event) — newsId missing or not an ObjectId',
+        );
+        return;
       }
+
+      // Do not send userId — backend derives from JWT when present.
+      // Prefer anonymous when logged-out or after V2 rejected the JWT (403).
+      String? rawToken;
+      var loggedIn = false;
+      try {
+        final users = _users;
+        loggedIn = users?.isLoggedIn == true;
+        rawToken = users?.getToken();
+      } catch (_) {
+        rawToken = null;
+        loggedIn = false;
+      }
+
+      final identity = _tokenIdentity(rawToken);
+      if (identity != _bearerIdentity) {
+        _bearerIdentity = identity;
+        // New / cleared session — allow bearer again.
+        _skipBearerAfterInvalidToken = false;
+      }
+
+      var bearer = resolveOptionalBearer(
+        isLoggedIn: loggedIn,
+        token: rawToken,
+        skipAfterInvalidToken: _skipBearerAfterInvalidToken,
+      );
+      debugPrint('📊 Analytics auth token present=${bearer != null}');
 
       final api = _api;
       if (api == null) {
@@ -163,7 +266,8 @@ class AnalyticsService {
         return;
       }
 
-      // Prefer isolated V2 host when ready; otherwise keep V1 behavior.
+      // Prefer isolated V2 host when ready; otherwise keep V1 behavior
+      // (unless [v2Only] — V2 surfaces must never fall back to api.newson.app).
       try {
         await V2ApiConfigService.instance.ensureReady();
       } catch (_) {
@@ -171,18 +275,61 @@ class AnalyticsService {
       }
       final v2Base = V2ApiConfigService.instance.baseUrlIfEnabled;
       final canUseV2 = v2Base != null && v2Base.isNotEmpty;
-      if (!canUseV2 && !_hasUsableBaseUrl(api)) {
+
+      if (v2Only) {
+        if (!canUseV2) {
+          debugPrint(
+            '📊 Analytics skipped ($event) — V2 host unavailable (v2Only)',
+          );
+          return;
+        }
+      } else if (!canUseV2 && !_hasUsableBaseUrl(api)) {
         debugPrint('📊 Analytics (offline/no API): $event $params');
         return;
       }
 
+      final useV2Host = v2Only || canUseV2;
+
       try {
-        await api.postByPath(
+        var response = await api.postByPath(
           trackPath,
           body: body,
-          bearerToken: (token != null && token.isNotEmpty) ? token : null,
-          useV2Host: canUseV2,
+          bearerToken: bearer,
+          useV2Host: useV2Host,
         );
+
+        // Stale/invalid JWT on V2 → 403 while anonymous still records 201.
+        if (!response.success &&
+            bearer != null &&
+            isInvalidTokenResponse(
+              statusCode: response.statusCode,
+              error: response.error,
+            )) {
+          debugPrint(
+            '📊 Analytics 403 invalid token — retrying anonymously '
+            '($event)',
+          );
+          _skipBearerAfterInvalidToken = true;
+          bearer = null;
+          response = await api.postByPath(
+            trackPath,
+            body: body,
+            bearerToken: null,
+            useV2Host: useV2Host,
+          );
+        }
+
+        if (!response.success) {
+          // Surface contract/backend failures without blocking UI.
+          debugPrint(
+            '📊 Analytics rejected ($event) '
+            'host=${useV2Host ? 'V2' : 'V1'} '
+            'status=${response.statusCode} '
+            'error=${response.error} '
+            'authPresent=${bearer != null} '
+            'bodyKeys=${body.keys.toList()}',
+          );
+        }
       } catch (e) {
         // Never block product UI.
         debugPrint('📊 Analytics emit soft-fail ($event): $e');
@@ -205,6 +352,7 @@ class AnalyticsService {
     required String newsId,
     String? category,
     String? publisher,
+    bool v2Only = false,
   }) {
     return log(
       AnalyticsEvents.newsImpression,
@@ -214,29 +362,39 @@ class AnalyticsService {
         if (publisher != null) 'publisher': publisher,
       },
       dedupeKey: 'impression::$newsId',
+      v2Only: v2Only,
     );
   }
 
-  Future<void> newsOpen({required String newsId}) {
+  Future<void> newsOpen({
+    required String newsId,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.newsOpen,
       params: {'newsId': newsId},
       dedupeKey: 'open::$newsId',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> summaryView({required String newsId}) {
+  Future<void> summaryView({
+    required String newsId,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.summaryView,
       params: {'newsId': newsId},
       dedupeKey: 'summary::$newsId',
+      v2Only: v2Only,
     );
   }
 
   Future<void> fullArticleClick({
     required String newsId,
     String? url,
+    bool v2Only = false,
   }) {
     return log(
       AnalyticsEvents.fullArticleClick,
@@ -246,34 +404,71 @@ class AnalyticsService {
       },
       dedupeKey: 'full::$newsId',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> categoryView({required String category}) {
+  Future<void> categoryView({
+    required String category,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.categoryView,
       params: {'category': category},
       dedupeKey: 'category_view::$category',
       dedupeFor: const Duration(seconds: 30),
+      v2Only: v2Only,
     );
   }
 
   Future<void> publisherView({
     required String publisherId,
     String? publisherName,
+    String? language,
+    String? sourceScreen,
+    bool v2Only = false,
   }) {
     return log(
       AnalyticsEvents.publisherView,
       params: {
         'publisherId': publisherId,
         if (publisherName != null) 'publisherName': publisherName,
+        if (language != null && language.isNotEmpty) 'language': language,
+        if (sourceScreen != null && sourceScreen.isNotEmpty)
+          'sourceScreen': sourceScreen,
       },
       dedupeKey: 'publisher_view::$publisherId',
       dedupeFor: const Duration(seconds: 60),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> forYouImpression({String? newsId}) {
+  Future<void> publisherClick({
+    required String publisherId,
+    String? publisherName,
+    String? language,
+    String? sourceScreen,
+    bool v2Only = false,
+  }) {
+    return log(
+      AnalyticsEvents.publisherClick,
+      params: {
+        'publisherId': publisherId,
+        if (publisherName != null) 'publisherName': publisherName,
+        if (language != null && language.isNotEmpty) 'language': language,
+        if (sourceScreen != null && sourceScreen.isNotEmpty)
+          'sourceScreen': sourceScreen,
+      },
+      dedupeKey: 'publisher_click::$publisherId::${sourceScreen ?? ''}',
+      dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
+    );
+  }
+
+  Future<void> forYouImpression({
+    String? newsId,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.forYouImpression,
       params: {
@@ -283,11 +478,15 @@ class AnalyticsService {
           ? 'for_you_impression::$newsId'
           : 'for_you_impression::section',
       dedupeFor: const Duration(seconds: 60),
+      v2Only: v2Only,
     );
   }
 
   /// Emit only on submitted / executed search — never per keystroke.
-  Future<void> search({required String query}) {
+  Future<void> search({
+    required String query,
+    bool v2Only = false,
+  }) {
     final q = query.trim();
     if (q.isEmpty) return Future.value();
     return log(
@@ -295,11 +494,15 @@ class AnalyticsService {
       params: {'queryLength': q.length},
       dedupeKey: 'search::${q.toLowerCase()}',
       dedupeFor: const Duration(seconds: 5),
+      v2Only: v2Only,
     );
   }
 
   /// Emit only on actual user Listen / audio control interaction.
-  Future<void> audioClick({required String newsId}) {
+  Future<void> audioClick({
+    required String newsId,
+    bool v2Only = false,
+  }) {
     final id = newsId.trim();
     if (id.isEmpty) return Future.value();
     return log(
@@ -307,6 +510,7 @@ class AnalyticsService {
       params: {'newsId': id},
       dedupeKey: 'audio_click::$id',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
@@ -315,6 +519,7 @@ class AnalyticsService {
     String? campaignId,
     String? type,
     String? newsId,
+    bool v2Only = false,
   }) {
     return log(
       AnalyticsEvents.notificationOpen,
@@ -327,37 +532,53 @@ class AnalyticsService {
       dedupeKey:
           'notification_open::${campaignId ?? ''}::${type ?? ''}::${newsId ?? ''}',
       dedupeFor: const Duration(seconds: 5),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> bookmark({required String newsId}) {
+  Future<void> bookmark({
+    required String newsId,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.bookmark,
       params: {'newsId': newsId},
       dedupeKey: 'bookmark::$newsId',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> share({required String newsId}) {
+  Future<void> share({
+    required String newsId,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.share,
       params: {'newsId': newsId},
       dedupeKey: 'share::$newsId',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> languageChange({required String newsLanguage}) {
+  Future<void> languageChange({
+    required String newsLanguage,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.languageChange,
       params: {'newsLanguage': newsLanguage},
       dedupeKey: 'language_change::$newsLanguage',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 
-  Future<void> regionChange({String? regionLabel}) {
+  Future<void> regionChange({
+    String? regionLabel,
+    bool v2Only = false,
+  }) {
     return log(
       AnalyticsEvents.regionChange,
       params: {
@@ -365,6 +586,7 @@ class AnalyticsService {
       },
       dedupeKey: 'region_change::${regionLabel ?? 'cleared'}',
       dedupeFor: const Duration(seconds: 2),
+      v2Only: v2Only,
     );
   }
 

@@ -20,10 +20,27 @@ class BookmarkListResponse {
     final pagination = PaginationInfo.fromJson(paginationData);
 
     final dataList = json['data'] as List<dynamic>? ?? [];
-    final articles =
-        dataList
-            .map((item) => NewsArticle.fromJson(item as Map<String, dynamic>))
-            .toList();
+    // Backend returns a flat news array. Each item's `_id` is the news Mongo id
+    // used by removeBookmark/:newsId.
+    final articles = dataList.map((item) {
+      if (item is! Map) {
+        return NewsArticle.fromJson(const <String, dynamic>{});
+      }
+      final map = Map<String, dynamic>.from(item);
+      final nested = map['news'];
+      if (nested is Map) {
+        final articleMap = Map<String, dynamic>.from(nested);
+        articleMap['_id'] ??= map['newsId'] ?? map['_id'] ?? nested['_id'];
+        articleMap['isBookmarked'] = true;
+        return NewsArticle.fromJson(articleMap);
+      }
+      map['isBookmarked'] = true;
+      return NewsArticle.fromJson(map);
+    }).where((a) {
+      final hasId = a.newsId != null && a.newsId!.trim().isNotEmpty;
+      final hasTitle = a.title.trim().isNotEmpty && a.title != 'No Title';
+      return hasId || hasTitle;
+    }).toList();
 
     return BookmarkListResponse(
       message: json['message'] as String? ?? 'success',
@@ -143,9 +160,84 @@ class BookmarkApiService {
     }
   }
 
+  /// Remove all bookmarks for the current user.
+  ///
+  /// Backend (live):
+  ///   DELETE /api/bookmark/removeAllBookmarks
+  ///   DELETE /api/bookmark/removeAllBookMarks  (alias)
+  ///
+  /// Tries Firestore endpoint keys first, then hardcoded production paths.
+  Future<bool> removeAllBookmarks() async {
+    final token = _userService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('User not authenticated. Please sign in.');
+    }
+
+    debugPrint('🗑️ Removing all bookmarks via bulk API');
+
+    // Prefer hardcoded production paths first (backend-confirmed, no Firestore wait).
+    for (final path in [
+      '/api/bookmark/removeAllBookmarks',
+      '/api/bookmark/removeAllBookMarks',
+    ]) {
+      try {
+        final response = await _apiService.deleteByPath(
+          path,
+          bearerToken: token,
+        );
+        if (response.success) {
+          final deleted = _readDeletedCount(response.data);
+          debugPrint(
+            '✅ All bookmarks removed via $path'
+            '${deleted != null ? ' (deletedCount=$deleted)' : ''}',
+          );
+          return true;
+        }
+        debugPrint('⚠️ Bulk path $path failed: ${response.error}');
+      } catch (e) {
+        debugPrint('⚠️ Bulk path $path error: $e');
+      }
+    }
+
+    // Fallback: Firestore-configured keys under module "news" (if present).
+    for (final key in ['removeAllBookMarks', 'removeAllBookmarks']) {
+      try {
+        await _apiService.ensureEndpoint('news', key);
+        final response = await _apiService.delete(
+          'news',
+          key,
+          bearerToken: token,
+        );
+        if (response.success) {
+          final deleted = _readDeletedCount(response.data);
+          debugPrint(
+            '✅ All bookmarks removed via endpoint key "$key"'
+            '${deleted != null ? ' (deletedCount=$deleted)' : ''}',
+          );
+          return true;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Bulk key "$key" unavailable: $e');
+      }
+    }
+
+    throw Exception('Failed to remove all bookmarks');
+  }
+
+  int? _readDeletedCount(dynamic data) {
+    if (data is Map) {
+      final raw = data['deletedCount'];
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw);
+    }
+    return null;
+  }
+
   /// Get bookmark list
-  /// GET /news/bookMarkList
+  /// GET /news/bookMarkList  → backend: GET /api/bookmark/getAllBookmarks
   /// Query params: page, limit
+  /// Each item is a flat news object; `_id` is the news Mongo ObjectId.
   Future<BookmarkListResponse> getBookmarkList({
     int page = 1,
     int limit = 20,

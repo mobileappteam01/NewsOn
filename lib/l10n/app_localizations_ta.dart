@@ -56,7 +56,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get selectCategories => 'வகைகளைத் தேர்ந்தெடுக்கவும்';
 
   @override
-  String get selectAtLeastOneCategory => 'தயவுசெய்து குறைந்தது ஒரு வகையைத் தேர்ந்தெடுக்கவும்';
+  String get selectAtLeastOneCategory =>
+      'தயவுசெய்து குறைந்தது ஒரு வகையைத் தேர்ந்தெடுக்கவும்';
 
   @override
   String get categories => 'வகைகள்';
@@ -74,7 +75,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get forYou => 'உங்களுக்காக';
 
   @override
-  String get pickedForYouSubtitle => 'உங்கள் ஆர்வங்களின் அடிப்படையில் தேர்ந்தெடுக்கப்பட்ட கதைகள்';
+  String get pickedForYouSubtitle =>
+      'உங்கள் ஆர்வங்களின் அடிப்படையில் தேர்ந்தெடுக்கப்பட்ட கதைகள்';
 
   @override
   String get moreStoriesForYou => 'உங்களுக்கான மேலும் கதைகள்';
@@ -85,7 +87,8 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get shareNewsCuriousCta => '🔥 இந்த செய்தியின் முழு உண்மை NewsOn-ல் — இப்போதே படியுங்கள் 👇';
+  String get shareNewsCuriousCta =>
+      '🔥 இந்த செய்தியின் முழு உண்மை NewsOn-ல் — இப்போதே படியுங்கள் 👇';
 
   @override
   String get newsFeed => 'செய்தி ஊட்டம்';
@@ -130,7 +133,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get removedFromBookmarks => 'புத்தகக்குறிகளிலிருந்து நீக்கப்பட்டது';
 
   @override
-  String get noInternetConnection => 'இணைய இணைப்பு இல்லை. தயவுசெய்து உங்கள் நெட்வொர்க்கை சரிபார்க்கவும்.';
+  String get noInternetConnection =>
+      'இணைய இணைப்பு இல்லை. தயவுசெய்து உங்கள் நெட்வொர்க்கை சரிபார்க்கவும்.';
 
   @override
   String get serverError => 'சர்வர் பிழை. தயவுசெய்து பிறகு முயற்சிக்கவும்.';
@@ -150,10 +154,12 @@ class AppLocalizationsTa extends AppLocalizations {
   String get textSizeSaved => 'உரை அளவு சேமிக்கப்பட்டது';
 
   @override
-  String get formSubmittedSuccessfully => 'படிவம் வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது!';
+  String get formSubmittedSuccessfully =>
+      'படிவம் வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது!';
 
   @override
-  String get pleaseFixErrorsBeforeSaving => 'சேமிப்பதற்கு முன் தயவுசெய்து பிழைகளை சரிசெய்யவும்';
+  String get pleaseFixErrorsBeforeSaving =>
+      'சேமிப்பதற்கு முன் தயவுசெய்து பிழைகளை சரிசெய்யவும்';
 
   @override
   String get accountSettings => 'கணக்கு அமைப்புகள்';
@@ -180,7 +186,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get logout => 'வெளியேற';
 
   @override
-  String get areYouSureYouWantToLogout => 'நீங்கள் உறுதியாக வெளியேற விரும்புகிறீர்களா?';
+  String get areYouSureYouWantToLogout =>
+      'நீங்கள் உறுதியாக வெளியேற விரும்புகிறீர்களா?';
 
   @override
   String get yes => 'ஆம்';
@@ -237,7 +244,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get noNewsForDate => 'இந்த தேதிக்கு செய்திகள் கிடைக்கவில்லை';
 
   @override
-  String get remoteConfigRefreshed => 'ரிமோட் கன்ஃபிக் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!';
+  String get remoteConfigRefreshed =>
+      'ரிமோட் கன்ஃபிக் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!';
 
   @override
   String failedToRefresh(String error) {
@@ -254,7 +262,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get selectCategoryTitle => 'உங்கள் ஆர்வங்களைத் தேர்ந்தெடுக்கவும்';
 
   @override
-  String get selectCategoryDesc => 'நீங்கள் பின்தொடர விரும்பும் வகைகளைத் தேர்ந்தெடுக்கவும்';
+  String get selectCategoryDesc =>
+      'நீங்கள் பின்தொடர விரும்பும் வகைகளைத் தேர்ந்தெடுக்கவும்';
 
   @override
   String get menu => 'மெனு';
@@ -314,7 +323,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get mobileNumberRequired => 'மொபைல் எண் தேவை';
 
   @override
-  String get enterValidMobileNumber => 'செல்லுபடியாகும் 10-இலக்க மொபைல் எண்ணை உள்ளிடவும்';
+  String get enterValidMobileNumber =>
+      'செல்லுபடியாகும் 10-இலக்க மொபைல் எண்ணை உள்ளிடவும்';
 
   @override
   String get selectCity => 'நகரத்தைத் தேர்ந்தெடுக்கவும்';
@@ -329,7 +339,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get pincodeRequired => 'பின்கோட் தேவை';
 
   @override
-  String get enterValidPincode => 'செல்லுபடியாகும் 6-இலக்க பின்கோட்டை உள்ளிடவும்';
+  String get enterValidPincode =>
+      'செல்லுபடியாகும் 6-இலக்க பின்கோட்டை உள்ளிடவும்';
 
   @override
   String get selectCountry => 'நாட்டைத் தேர்ந்தெடுக்கவும்';
@@ -371,7 +382,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get version => 'பதிப்பு';
 
   @override
-  String get yourPersonalizedNewsApplication => 'உங்கள் தனிப்பயனாக்கப்பட்ட செய்தி பயன்பாடு';
+  String get yourPersonalizedNewsApplication =>
+      'உங்கள் தனிப்பயனாக்கப்பட்ட செய்தி பயன்பாடு';
 
   @override
   String get close => 'மூடு';
@@ -407,7 +419,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get playFullNews => 'முழு செய்தியை இயக்க';
 
   @override
-  String get selectNewsReadingMode => 'செய்தி வாசிப்பு முறையைத் தேர்ந்தெடுக்கவும்';
+  String get selectNewsReadingMode =>
+      'செய்தி வாசிப்பு முறையைத் தேர்ந்தெடுக்கவும்';
 
   @override
   String get settingsSaved => 'அமைப்புகள் சேமிக்கப்பட்டது';
@@ -419,7 +432,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get backgroundMusicSettings => 'பின்னணி இசை';
 
   @override
-  String get backgroundMusicSettingsDescription => 'செய்திகளைக் கேட்கும்போது பின்னணி இசையை இயக்கவும். கீழே அணைக்கலாம் அல்லது வலிமையை சரிசெய்யலாம்.';
+  String get backgroundMusicSettingsDescription =>
+      'செய்திகளைக் கேட்கும்போது பின்னணி இசையை இயக்கவும். கீழே அணைக்கலாம் அல்லது வலிமையை சரிசெய்யலாம்.';
 
   @override
   String get enableBackgroundMusic => 'பின்னணி இசையை இயக்கு';
@@ -440,7 +454,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get getInTouch => 'தொடர்பில் இருங்கள்';
 
   @override
-  String get contactSupportText => 'எங்கள் உள்ளடக்கம் மற்றும் தளம் தொடர்பான ஆதரவு, விசாரணைகள் அல்லது பின்னூட்டங்களுக்கு, தயவுசெய்து எங்களை தொடர்பு கொள்ளவும்.';
+  String get contactSupportText =>
+      'எங்கள் உள்ளடக்கம் மற்றும் தளம் தொடர்பான ஆதரவு, விசாரணைகள் அல்லது பின்னூட்டங்களுக்கு, தயவுசெய்து எங்களை தொடர்பு கொள்ளவும்.';
 
   @override
   String get email => 'மின்னஞ்சல்';
@@ -473,22 +488,26 @@ class AppLocalizationsTa extends AppLocalizations {
   String get reset => 'மீட்டமை';
 
   @override
-  String get noNewsForRegion => 'தேர்ந்தெடுக்கப்பட்ட பிராந்தியத்திற்கு செய்திகள் இல்லை';
+  String get noNewsForRegion =>
+      'தேர்ந்தெடுக்கப்பட்ட பிராந்தியத்திற்கு செய்திகள் இல்லை';
 
   @override
-  String get selectRegionTooltip => 'பிராந்தியத்தின் அடிப்படையில் செய்திகளை வடிகட்டு';
+  String get selectRegionTooltip =>
+      'பிராந்தியத்தின் அடிப்படையில் செய்திகளை வடிகட்டு';
 
   @override
   String get noBookmarks => 'புக்மார்க்குகள் இல்லை';
 
   @override
-  String get bookmarksWillAppearHere => 'நீங்கள் புக்மார்க் செய்யும் கட்டுரைகள் இங்கே தோன்றும்';
+  String get bookmarksWillAppearHere =>
+      'நீங்கள் புக்மார்க் செய்யும் கட்டுரைகள் இங்கே தோன்றும்';
 
   @override
   String get errorLoadingBookmarks => 'புக்மார்க்குகளை ஏற்றுவதில் பிழை';
 
   @override
-  String get clearBookmarksMessage => 'இது சேமித்த அனைத்து கட்டுரைகளையும் நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
+  String get clearBookmarksMessage =>
+      'இது சேமித்த அனைத்து கட்டுரைகளையும் நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
 
   @override
   String errorPlayingAudio(String error) {
@@ -504,7 +523,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get noBreakingNewsAvailable => 'முக்கியச் செய்திகள் எதுவும் இல்லை';
 
   @override
-  String get noNewsForThisCategory => 'இந்தப் பிரிவுக்கு செய்திகள் எதுவும் இல்லை';
+  String get noNewsForThisCategory =>
+      'இந்தப் பிரிவுக்கு செய்திகள் எதுவும் இல்லை';
 
   @override
   String get recentSearches => 'சமீபத்திய தேடல்கள்';
@@ -513,13 +533,16 @@ class AppLocalizationsTa extends AppLocalizations {
   String get searchNewsHint => 'செய்திகளைத் தேடு...';
 
   @override
-  String get enterKeywordsToFindArticles => 'கட்டுரைகளைக் கண்டறிய முக்கிய வார்த்தைகளை உள்ளிடவும்';
+  String get enterKeywordsToFindArticles =>
+      'கட்டுரைகளைக் கண்டறிய முக்கிய வார்த்தைகளை உள்ளிடவும்';
 
   @override
-  String get orTryVoiceSearch => 'அல்லது மைக்ரோஃபோனைப் பயன்படுத்தி குரல் தேடலை முயற்சிக்கவும்';
+  String get orTryVoiceSearch =>
+      'அல்லது மைக்ரோஃபோனைப் பயன்படுத்தி குரல் தேடலை முயற்சிக்கவும்';
 
   @override
-  String get tryDifferentKeywords => 'வேறு முக்கிய வார்த்தைகளை முயற்சிக்கவும் அல்லது எழுத்துப்பிழையைச் சரிபார்க்கவும்';
+  String get tryDifferentKeywords =>
+      'வேறு முக்கிய வார்த்தைகளை முயற்சிக்கவும் அல்லது எழுத்துப்பிழையைச் சரிபார்க்கவும்';
 
   @override
   String sourceLabel(String source) {
@@ -554,7 +577,8 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get agreeToTermsPrivacy => 'தொடர்வதன் மூலம், எங்கள் விதிமுறைகள் & தனியுரிமைக் கொள்கையை ஏற்கிறீர்கள்';
+  String get agreeToTermsPrivacy =>
+      'தொடர்வதன் மூலம், எங்கள் விதிமுறைகள் & தனியுரிமைக் கொள்கையை ஏற்கிறீர்கள்';
 
   @override
   String get tapToPlayArticle => 'கட்டுரையை இயக்க தட்டவும்';
@@ -572,13 +596,15 @@ class AppLocalizationsTa extends AppLocalizations {
   String get shareThisNews => 'இந்தச் செய்தியைப் பகிர்';
 
   @override
-  String get shareThisNewsSubtitle => 'NewsOn உள்ள நண்பர்கள் கட்டுரையை ஆப்பில் திறக்க முடியும்';
+  String get shareThisNewsSubtitle =>
+      'NewsOn உள்ள நண்பர்கள் கட்டுரையை ஆப்பில் திறக்க முடியும்';
 
   @override
   String get generatingAudio => 'ஆடியோ உருவாக்கப்படுகிறது...';
 
   @override
-  String get convertingTextToSpeech => 'ElevenLabs மூலம் உரையைப் பேச்சாக மாற்றுகிறது';
+  String get convertingTextToSpeech =>
+      'ElevenLabs மூலம் உரையைப் பேச்சாக மாற்றுகிறது';
 
   @override
   String get sponsored => 'விளம்பரம்';
@@ -590,13 +616,15 @@ class AppLocalizationsTa extends AppLocalizations {
   String get deleteAccountTitle => 'கணக்கை நீக்கவா?';
 
   @override
-  String get deleteAccountMessage => 'இது உங்கள் கணக்கையும் அதனுடன் தொடர்புடைய அனைத்து தரவையும் நிரந்தரமாக நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
+  String get deleteAccountMessage =>
+      'இது உங்கள் கணக்கையும் அதனுடன் தொடர்புடைய அனைத்து தரவையும் நிரந்தரமாக நீக்கும். இந்தச் செயலை மீட்டமைக்க முடியாது.';
 
   @override
   String get delete => 'நீக்கு';
 
   @override
-  String get signInToReadSharedArticle => 'பகிரப்பட்ட கட்டுரையைப் படிக்க உள்நுழையவும்';
+  String get signInToReadSharedArticle =>
+      'பகிரப்பட்ட கட்டுரையைப் படிக்க உள்நுழையவும்';
 
   @override
   String get pleaseWaitSettingUp => 'அமைக்கும் வரை சிறிது காத்திருக்கவும்';
@@ -622,5 +650,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get paused => 'இடைநிறுத்தப்பட்டது';
 
   @override
-  String get voiceFeaturesUnavailable => 'குரல் மற்றும் ஆடியோ அம்சங்கள் தற்போது கிடைக்கவில்லை.';
+  String get voiceFeaturesUnavailable =>
+      'குரல் மற்றும் ஆடியோ அம்சங்கள் தற்போது கிடைக்கவில்லை.';
 }
