@@ -196,7 +196,8 @@ class _V2SearchTabState extends State<V2SearchTab>
                             ),
                           );
                           if (!mounted) return;
-                          if (state.query.isNotEmpty) {
+                          if (state.status == SearchStatus.ready &&
+                              state.query.isNotEmpty) {
                             await _submit(state.query);
                           }
                         },

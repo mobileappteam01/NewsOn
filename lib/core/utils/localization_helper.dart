@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../data/services/dynamic_localization_service.dart';
 import '../../providers/dynamic_language_provider.dart';
 import '../../providers/language_provider.dart';
+import 'stories_count_text.dart';
 
 /// Helper class for easy access to localized strings
 /// This provides a convenient way to access AppLocalizations throughout the app
@@ -275,12 +276,28 @@ class LocalizationHelper {
   }
 
   static String storiesCount(BuildContext context, int count) {
-    return _getString(
-      context,
-      (l10n) => l10n.storiesCount(count),
-      '$count stories',
-      key: 'storiesCount',
-    );
+    _subscribeToLanguageChanges(context);
+    final dynamicService = DynamicLocalizationService();
+    String template;
+    if (dynamicService.isInitialized &&
+        dynamicService.hasTranslation('storiesCount')) {
+      template = dynamicService.translate(
+        'storiesCount',
+        params: {'count': '$count'},
+      );
+    } else {
+      final l10n = of(context);
+      if (l10n != null) {
+        try {
+          template = l10n.storiesCount(count);
+        } catch (_) {
+          template = '$count stories';
+        }
+      } else {
+        template = '$count stories';
+      }
+    }
+    return StoriesCountText.apply(template, count);
   }
 
   /// Catchy share CTA shown before the NewsOn deep link.

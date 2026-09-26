@@ -37,7 +37,7 @@ void main() {
     final uri = DeepLinkConstants.buildV2HttpsDeepLink(id);
     expect(
       uri.toString(),
-      'https://api.newson.app/v2/article/$id',
+      'https://v2-api.newson.app/v2/news/$id',
     );
     expect(DeepLinkConstants.isV2ArticleDeepLink(uri), isTrue);
     expect(DeepLinkConstants.parseV2ArticleId(uri), id);
@@ -45,13 +45,27 @@ void main() {
     expect(DeepLinkConstants.linkKey(uri), 'v2:$id');
   });
 
+  test('legacy api.newson.app /v2/news links still parse as V2', () {
+    const id = '6ab1d4fda5abc256076d157e';
+    final uri = Uri.parse('https://api.newson.app/v2/news/$id');
+    expect(DeepLinkConstants.parseV2ArticleId(uri), id);
+    expect(DeepLinkConstants.isV2ArticleDeepLink(uri), isTrue);
+  });
+
   test('V2 custom scheme share link parses as V2 only', () {
     const id = '6ab1d4fda5abc256076d157e';
     final uri = DeepLinkConstants.buildV2AppDeepLink(id);
-    expect(uri.toString(), 'newson://v2/article/$id');
+    expect(uri.toString(), 'newson://v2/news/$id');
     expect(DeepLinkConstants.isV2ArticleDeepLink(uri), isTrue);
     expect(DeepLinkConstants.parseV2ArticleId(uri), id);
     expect(DeepLinkConstants.parseArticleId(uri), isNull);
+  });
+
+  test('legacy /v2/article share links still parse as V2', () {
+    const id = '6ab1d4fda5abc256076d157e';
+    final uri = Uri.parse('https://api.newson.app/v2/article/$id');
+    expect(DeepLinkConstants.parseV2ArticleId(uri), id);
+    expect(DeepLinkConstants.isV2ArticleDeepLink(uri), isTrue);
   });
 
   test('V1 /news/ is never classified as V2', () {

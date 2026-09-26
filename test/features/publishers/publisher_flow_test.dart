@@ -514,7 +514,7 @@ void main() {
 
       expect(
         observer.pushedNames,
-        contains('/v2/article/${article.articleId}'),
+        contains('/v2/news/${article.articleId}'),
       );
       expect(
         observer.pushedNames.any((n) => n.contains('news-detail')),
@@ -558,7 +558,7 @@ void main() {
       await tester.pump();
       expect(
         observer.pushedNames,
-        contains('/v2/article/${article.articleId}'),
+        contains('/v2/news/${article.articleId}'),
       );
       expect(
         observer.pushedNames.any((n) => n.contains('news-detail')),

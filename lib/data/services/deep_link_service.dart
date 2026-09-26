@@ -286,9 +286,12 @@ class DeepLinkService {
   Future<void> _tryOpenPendingV2() async {
     if (_isResolving) return;
 
-    final articleId = _pendingV2ArticleId;
+    final articleId = _pendingV2ArticleId?.trim();
     final linkKey = _pendingLinkKey;
-    if (articleId == null || articleId.isEmpty) return;
+    if (articleId == null || articleId.isEmpty) {
+      _clearPending();
+      return;
+    }
 
     // Already showing this V2 detail — consume without pushing again.
     final ctx = appNavigatorKey.currentContext;
@@ -314,12 +317,18 @@ class DeepLinkService {
       _clearPending();
 
       debugPrint('🔗 Opening V2 article detail for $articleId (no V1 resolver)');
-      await navigator.push(
-        MaterialPageRoute<void>(
-          settings: RouteSettings(name: '/v2/article/$articleId'),
-          builder: (_) => V2ArticleDetailScreen(articleId: articleId),
-        ),
-      );
+      try {
+        await navigator.push(
+          MaterialPageRoute<void>(
+            settings: RouteSettings(name: '/v2/article/$articleId'),
+            builder: (_) => V2ArticleDetailScreen(articleId: articleId),
+          ),
+        );
+      } catch (e, st) {
+        // Never crash the app on a bad share open — detail screen itself
+        // shows a safe not-found/error state for missing articles.
+        debugPrint('🔗 V2 detail navigation failed: $e\n$st');
+      }
     } finally {
       _isResolving = false;
     }

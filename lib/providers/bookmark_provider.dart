@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../core/utils/auth_navigation_helper.dart';
+import '../features/bookmarks/domain/bookmark_list_state.dart';
 import '../data/models/news_article.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/services/bookmark_api_service.dart';
@@ -44,12 +45,18 @@ class BookmarkProvider with ChangeNotifier {
   int _totalBookmarks = 0;
   int _loadGeneration = 0;
 
-  /// Recently removed Mongo IDs — ignore them if a stale list response still
-  /// contains them (common race: remove → refresh → old server/cache list).
+  /// Last list load used the V2 bookmark route (not the V1 catalog).
+  bool _v2List = false;
+
+  /// Recently removed Mongo IDs — V1 list race only.
+  /// A successful V2 refresh replaces the list from the API and does not
+  /// consult this set.
   final Set<String> _removedNewsIds = <String>{};
 
-  // Getters
-  List<NewsArticle> get bookmarks => _bookmarks;
+  final BookmarkToggleGuard _toggleGuard = BookmarkToggleGuard();
+
+  // Getters — defensive copy so UI list rebuilds are not concurrent with edits.
+  List<NewsArticle> get bookmarks => List<NewsArticle>.unmodifiable(_bookmarks);
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get bookmarksCount => _bookmarks.length;
@@ -62,6 +69,7 @@ class BookmarkProvider with ChangeNotifier {
     bool refresh = false,
     int page = 1,
     bool forceNetwork = false,
+    bool v2List = false,
   }) async {
     if (!_userService.isLoggedIn) {
       debugPrint('⚠️ User not authenticated, loading from local cache only');
@@ -70,6 +78,10 @@ class BookmarkProvider with ChangeNotifier {
     }
 
     final generation = ++_loadGeneration;
+    if (refresh || page <= 1) {
+      _v2List = v2List;
+    }
+    final useV2 = _v2List;
 
     try {
       _isLoading = true;
@@ -102,22 +114,41 @@ class BookmarkProvider with ChangeNotifier {
       notifyListeners();
 
       try {
-        final response = await _requireBookmarkApi.getBookmarkList(
-          page: _currentPage,
-          limit: 20,
-        );
+        final BookmarkListResponse? response;
+        if (useV2) {
+          response = await _requireBookmarkApi.tryGetV2BookmarkList(
+            page: _currentPage,
+            limit: 20,
+          );
+          if (response == null) {
+            if (generation != _loadGeneration) return;
+            _failV2Refresh('Could not refresh bookmarks');
+            return;
+          }
+        } else {
+          response = await _requireBookmarkApi.getBookmarkList(
+            page: _currentPage,
+            limit: 20,
+          );
+        }
 
         if (generation != _loadGeneration) {
           debugPrint('🔖 Ignoring stale bookmark load (gen $generation)');
           return;
         }
 
-        final filtered = _filterRemoved(response.data);
+        final incoming = useV2 ? response.data : _filterRemoved(response.data);
+        final pageResult = useV2 && _currentPage == 1
+            ? BookmarkRefreshResult.success(incoming)
+            : null;
 
         if (_currentPage == 1) {
-          _bookmarks = filtered;
+          _bookmarks = pageResult?.items ?? incoming;
         } else {
-          _bookmarks.addAll(filtered);
+          _bookmarks.addAll(incoming);
+        }
+        if (useV2 && _currentPage == 1) {
+          _removedNewsIds.clear();
         }
 
         _hasMore = response.pagination.hasMore;
@@ -140,6 +171,11 @@ class BookmarkProvider with ChangeNotifier {
         notifyListeners();
       } catch (apiError) {
         if (generation != _loadGeneration) return;
+        if (useV2) {
+          debugPrint('⚠️ V2 bookmark refresh failed: $apiError');
+          _failV2Refresh(apiError.toString());
+          return;
+        }
         if (_bookmarks.isNotEmpty) {
           debugPrint('⚠️ API fetch failed, using in-memory bookmarks: $apiError');
           _isLoading = false;
@@ -195,7 +231,20 @@ class BookmarkProvider with ChangeNotifier {
 
   Future<void> loadMoreBookmarks() async {
     if (_isLoading || !_hasMore) return;
-    await loadBookmarks(page: _currentPage + 1);
+    await loadBookmarks(page: _currentPage + 1, v2List: _v2List);
+  }
+
+  /// Failed V2 refresh. Keeps [bookmarks] and records an error.
+  /// Does not turn the failure into an empty list.
+  void _failV2Refresh(String error) {
+    final kept = BookmarkRefreshResult.failure(
+      visible: _bookmarks,
+      error: error,
+    );
+    _bookmarks = kept.items;
+    _error = kept.error;
+    _isLoading = false;
+    notifyListeners();
   }
 
   String? _bookmarkApiNewsId(NewsArticle article) {
@@ -225,11 +274,14 @@ class BookmarkProvider with ChangeNotifier {
 
   Future<void> _purgeLocal(NewsArticle article, String newsId) async {
     _removedNewsIds.add(newsId);
-    _bookmarks.removeWhere((a) {
-      final aId = a.newsId?.trim();
-      if (aId != null && aId == newsId) return true;
-      return (a.articleId ?? a.title) == (article.articleId ?? article.title);
-    });
+    // Immutable replace — never mutate the list ListView may still hold.
+    _bookmarks = BookmarkListEdits.remove(_bookmarks, newsId);
+    final key = (article.articleId ?? article.title).trim();
+    if (key.isNotEmpty) {
+      _bookmarks = _bookmarks
+          .where((a) => (a.articleId ?? a.title) != key)
+          .toList();
+    }
     await StorageService.removeBookmarkForArticle(article);
     await StorageService.removeBookmark(newsId);
     await StorageService.saveBookmarkListCache(_bookmarks);
@@ -286,11 +338,10 @@ class BookmarkProvider with ChangeNotifier {
     }
   }
 
-  /// V2 Reader / V2 Article Detail bookmark — local UI + V2 interaction only.
+  /// V2 bookmark add/remove. Persistence is `POST` / `DELETE /api/v2/bookmarks`.
   ///
-  /// Persists engagement via [InteractionService.ensureBookmarkTracked]
-  /// (`POST /api/interaction` on the V2 host). Never calls
-  /// `api.newson.app` `/api/bookmark/addBookmark` or other V1 bookmark APIs.
+  /// `POST /api/interaction` is analytics only, and only after the bookmark
+  /// write succeeds. It never decides whether the article stays bookmarked.
   Future<bool> toggleBookmarkV2(NewsArticle article) async {
     final currentlyBookmarked = isBookmarked(article);
 
@@ -305,38 +356,75 @@ class BookmarkProvider with ChangeNotifier {
       throw Exception('Cannot bookmark: missing V2 article id');
     }
 
-    final interactions = InteractionService();
-
-    if (currentlyBookmarked) {
-      await _purgeLocal(article, newsId);
-      interactions.clearBookmarkDedupe(article);
-      notifyListeners();
-      debugPrint('✅ V2 bookmark removed (local + interaction dedupe cleared)');
-      return false;
+    if (!_toggleGuard.tryBegin(newsId)) {
+      debugPrint('🔖 V2 bookmark already in flight for $newsId');
+      return currentlyBookmarked;
     }
 
-    // Optimistic local UI, then V2 interaction persistence.
-    _removedNewsIds.remove(newsId);
-    final bookmarkedArticle = article.copyWith(
-      isBookmarked: true,
-      bookmarkedAt: DateTime.now(),
-      newsId: newsId,
-      articleId: article.articleId ?? newsId,
-    );
-    _bookmarks.insert(0, bookmarkedArticle);
-    notifyListeners();
+    final interactions = InteractionService();
 
     try {
-      await StorageService.addBookmark(bookmarkedArticle);
-      await StorageService.saveBookmarkListCache(_bookmarks);
-      await interactions.ensureBookmarkTracked(bookmarkedArticle);
-      debugPrint('✅ V2 bookmark added (local + /api/interaction)');
-      return true;
-    } catch (e) {
-      debugPrint('❌ V2 bookmark persistence failed — rolling back: $e');
-      await _purgeLocal(article, newsId);
+      if (currentlyBookmarked) {
+        NewsArticle snapshot = article;
+        for (final a in _bookmarks) {
+          final aId = a.newsId?.trim();
+          if (aId != null && aId == newsId) {
+            snapshot = a;
+            break;
+          }
+          if ((a.articleId ?? a.title) == (article.articleId ?? article.title)) {
+            snapshot = a;
+            break;
+          }
+        }
+        await _purgeLocal(article, newsId);
+        notifyListeners();
+        try {
+          await _requireBookmarkApi.deleteV2Bookmark(newsId);
+          interactions.clearBookmarkDedupe(article);
+          debugPrint('[V2Bookmark] delete success');
+          return false;
+        } catch (e) {
+          debugPrint('❌ V2 unbookmark failed — rolling back: $e');
+          _removedNewsIds.remove(newsId);
+          _bookmarks = BookmarkListEdits.add(_bookmarks, snapshot);
+          await StorageService.addBookmark(snapshot);
+          await StorageService.saveBookmarkListCache(_bookmarks);
+          notifyListeners();
+          rethrow;
+        }
+      }
+
+      _removedNewsIds.remove(newsId);
+      final bookmarkedArticle = article.copyWith(
+        isBookmarked: true,
+        bookmarkedAt: DateTime.now(),
+        newsId: newsId,
+        articleId: article.articleId ?? newsId,
+      );
+      _bookmarks = BookmarkListEdits.add(_bookmarks, bookmarkedArticle);
       notifyListeners();
-      rethrow;
+
+      try {
+        await _requireBookmarkApi.addV2Bookmark(newsId);
+        await StorageService.addBookmark(bookmarkedArticle);
+        await StorageService.saveBookmarkListCache(_bookmarks);
+        try {
+          await interactions.ensureBookmarkTracked(bookmarkedArticle);
+        } catch (trackError) {
+          debugPrint(
+            '[V2Bookmark] interaction track failed after persist: $trackError',
+          );
+        }
+        return true;
+      } catch (e) {
+        debugPrint('[V2Bookmark] add failed');
+        await _purgeLocal(article, newsId);
+        notifyListeners();
+        rethrow;
+      }
+    } finally {
+      _toggleGuard.end(newsId);
     }
   }
 

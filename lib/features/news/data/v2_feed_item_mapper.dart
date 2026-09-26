@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../data/models/news_article.dart';
 import '../domain/news_summary.dart';
 
@@ -173,6 +175,7 @@ abstract final class V2FeedItemMapper {
         payload['has_more'] == true ||
         payload['hasMore'] == true;
     final mode = _str(payload['mode'] ?? payload['sortMode']);
+    final filters = V2HomeCategoryFilters.parse(payload['filters']);
 
     return V2FeedPage(
       articles: articles,
@@ -180,6 +183,7 @@ abstract final class V2FeedItemMapper {
       hasMore: hasMore,
       mode: mode,
       limit: _int(payload['limit']),
+      categoryFilters: filters,
     );
   }
 
@@ -238,6 +242,7 @@ class V2FeedPage {
     required this.hasMore,
     this.mode,
     this.limit,
+    this.categoryFilters,
   });
 
   final List<NewsArticle> articles;
@@ -245,4 +250,85 @@ class V2FeedPage {
   final bool hasMore;
   final String? mode;
   final int? limit;
+
+  /// From `data.filters` on `GET /api/v2/home` when present.
+  final V2HomeCategoryFilters? categoryFilters;
+
+  String? get categorySource => categoryFilters?.source;
+}
+
+/// Backend `data.filters` for Home category resolution.
+class V2HomeCategoryFilters {
+  const V2HomeCategoryFilters({
+    required this.source,
+    this.categories = const [],
+  });
+
+  /// `explicit` | `saved_preferences` | `default`
+  final String source;
+
+  /// Display tokens (slug preferred, else name).
+  final List<String> categories;
+
+  static V2HomeCategoryFilters? parse(dynamic raw) {
+    if (raw is! Map) return null;
+    final map = Map<String, dynamic>.from(raw);
+    final source = (map['categorySource'] ?? map['source'])?.toString().trim();
+    if (source == null || source.isEmpty) return null;
+
+    final tokens = <String>[];
+    final seen = <String>{};
+    final list = map['categories'];
+    if (list is List) {
+      for (final item in list) {
+        String? token;
+        if (item is Map) {
+          final m = Map<String, dynamic>.from(item);
+          token = (m['slug'] ?? m['name'] ?? m['id'])?.toString();
+        } else if (item != null) {
+          token = item.toString();
+        }
+        final trimmed = token?.trim() ?? '';
+        if (trimmed.isEmpty || seen.contains(trimmed)) continue;
+        seen.add(trimmed);
+        tokens.add(trimmed);
+      }
+    }
+    return V2HomeCategoryFilters(source: source, categories: tokens);
+  }
+}
+
+/// Debug logging for Home category contract.
+abstract final class V2HomeCategoryDebug {
+  /// Returns the log lines (also useful for tests).
+  static List<String> lines({
+    required String source,
+    required List<String> categories,
+    required int itemCount,
+  }) {
+    final out = <String>[
+      '[V2HomeCategory]',
+      'source=$source',
+      'categories=[${categories.join(', ')}]',
+    ];
+    if (source == 'saved_preferences' && itemCount == 0) {
+      out.add(
+        '[V2HomeCategory] saved preferences returned zero matching articles',
+      );
+    }
+    return out;
+  }
+
+  static void logPage(V2FeedPage page) {
+    final filters = page.categoryFilters;
+    if (filters == null) return;
+    for (final line in lines(
+      source: filters.source,
+      categories: filters.categories,
+      itemCount: page.articles.length,
+    )) {
+      // ignore: avoid_print — intentional V2 Home category diagnostics
+      debugPrint(line);
+    }
+  }
 }

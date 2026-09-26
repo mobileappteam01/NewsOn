@@ -40,7 +40,10 @@ class V2ArticleImage extends StatelessWidget {
             color: theme.colorScheme.surfaceContainerHighest
                 .withValues(alpha: 0.6),
             child: url.isEmpty
-                ? newsOnImageFallback(height: double.infinity)
+                ? newsOnImageFallback(
+                    height: double.infinity,
+                    logoMaxExtent: 72,
+                  )
                 : CachedNetworkImage(
                     imageUrl: url,
                     fit: BoxFit.cover,
@@ -59,8 +62,10 @@ class V2ArticleImage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    errorWidget: (_, __, ___) =>
-                        newsOnImageFallback(height: double.infinity),
+                    errorWidget: (_, __, ___) => newsOnImageFallback(
+                      height: double.infinity,
+                      logoMaxExtent: 72,
+                    ),
                   ),
           ),
         ),

@@ -42,9 +42,9 @@ class CategoryCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // Background image
-                  if (imageUrl != null)
+                  if (imageUrl != null && imageUrl!.trim().isNotEmpty)
                     CachedNetworkImage(
-                      imageUrl: imageUrl!,
+                      imageUrl: imageUrl!.trim(),
                       fit: BoxFit.cover,
                       placeholder:
                           (context, url) => Container(

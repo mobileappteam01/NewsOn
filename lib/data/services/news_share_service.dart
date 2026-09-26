@@ -20,8 +20,8 @@ class NewsShareService {
   /// Title, catchy CTA, and app deep link only (no description body).
   ///
   /// When [v2] is true, emits an explicit V2 share URL
-  /// (`https://api.newson.app/v2/article/{id}`) so deep-link handling skips
-  /// the V1 [NewsArticleResolver].
+  /// (`https://v2-api.newson.app/v2/news/{id}`) so deep-link handling skips
+  /// the V1 [NewsArticleResolver] and the browser hits the V2 HTML page.
   static String buildShareText(
     NewsArticle article, {
     String? curiousCta,

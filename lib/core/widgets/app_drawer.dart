@@ -17,7 +17,11 @@ import 'package:provider/provider.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/language_provider.dart';
-import '../../screens/drawer_widgets/notification.dart';
+import 'package:newson/features/account/presentation/v2_account_settings_screen.dart';
+import 'package:newson/features/home_v2/domain/v2_effective_categories.dart';
+import 'package:newson/features/notifications/presentation/v2_notification_inbox_screen.dart';
+import 'package:newson/screens/drawer_widgets/notification.dart';
+import 'package:newson/core/config/v2_feature_flags.dart';
 import '../utils/shared_functions.dart';
 
 /// App drawer/sidebar menu
@@ -114,9 +118,19 @@ class AppDrawer extends StatelessWidget {
 
                             final Widget page;
                             if (i == 0) {
-                              page = const AccountSettings();
+                              final useV2Account =
+                                  V2FeatureFlags.homeReader(config) ||
+                                      V2FeatureFlags.notifications(config);
+                              page = useV2Account
+                                  ? const V2AccountSettingsScreen()
+                                  : const AccountSettings();
                             } else if (i == 1) {
-                              page = const NotificationView();
+                              final useV2Inbox =
+                                  V2FeatureFlags.homeReader(config) ||
+                                      V2FeatureFlags.notifications(config);
+                              page = useV2Inbox
+                                  ? const V2NotificationInboxScreen()
+                                  : const NotificationView();
                             } else if (i == 2) {
                               page = BookMark();
                             } else if (i == 3) {
@@ -126,8 +140,12 @@ class AppDrawer extends StatelessWidget {
                             } else if (i == 5) {
                               page = PrivacyPolicy();
                             } else {
-                              page = const CategorySelectionScreen(
+                              final useV2Categories =
+                                  V2FeatureFlags.homeReader(config) ||
+                                      V2FeatureFlags.notifications(config);
+                              page = CategorySelectionScreen(
                                 isFromSideMenu: true,
+                                useV2Catalog: useV2Categories,
                               );
                             }
 
@@ -140,6 +158,7 @@ class AppDrawer extends StatelessWidget {
                                 result == true) {
                               NewsFeedTabNew
                                   .preferredCategoriesRevision.value++;
+                              V2CategoryPreferenceResolver.bump();
                             }
                           },
                           iconColor: config.primaryColorValue,

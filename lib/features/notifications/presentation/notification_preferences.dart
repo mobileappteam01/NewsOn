@@ -17,6 +17,9 @@ class NotificationPreferencesController extends ChangeNotifier {
   bool _loading = false;
   bool get loading => _loading;
 
+  bool _updating = false;
+  bool get updating => _updating;
+
   String? _error;
   String? get error => _error;
 
@@ -47,14 +50,18 @@ class NotificationPreferencesController extends ChangeNotifier {
       _patch(_prefs.copyWith(publisherNotificationsEnabled: value));
 
   Future<void> _patch(NotificationPreferences next) async {
+    if (_updating) return;
     final previous = _prefs;
+    _updating = true;
     _prefs = next;
+    _error = null;
     notifyListeners();
     final ok = await _api.updatePreferences(next);
+    _updating = false;
     if (!ok) {
       _prefs = previous;
       _error = 'update_failed';
-      notifyListeners();
     }
+    notifyListeners();
   }
 }

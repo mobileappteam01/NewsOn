@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../data/models/news_article.dart';
+import '../../providers/bookmark_provider.dart';
 import 'news_article_image.dart';
 
 /// Instagram-style featured row: two stacked tiles left, one hero tile right.
@@ -12,6 +14,8 @@ class ForYouFeaturedMosaic extends StatelessWidget {
     required this.primaryColor,
     required this.onArticleTap,
     this.onListenTap,
+    this.onBookmark,
+    this.onShare,
     this.showListenOverlay = false,
   });
 
@@ -19,6 +23,8 @@ class ForYouFeaturedMosaic extends StatelessWidget {
   final Color primaryColor;
   final void Function(NewsArticle article, int index) onArticleTap;
   final void Function(NewsArticle article, int index)? onListenTap;
+  final void Function(NewsArticle article, int index)? onBookmark;
+  final void Function(NewsArticle article, int index)? onShare;
   final bool showListenOverlay;
 
   static const double _mosaicHeight = 248;
@@ -39,6 +45,10 @@ class ForYouFeaturedMosaic extends StatelessWidget {
         onListenTap: onListenTap != null
             ? () => onListenTap!(articles[0], 0)
             : null,
+        onBookmark: onBookmark != null
+            ? () => onBookmark!(articles[0], 0)
+            : null,
+        onShare: onShare != null ? () => onShare!(articles[0], 0) : null,
         showListenOverlay: showListenOverlay,
       );
     }
@@ -61,6 +71,11 @@ class ForYouFeaturedMosaic extends StatelessWidget {
                 onListenTap: onListenTap != null
                     ? () => onListenTap!(articles[0], 0)
                     : null,
+                onBookmark: onBookmark != null
+                    ? () => onBookmark!(articles[0], 0)
+                    : null,
+                onShare:
+                    onShare != null ? () => onShare!(articles[0], 0) : null,
                 showListenOverlay: showListenOverlay,
               ),
             ),
@@ -78,6 +93,11 @@ class ForYouFeaturedMosaic extends StatelessWidget {
                 onListenTap: onListenTap != null
                     ? () => onListenTap!(articles[1], 1)
                     : null,
+                onBookmark: onBookmark != null
+                    ? () => onBookmark!(articles[1], 1)
+                    : null,
+                onShare:
+                    onShare != null ? () => onShare!(articles[1], 1) : null,
                 showListenOverlay: showListenOverlay,
               ),
             ),
@@ -111,6 +131,11 @@ class ForYouFeaturedMosaic extends StatelessWidget {
                     onListenTap: onListenTap != null
                         ? () => onListenTap!(leftTop, 0)
                         : null,
+                    onBookmark: onBookmark != null
+                        ? () => onBookmark!(leftTop, 0)
+                        : null,
+                    onShare:
+                        onShare != null ? () => onShare!(leftTop, 0) : null,
                     showListenOverlay: showListenOverlay,
                   ),
                 ),
@@ -127,6 +152,12 @@ class ForYouFeaturedMosaic extends StatelessWidget {
                     onTap: () => onArticleTap(leftBottom, 1),
                     onListenTap: onListenTap != null
                         ? () => onListenTap!(leftBottom, 1)
+                        : null,
+                    onBookmark: onBookmark != null
+                        ? () => onBookmark!(leftBottom, 1)
+                        : null,
+                    onShare: onShare != null
+                        ? () => onShare!(leftBottom, 1)
                         : null,
                     showListenOverlay: showListenOverlay,
                   ),
@@ -148,6 +179,9 @@ class ForYouFeaturedMosaic extends StatelessWidget {
               onListenTap: onListenTap != null
                   ? () => onListenTap!(hero, 2)
                   : null,
+              onBookmark:
+                  onBookmark != null ? () => onBookmark!(hero, 2) : null,
+              onShare: onShare != null ? () => onShare!(hero, 2) : null,
               showListenOverlay: showListenOverlay,
             ),
           ),
@@ -166,6 +200,8 @@ class _FeaturedTile extends StatelessWidget {
     required this.borderRadius,
     required this.onTap,
     this.onListenTap,
+    this.onBookmark,
+    this.onShare,
     this.showListenOverlay = false,
   });
 
@@ -176,6 +212,8 @@ class _FeaturedTile extends StatelessWidget {
   final BorderRadius borderRadius;
   final VoidCallback onTap;
   final VoidCallback? onListenTap;
+  final VoidCallback? onBookmark;
+  final VoidCallback? onShare;
   final bool showListenOverlay;
 
   String? get _imageUrl {
@@ -186,6 +224,8 @@ class _FeaturedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showActions = onBookmark != null || onShare != null;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -218,7 +258,7 @@ class _FeaturedTile extends StatelessWidget {
                 ),
                 Positioned(
                   left: 10,
-                  right: 10,
+                  right: showActions ? 56 : 10,
                   bottom: 10,
                   child: Text(
                     article.title,
@@ -276,9 +316,57 @@ class _FeaturedTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (showActions)
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (onBookmark != null)
+                          Consumer<BookmarkProvider>(
+                            builder: (context, bookmarks, _) {
+                              final saved = bookmarks.isBookmarked(article);
+                              return _mosaicAction(
+                                icon: saved
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                onTap: onBookmark!,
+                                color: saved ? primaryColor : Colors.white,
+                              );
+                            },
+                          ),
+                        if (onShare != null)
+                          _mosaicAction(
+                            icon: Icons.share_outlined,
+                            onTap: onShare!,
+                            color: Colors.white,
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mosaicAction({
+    required IconData icon,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return Material(
+      color: Colors.black45,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(icon, size: 16, color: color),
         ),
       ),
     );

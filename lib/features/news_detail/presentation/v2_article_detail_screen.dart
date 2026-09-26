@@ -13,6 +13,7 @@ import '../../../core/utils/shared_functions.dart';
 import '../../../data/models/news_article.dart';
 import '../../../data/services/interaction_service.dart';
 import '../../../data/services/news_share_service.dart';
+import '../../../features/home_v2/presentation/v2_news_text_scale.dart';
 import '../../../features/home_v2/presentation/widgets/v2_vintage_paper_background.dart';
 import '../../../providers/bookmark_provider.dart';
 import '../../../providers/language_provider.dart';
@@ -275,7 +276,9 @@ class _V2ArticleDetailScreenState extends State<V2ArticleDetailScreen> {
               ),
               const SizedBox(height: 14),
               Expanded(
-                child: _buildSheetBody(theme, bodyStyle, article),
+                child: V2NewsTextScope(
+                  child: _buildSheetBody(theme, bodyStyle, article),
+                ),
               ),
             ],
           ),

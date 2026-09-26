@@ -42,7 +42,7 @@ https://api.newson.app/news/930a8436b94a3e538164f95859055261''',
       );
     });
 
-    test('V2 share uses /v2/article/{id} URL', () {
+    test('V2 share uses /v2/news/{id} on v2-api host', () {
       final article = NewsArticle(
         articleId: '6ab1d4fda5abc256076d157e',
         newsId: '6ab1d4fda5abc256076d157e',
@@ -55,9 +55,15 @@ https://api.newson.app/news/930a8436b94a3e538164f95859055261''',
       );
       expect(
         text,
-        contains('https://api.newson.app/v2/article/6ab1d4fda5abc256076d157e'),
+        contains('https://v2-api.newson.app/v2/news/6ab1d4fda5abc256076d157e'),
       );
-      expect(text, isNot(contains('https://api.newson.app/news/')));
+      expect(text, isNot(contains('/v2/article/')));
+      // Must not use V1 host for V2 public HTML shares.
+      expect(text, isNot(contains('https://api.newson.app/v2/news/')));
+      expect(
+        text,
+        isNot(contains('https://api.newson.app/news/6ab1d4fda5abc256076d157e')),
+      );
     });
 
     test('with no articleId shares title only (no CTA/link)', () {

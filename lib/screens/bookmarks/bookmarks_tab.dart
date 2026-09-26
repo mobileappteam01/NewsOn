@@ -2,13 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../app/routing/v2_routes.dart';
+import '../../features/bookmarks/presentation/v2_bookmark_list_tile.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/bookmark_provider.dart';
+import '../../core/config/v2_feature_flags.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/localization_helper.dart';
-import '../../core/widgets/news_card.dart';
 import '../../core/widgets/audio_mini_player.dart';
 import '../../providers/news_provider.dart';
+import '../../providers/remote_config_provider.dart';
 import '../../widgets/news_grid_views.dart';
 import '../../core/widgets/news_share_bottom_sheet.dart';
 import '../news_detail/news_detail_screen.dart';
@@ -29,8 +32,18 @@ class _BookmarksTabState extends State<BookmarksTab>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BookmarkProvider>().loadBookmarks(refresh: true);
+      if (!mounted) return;
+      context.read<BookmarkProvider>().loadBookmarks(
+            refresh: true,
+            v2List: _v2Bookmarks(context),
+          );
     });
+  }
+
+  bool _v2Bookmarks(BuildContext context) {
+    final config = context.read<RemoteConfigProvider>().config;
+    return V2FeatureFlags.homeReader(config) ||
+        V2FeatureFlags.newArticleDetail(config);
   }
 
   @override
@@ -102,6 +115,35 @@ class _BookmarksTabState extends State<BookmarksTab>
                   ),
                 ),
 
+              if (bookmarkProvider.error != null &&
+                  bookmarkProvider.hasBookmarks)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.defaultPadding,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          bookmarkProvider.error!,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: bookmarkProvider.isLoading
+                            ? null
+                            : () {
+                                bookmarkProvider.loadBookmarks(
+                                  refresh: true,
+                                  v2List: _v2Bookmarks(context),
+                                );
+                              },
+                        child: Text(LocalizationHelper.retry(context)),
+                      ),
+                    ],
+                  ),
+                ),
+
               const SizedBox(height: AppConstants.defaultPadding),
 
               // Bookmarks list
@@ -137,7 +179,10 @@ class _BookmarksTabState extends State<BookmarksTab>
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
-                                  bookmarkProvider.loadBookmarks(refresh: true);
+                                  bookmarkProvider.loadBookmarks(
+                                    refresh: true,
+                                    v2List: _v2Bookmarks(context),
+                                  );
                                 },
                                 child: Text(LocalizationHelper.retry(context)),
                               ),
@@ -187,6 +232,7 @@ class _BookmarksTabState extends State<BookmarksTab>
                             await bookmarkProvider.loadBookmarks(
                               refresh: true,
                               forceNetwork: true,
+                              v2List: _v2Bookmarks(context),
                             );
                           },
                           child: ListView.builder(
@@ -208,6 +254,62 @@ class _BookmarksTabState extends State<BookmarksTab>
                                 return const SizedBox.shrink();
                               }
                               final article = displayedBookmarks[index];
+                              if (_v2Bookmarks(context)) {
+                                return V2BookmarkListTile(
+                                  key: ValueKey(
+                                    'v2_bookmark_${article.newsId ?? article.articleId ?? index}',
+                                  ),
+                                  article: article,
+                                  bookmarked:
+                                      bookmarkProvider.isBookmarked(article),
+                                  onOpen: () {
+                                    V2Routes.openArticle(
+                                      context,
+                                      article: article,
+                                      articles: displayedBookmarks,
+                                      initialIndex: index,
+                                    );
+                                  },
+                                  onBookmark: () async {
+                                    try {
+                                      final nowBookmarked =
+                                          await bookmarkProvider
+                                              .toggleBookmarkV2(article);
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            nowBookmarked
+                                                ? LocalizationHelper
+                                                    .addedToBookmarks(context)
+                                                : LocalizationHelper
+                                                    .removedFromBookmarks(
+                                                        context),
+                                          ),
+                                          duration: const Duration(seconds: 1),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            LocalizationHelper.error(
+                                              context,
+                                              e.toString(),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  onShare: () {
+                                    showNewsShareBottomSheet(context, article);
+                                  },
+                                );
+                              }
                               // return NewsCard(
                               //   article: article,
                               //   onTap: () {
@@ -329,6 +431,15 @@ class _BookmarksTabState extends State<BookmarksTab>
                                   }
                                 },
                                 onNewsTapped: () {
+                                  if (_v2Bookmarks(context)) {
+                                    V2Routes.openArticle(
+                                      context,
+                                      article: article,
+                                      articles: displayedBookmarks,
+                                      initialIndex: index,
+                                    );
+                                    return;
+                                  }
                                   NewsDetailScreen.open(
                                     context,
                                     article: article,

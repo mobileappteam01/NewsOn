@@ -63,7 +63,17 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="newson" android:host="news"/>
             </intent-filter>
-            <!-- Deep link: newson://v2/article/{articleId} -->
+            <!-- Deep link: newson://v2/news/{articleId} -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="newson"
+                    android:host="v2"
+                    android:pathPrefix="/news"/>
+            </intent-filter>
+            <!-- Legacy deep link: newson://v2/article/{articleId} -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -83,7 +93,7 @@
                     android:host="api.newson.app"
                     android:pathPrefix="/news"/>
             </intent-filter>
-            <!-- HTTPS app link: https://api.newson.app/v2/article/{articleId} -->
+            <!-- HTTPS app link: https://api.newson.app/v2/news/{articleId} (legacy host) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -91,6 +101,35 @@
                 <data
                     android:scheme="https"
                     android:host="api.newson.app"
+                    android:pathPrefix="/v2/news"/>
+            </intent-filter>
+            <!-- HTTPS app link: https://v2-api.newson.app/v2/news/{articleId} (canonical) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="v2-api.newson.app"
+                    android:pathPrefix="/v2/news"/>
+            </intent-filter>
+            <!-- Legacy HTTPS: https://api.newson.app/v2/article/{articleId} -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="api.newson.app"
+                    android:pathPrefix="/v2/article"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="v2-api.newson.app"
                     android:pathPrefix="/v2/article"/>
             </intent-filter>
         </activity>

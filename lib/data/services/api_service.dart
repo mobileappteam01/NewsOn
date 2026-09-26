@@ -1174,6 +1174,62 @@ class ApiService {
     }
   }
 
+  /// PUT by absolute-or-relative API path (V2 preference routes, etc.).
+  Future<ApiResponse> putByPath(
+    String relativeOrAbsolutePath, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    String? bearerToken,
+    bool useV2Host = false,
+    String? baseUrlOverride,
+  }) async {
+    try {
+      final url = await _resolvePathUrlReady(
+        relativeOrAbsolutePath,
+        useV2Host: useV2Host,
+        baseUrlOverride: baseUrlOverride,
+      );
+      final finalHeaders = <String, String>{};
+      if (headers != null) finalHeaders.addAll(headers);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        finalHeaders['Authorization'] = 'Bearer $bearerToken';
+      }
+      debugPrint('🌐 PUT (by path) Request: $url');
+      final response = await _dio.put(
+        url,
+        data: body,
+        options: Options(
+          headers: finalHeaders,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        return _handleDioError(
+          DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'HTTP ${response.statusCode}',
+          ),
+        );
+      }
+      return _handleDioResponse(response);
+    } on V2ApiConfigException {
+      rethrow;
+    } on DioException catch (e) {
+      debugPrint('❌ PUT (by path) Error: ${e.message}');
+      return _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ PUT (by path) Error: $e');
+      return ApiResponse(
+        success: false,
+        data: null,
+        error: e.toString(),
+        statusCode: 0,
+      );
+    }
+  }
+
   /// PATCH by absolute-or-relative API path.
   Future<ApiResponse> patchByPath(
     String relativeOrAbsolutePath, {

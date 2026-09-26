@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/routing/v2_routes.dart';
+import '../../core/config/v2_feature_flags.dart';
 import '../../core/utils/localization_helper.dart';
-import '../../providers/remote_config_provider.dart';
-import '../../providers/bookmark_provider.dart';
 import '../../core/widgets/news_card.dart';
+import '../../core/widgets/news_share_bottom_sheet.dart';
+import '../../features/bookmarks/presentation/v2_bookmark_list_tile.dart';
+import '../../providers/bookmark_provider.dart';
+import '../../providers/remote_config_provider.dart';
 import '../news_detail/news_detail_screen.dart';
 
 class BookMark extends StatefulWidget {
@@ -22,8 +26,18 @@ class _BookMarkState extends State<BookMark> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BookmarkProvider>().loadBookmarks(refresh: true);
+      if (!mounted) return;
+      context.read<BookmarkProvider>().loadBookmarks(
+            refresh: true,
+            v2List: _v2Bookmarks(context),
+          );
     });
+  }
+
+  bool _v2Bookmarks(BuildContext context) {
+    final config = context.read<RemoteConfigProvider>().config;
+    return V2FeatureFlags.homeReader(config) ||
+        V2FeatureFlags.newArticleDetail(config);
   }
 
   @override
@@ -33,16 +47,18 @@ class _BookMarkState extends State<BookMark> {
         final config = configProvider.config;
         final theme = Theme.of(context);
         final bookmarkProvider = Provider.of<BookmarkProvider>(context);
+        final useV2 = _v2Bookmarks(context);
 
-        final displayedBookmarks = _searchQuery.isEmpty
+        // Copy so ListView is not tied to the provider's mutable list.
+        final source = _searchQuery.isEmpty
             ? bookmarkProvider.bookmarks
             : bookmarkProvider.searchBookmarks(_searchQuery);
+        final displayedBookmarks = List.of(source);
 
         return Scaffold(
           body: SafeArea(
             child: Column(
               children: [
-                // Header
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -64,8 +80,6 @@ class _BookMarkState extends State<BookMark> {
                     ],
                   ),
                 ),
-
-                // Search bar
                 if (bookmarkProvider.hasBookmarks)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -86,10 +100,7 @@ class _BookMarkState extends State<BookMark> {
                       },
                     ),
                   ),
-
                 const SizedBox(height: 16),
-
-                // Bookmarks list
                 Expanded(
                   child: bookmarkProvider.isLoading &&
                           bookmarkProvider.bookmarks.isEmpty
@@ -124,6 +135,7 @@ class _BookMarkState extends State<BookMark> {
                                     onPressed: () {
                                       bookmarkProvider.loadBookmarks(
                                         refresh: true,
+                                        v2List: useV2,
                                       );
                                     },
                                     child:
@@ -179,6 +191,7 @@ class _BookMarkState extends State<BookMark> {
                                         await bookmarkProvider.loadBookmarks(
                                           refresh: true,
                                           forceNetwork: true,
+                                          v2List: useV2,
                                         );
                                       },
                                       child: ListView.builder(
@@ -190,7 +203,6 @@ class _BookMarkState extends State<BookMark> {
                                         itemBuilder: (context, index) {
                                           if (index ==
                                               displayedBookmarks.length) {
-                                            // Load more indicator
                                             if (bookmarkProvider.hasMore) {
                                               bookmarkProvider
                                                   .loadMoreBookmarks();
@@ -206,6 +218,74 @@ class _BookMarkState extends State<BookMark> {
                                           }
                                           final article =
                                               displayedBookmarks[index];
+                                          if (useV2) {
+                                            return V2BookmarkListTile(
+                                              key: ValueKey(
+                                                'sidebar_v2_bookmark_'
+                                                '${article.newsId ?? article.articleId ?? index}',
+                                              ),
+                                              article: article,
+                                              bookmarked: bookmarkProvider
+                                                  .isBookmarked(article),
+                                              onOpen: () {
+                                                V2Routes.openArticle(
+                                                  context,
+                                                  article: article,
+                                                  articles: displayedBookmarks,
+                                                  initialIndex: index,
+                                                );
+                                              },
+                                              onBookmark: () async {
+                                                try {
+                                                  final nowBookmarked =
+                                                      await bookmarkProvider
+                                                          .toggleBookmarkV2(
+                                                              article);
+                                                  if (!context.mounted) {
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        nowBookmarked
+                                                            ? LocalizationHelper
+                                                                .addedToBookmarks(
+                                                                    context)
+                                                            : LocalizationHelper
+                                                                .removedFromBookmarks(
+                                                                    context),
+                                                      ),
+                                                      duration: const Duration(
+                                                          seconds: 1),
+                                                    ),
+                                                  );
+                                                } catch (e) {
+                                                  if (!context.mounted) {
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        LocalizationHelper
+                                                            .error(
+                                                          context,
+                                                          e.toString(),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              onShare: () {
+                                                showNewsShareBottomSheet(
+                                                  context,
+                                                  article,
+                                                );
+                                              },
+                                            );
+                                          }
                                           return NewsCard(
                                             article: article,
                                             onTap: () {

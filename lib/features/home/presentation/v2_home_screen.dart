@@ -230,8 +230,9 @@ class _V2HomeScreenState extends State<V2HomeScreen> {
                         onExploreAll: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  const CategorySelectionScreen(),
+                              builder: (_) => const CategorySelectionScreen(
+                                useV2Catalog: true,
+                              ),
                             ),
                           );
                         },

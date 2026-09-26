@@ -86,7 +86,8 @@ class NewsSearchController extends ChangeNotifier {
     _set(_state.copyWith(recent: recent));
   }
 
-  /// Debounced local filter of recent searches (no API).
+  /// Debounced local filter of recent searches (no API, no persistence).
+  /// Recent searches are written only from [submit].
   void onQueryChanged(String raw) {
     _suggestionDebounce?.cancel();
     _suggestionDebounce = Timer(suggestionDebounce, () {

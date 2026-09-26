@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/widgets/language_selector_dialog.dart';
+import '../../core/config/v2_feature_flags.dart';
 import '../../providers/remote_config_provider.dart';
+import '../../features/notifications/presentation/notification_preferences.dart';
 import 'text_size_settings.dart';
 import 'appearance_settings.dart';
 import 'news_reading_settings.dart';
@@ -25,6 +27,8 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
         final config = configProvider.config;
         final voiceEnabled = configProvider.isVoiceFeaturesEnabled;
         final theme = Theme.of(context);
+        final showNotifications = V2FeatureFlags.homeReader(config) ||
+            V2FeatureFlags.forYou(config);
 
         return Scaffold(
           body: SafeArea(
@@ -58,6 +62,10 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
                     theme: theme,
                     onTap: () => showAppLanguageSelectorDialog(context),
                   ),
+                  if (showNotifications) ...[
+                    _divider(),
+                    const _NotificationToggle(),
+                  ],
                   _divider(),
                   _buildSettingItem(
                     title: LocalizationHelper.textSize(context),
@@ -137,4 +145,53 @@ class _ApplicationSettingsState extends State<ApplicationSettings> {
   }
 
   Widget _divider() => const Divider(color: Colors.grey, thickness: 0.5);
+}
+
+class _NotificationToggle extends StatefulWidget {
+  const _NotificationToggle();
+
+  @override
+  State<_NotificationToggle> createState() => _NotificationToggleState();
+}
+
+class _NotificationToggleState extends State<_NotificationToggle> {
+  late final NotificationPreferencesController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = NotificationPreferencesController()..load();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final enabled = _controller.prefs.notificationsEnabled;
+        final busy = _controller.loading || _controller.updating;
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Notifications',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: theme.colorScheme.secondary,
+            ),
+          ),
+          value: enabled,
+          onChanged: busy
+              ? null
+              : (value) => _controller.setNotificationsEnabled(value),
+        );
+      },
+    );
+  }
 }

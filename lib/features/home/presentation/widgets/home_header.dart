@@ -19,18 +19,27 @@ class V2HomeHeader extends StatelessWidget {
     super.key,
     this.onRegionChanged,
     this.onNewsLanguageChanged,
+    this.onOpenFilters,
+    this.filtersActive = false,
+    this.onRefresh,
   });
 
   final Future<void> Function()? onRegionChanged;
   final Future<void> Function()? onNewsLanguageChanged;
 
+  /// When set, the region globe is replaced by the V2 Home filter control.
+  final Future<void> Function()? onOpenFilters;
+  final bool filtersActive;
+  final Future<void> Function()? onRefresh;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final language = context.watch<LanguageProvider>();
-    final region = context.watch<RegionProvider>();
     final config = context.watch<RemoteConfigProvider>().config;
     final onSurface = theme.colorScheme.onSurface;
+    final regionHighlighted = onOpenFilters == null &&
+        context.select<RegionProvider, bool>((r) => r.hasAppliedRegion);
 
     return Material(
       color: Colors.transparent,
@@ -108,24 +117,48 @@ class V2HomeHeader extends StatelessWidget {
               ),
               Semantics(
                 button: true,
-                label: LocalizationHelper.selectRegionTooltip(context),
+                label: onOpenFilters != null ? 'Filters' : LocalizationHelper.selectRegionTooltip(context),
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   constraints: const BoxConstraints(
                     minWidth: 44,
                     minHeight: 44,
                   ),
-                  tooltip: LocalizationHelper.selectRegionTooltip(context),
+                  tooltip: onOpenFilters != null
+                      ? 'Filters'
+                      : LocalizationHelper.selectRegionTooltip(context),
                   icon: Icon(
-                    Icons.public,
+                    onOpenFilters != null
+                        ? Icons.tune_rounded
+                        : Icons.public,
                     size: 20,
-                    color: region.hasAppliedRegion
+                    color: (onOpenFilters != null
+                            ? filtersActive
+                            : regionHighlighted)
                         ? theme.colorScheme.primary
                         : onSurface,
                   ),
-                  onPressed: () => _openRegion(context),
+                  onPressed: () => onOpenFilters != null
+                      ? onOpenFilters!.call()
+                      : _openRegion(context),
                 ),
               ),
+              if (onRefresh != null)
+                Semantics(
+                  button: true,
+                  label: 'Refresh',
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    tooltip: 'Refresh',
+                    icon: const Icon(Icons.refresh_rounded, size: 22),
+                    color: onSurface,
+                    onPressed: () => onRefresh!.call(),
+                  ),
+                ),
               const Spacer(),
               Semantics(
                 button: true,

@@ -5,7 +5,9 @@ import '../../../data/models/news_article.dart';
 import '../../../data/models/region_model.dart';
 import '../../../data/services/v2_api_config_service.dart';
 import '../../for_you/data/for_you_repository.dart';
+import '../../news/data/v2_feed_item_mapper.dart';
 import '../../news/domain/news_summary.dart';
+import '../domain/home_filter_state.dart';
 
 enum V2ReaderStatus { idle, loading, ready, empty, error }
 
@@ -55,27 +57,47 @@ class V2ReaderState {
 }
 
 /// Loads V2 feed articles via existing `/api/v2/for-you` (fixture-friendly).
+typedef V2HomePageLoader = Future<V2FeedPage> Function({
+  required int page,
+  required int limit,
+  required String language,
+  required HomeFilterState filter,
+});
+
 class V2ReaderController extends ChangeNotifier {
   V2ReaderController({
     ForYouRepository? repository,
     required this.newsLanguageCode,
     required this.appliedRegion,
     V2ApiConfigService? configService,
-  })  : _repository = repository ?? ForYouRepository(),
+    V2HomePageLoader? homeLoader,
+    this.homeFilter,
+  })  : _repository = repository,
+        _homeLoader = homeLoader,
         _config = configService ?? V2ApiConfigService.instance;
 
   static const int pageSize = 20;
 
-  final ForYouRepository _repository;
+  ForYouRepository? _repository;
+  final V2HomePageLoader? _homeLoader;
   final V2ApiConfigService _config;
   final String Function() newsLanguageCode;
   final SavedRegion Function() appliedRegion;
+
+  /// Committed Home filter. Used only when [homeLoader] is set.
+  final HomeFilterState Function()? homeFilter;
+
+  ForYouRepository get _forYou => _repository ??= ForYouRepository();
 
   V2ReaderState _state = const V2ReaderState();
   V2ReaderState get state => _state;
 
   final Set<String> _impressedIds = <String>{};
   bool _loadingMore = false;
+  bool _refreshInFlight = false;
+  int _fetchGeneration = 0;
+
+  bool get refreshInFlight => _refreshInFlight;
 
   /// Counts successful fetchPage attempts for the current loadInitial cycle.
   @visibleForTesting
@@ -84,20 +106,28 @@ class V2ReaderController extends ChangeNotifier {
   /// True after the one allowed config-ordering retry has been used.
   bool _configRetryUsed = false;
 
-  Future<void> loadInitial() async {
-    _state = _state.copyWith(
-      status: V2ReaderStatus.loading,
-      clearError: true,
-      index: 0,
-      page: 1,
-    );
+  Future<void> loadInitial({bool keepVisible = false}) async {
+    final generation = ++_fetchGeneration;
+    _loadingMore = false;
+    final preserveFeed =
+        keepVisible && _state.articles.isNotEmpty && _state.status == V2ReaderStatus.ready;
+    if (preserveFeed) {
+      _state = _state.copyWith(clearError: true, page: 1);
+    } else {
+      _state = _state.copyWith(
+        status: V2ReaderStatus.loading,
+        clearError: true,
+        index: 0,
+        page: 1,
+      );
+    }
     notifyListeners();
     fetchAttempts = 0;
     _configRetryUsed = false;
 
     try {
       await _config.ensureReady();
-      await _fetchInitialPage();
+      await _fetchInitialPage(generation);
     } on V2ApiConfigException catch (e) {
       // Startup ordering: first attempt blocked before config usable — retry once.
       if (!_configRetryUsed) {
@@ -107,7 +137,7 @@ class V2ReaderController extends ChangeNotifier {
         );
         try {
           await _config.ensureReady();
-          await _fetchInitialPage();
+          await _fetchInitialPage(generation);
         } catch (e2) {
           _fail(e2);
         }
@@ -121,9 +151,13 @@ class V2ReaderController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _fetchInitialPage() async {
+  Future<void> _fetchInitialPage(int generation) async {
     fetchAttempts++;
-    final page = await _repository.fetchPage(
+    if (_homeLoader != null) {
+      await _applyHomePage(page: 1, append: false, generation: generation);
+      return;
+    }
+    final page = await _forYou.fetchPage(
       page: 1,
       limit: pageSize,
       newsLanguageCode: newsLanguageCode(),
@@ -131,6 +165,7 @@ class V2ReaderController extends ChangeNotifier {
       // Reader is V2-only — never paint V1 cold-start as the home feed.
       allowColdStart: false,
     );
+    if (generation != _fetchGeneration) return;
     if (page.articles.isEmpty) {
       _state = _state.copyWith(
         status: V2ReaderStatus.empty,
@@ -148,14 +183,79 @@ class V2ReaderController extends ChangeNotifier {
     }
   }
 
+  Future<void> _applyHomePage({
+    required int page,
+    required bool append,
+    int? keepIndex,
+    required int generation,
+  }) async {
+    final filter = homeFilter?.call() ?? const HomeFilterState();
+    final result = await _homeLoader!(
+      page: page,
+      limit: pageSize,
+      language: newsLanguageCode(),
+      filter: filter,
+    );
+    if (generation != _fetchGeneration) return;
+    if (!append) {
+      if (result.articles.isEmpty) {
+        _state = _state.copyWith(
+          status: V2ReaderStatus.empty,
+          articles: const [],
+          hasMore: false,
+          page: result.page,
+        );
+      } else {
+        _state = _state.copyWith(
+          status: V2ReaderStatus.ready,
+          articles: _dedupeAppend(const [], result.articles),
+          hasMore: result.hasMore,
+          page: result.page > 0 ? result.page : page,
+          index: 0,
+        );
+      }
+      return;
+    }
+    if (result.articles.isEmpty) {
+      _state = _state.copyWith(hasMore: false);
+      return;
+    }
+    final merged = _dedupeAppend(_state.articles, result.articles);
+    final safeIndex = (keepIndex ?? _state.index).clamp(0, merged.length - 1);
+    _state = _state.copyWith(
+      articles: merged,
+      hasMore: result.hasMore,
+      page: page,
+      index: safeIndex,
+    );
+  }
+
   void _fail(Object e) {
+    // Soft refresh / resume: keep the previous feed rather than blanking UI.
+    if (_state.articles.isNotEmpty) {
+      _state = _state.copyWith(
+        status: V2ReaderStatus.ready,
+        errorMessage: e.toString(),
+      );
+      return;
+    }
     _state = _state.copyWith(
       status: V2ReaderStatus.error,
       errorMessage: e.toString(),
     );
   }
 
-  Future<void> refresh() => loadInitial();
+  Future<void> refresh({bool keepVisible = true}) async {
+    if (_refreshInFlight) return;
+    _refreshInFlight = true;
+    notifyListeners();
+    try {
+      await loadInitial(keepVisible: keepVisible);
+    } finally {
+      _refreshInFlight = false;
+      notifyListeners();
+    }
+  }
 
   bool goNext() {
     if (_state.index >= _state.articles.length - 1) {
@@ -205,20 +305,32 @@ class V2ReaderController extends ChangeNotifier {
   }
 
   void unawaitedLoadMore() {
-    if (_loadingMore || !_state.hasMore) return;
+    if (_loadingMore || _refreshInFlight || !_state.hasMore) return;
     _loadingMore = true;
     final keepIndex = _state.index;
+    final generation = _fetchGeneration;
     () async {
       try {
         await _config.ensureReady();
+        if (generation != _fetchGeneration) return;
         final nextPage = _state.page + 1;
-        final page = await _repository.fetchPage(
+        if (_homeLoader != null) {
+          await _applyHomePage(
+            page: nextPage,
+            append: true,
+            keepIndex: keepIndex,
+            generation: generation,
+          );
+          return;
+        }
+        final page = await _forYou.fetchPage(
           page: nextPage,
           limit: pageSize,
           newsLanguageCode: newsLanguageCode(),
           appliedRegion: appliedRegion(),
           allowColdStart: false,
         );
+        if (generation != _fetchGeneration) return;
         if (page.articles.isEmpty) {
           _state = _state.copyWith(hasMore: false);
         } else {

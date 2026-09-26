@@ -1,5 +1,7 @@
+import 'dart:async';
 // ignore_for_file: deprecated_member_use, unused_local_variable, use_build_context_synchronously
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:newson/core/utils/localization_helper.dart';
 import 'package:newson/data/models/remote_config_model.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +28,7 @@ import '../../features/home_v2/presentation/widgets/v2_bottom_navigation.dart';
 import '../../features/home_v2/presentation/widgets/v2_vintage_paper_background.dart';
 import '../../core/config/v2_feature_flags.dart';
 import '../../core/analytics/analytics_service.dart';
+import '../../core/theme/app_theme.dart';
 import '../../features/notifications/data/notification_service.dart';
 import 'tabs/for_you_tab.dart';
 import '../bookmarks/bookmarks_tab.dart';
@@ -45,6 +48,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<V2ReaderHomeState> _v2ReaderHomeKey =
+      GlobalKey<V2ReaderHomeState>();
+  DateTime? _lastBackAt;
 
   List newsList = [];
 
@@ -72,7 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
       await context.read<NewsProvider>().fetchBreakingNews();
       DeepLinkService.instance.processPendingLink(navigationReady: true);
       V2NotificationService.instance.processPendingOpen(navigationReady: true);
-      context.read<BookmarkProvider>().loadBookmarks();
+      final bookmarkConfig = context.read<RemoteConfigProvider>().config;
+      final v2Bookmarks = V2FeatureFlags.homeReader(bookmarkConfig) ||
+          V2FeatureFlags.newArticleDetail(bookmarkConfig);
+      context.read<BookmarkProvider>().loadBookmarks(v2List: v2Bookmarks);
       context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();
 
@@ -180,11 +189,39 @@ class _HomeScreenState extends State<HomeScreen> {
         assert(languageProvider.locale.languageCode.isNotEmpty);
         assert(dynamicLanguageProvider.currentLanguageCode.isNotEmpty);
 
-        return Scaffold(
+        final useV2ReadingChrome = V2FeatureFlags.v2Chrome(config) ||
+            V2FeatureFlags.homeReader(config);
+        // Home (0) + For You (1) always present the light editorial surface,
+        // even when the ambient app theme is dark.
+        final readingTabSelected =
+            useV2ReadingChrome && (_currentIndex == 0 || _currentIndex == 1);
+        final lightTheme = AppTheme.getLightTheme(config);
+        final readingTheme =
+            readingTabSelected ? lightTheme : theme;
+
+        // Light theme only on the V2 Home / V2 For You surfaces — never on
+        // V1 tabs, Bookmarks, Search, or ambient chrome.
+        Widget wrapV2ReadingLight(Widget child, {required bool enabled}) {
+          if (!enabled) return child;
+          return Theme(data: lightTheme, child: child);
+        }
+
+        final v2Home =
+            V2FeatureFlags.homeReader(config) || V2FeatureFlags.newsCuts(config);
+        final v2ForYou = V2FeatureFlags.forYou(config);
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            _handleSystemBack(config);
+          },
+          child: Scaffold(
           key: _scaffoldKey,
-          backgroundColor: V2FeatureFlags.v2Chrome(config) ||
-                  V2FeatureFlags.homeReader(config)
-              ? V2VintagePaperBackground.stageBaseFor(theme.brightness)
+          backgroundColor: useV2ReadingChrome && readingTabSelected
+              ? V2VintagePaperBackground.stageBaseFor(
+                  Brightness.light,
+                )
               : theme.scaffoldBackgroundColor,
           drawer: AppDrawer(
             onNavigate: (index) {
@@ -199,37 +236,44 @@ class _HomeScreenState extends State<HomeScreen> {
               IndexedStack(
                 index: _currentIndex,
                 children: [
-                  V2FeatureFlags.homeReader(config)
-                      ? V2ReaderHome(
-                          key: const ValueKey('v2_reader_home'),
-                          onOpenForYouTab: () {
-                            if (!ensureLoggedInForAccountFeature(context)) {
-                              return;
-                            }
-                            setState(() => _currentIndex = 1);
-                          },
-                        )
-                      : V2FeatureFlags.newsCuts(config)
-                          ? V2HomeFeedTab(
-                              key: const ValueKey('v2_news_feed_tab'),
-                              onOpenForYouTab: () {
-                                if (!ensureLoggedInForAccountFeature(
-                                    context)) {
-                                  return;
-                                }
-                                setState(() => _currentIndex = 1);
-                              },
-                            )
-                          : NewsFeedTabNew(
-                              key: const ValueKey('news_feed_tab'),
-                              selectedCategories: widget.selectedCategories,
-                              newsList: newsList,
-                            ),
-                  V2FeatureFlags.forYou(config)
-                      ? const V2ForYouTab()
-                      : const ForYouTab(),
+                  wrapV2ReadingLight(
+                    V2FeatureFlags.homeReader(config)
+                        ? V2ReaderHome(
+                            key: _v2ReaderHomeKey,
+                            onOpenForYouTab: () {
+                              if (!ensureLoggedInForAccountFeature(context)) {
+                                return;
+                              }
+                              setState(() => _currentIndex = 1);
+                            },
+                          )
+                        : V2FeatureFlags.newsCuts(config)
+                            ? V2HomeFeedTab(
+                                key: const ValueKey('v2_news_feed_tab'),
+                                onOpenForYouTab: () {
+                                  if (!ensureLoggedInForAccountFeature(
+                                      context)) {
+                                    return;
+                                  }
+                                  setState(() => _currentIndex = 1);
+                                },
+                              )
+                            : NewsFeedTabNew(
+                                key: const ValueKey('news_feed_tab'),
+                                selectedCategories: widget.selectedCategories,
+                                newsList: newsList,
+                              ),
+                    enabled: v2Home,
+                  ),
+                  wrapV2ReadingLight(
+                    v2ForYou
+                        ? const V2ForYouTab()
+                        : const ForYouTab(),
+                    enabled: v2ForYou,
+                  ),
                   const BookmarksTab(),
-                  V2FeatureFlags.search(config)
+                  V2FeatureFlags.search(config) ||
+                          V2FeatureFlags.homeReader(config)
                       ? const V2SearchTab()
                       : const SearchTab(),
                 ],
@@ -245,83 +289,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Audio Loading Overlay (shows when generating audio)
               const AudioLoadingOverlay(),
-
-              // TTS Controller
-              // if (ttsProvider.isPlaying || ttsProvider.isPaused)
-              //   Positioned(
-              //     left: 0,
-              //     right: 0,
-              //     bottom: 80,
-              //     child: Container(
-              //       margin: const EdgeInsets.all(16),
-              //       padding: const EdgeInsets.all(12),
-              //       decoration: BoxDecoration(
-              //         color: theme.primaryColor,
-              //         borderRadius: BorderRadius.circular(12),
-              //         boxShadow: [
-              //           BoxShadow(
-              //             color: Colors.black.withOpacity(0.2),
-              //             blurRadius: 8,
-              //             offset: const Offset(0, 2),
-              //           ),
-              //         ],
-              //       ),
-              //       child: Row(
-              //         children: [
-              //           Icon(
-              //             ttsProvider.isPlaying
-              //                 ? Icons.volume_up
-              //                 : Icons.volume_off,
-              //             color: Colors.white,
-              //           ),
-              //           const SizedBox(width: 12),
-              //           Expanded(
-              //             child: Column(
-              //               crossAxisAlignment: CrossAxisAlignment.start,
-              //               mainAxisSize: MainAxisSize.min,
-              //               children: [
-              //                 const Text(
-              //                   'Now Playing',
-              //                   style: TextStyle(
-              //                     color: Colors.white70,
-              //                     fontSize: 12,
-              //                   ),
-              //                 ),
-              //                 Text(
-              //                   ttsProvider.currentArticle?.title ?? '',
-              //                   style: const TextStyle(
-              //                     color: Colors.white,
-              //                     fontWeight: FontWeight.bold,
-              //                   ),
-              //                   maxLines: 1,
-              //                   overflow: TextOverflow.ellipsis,
-              //                 ),
-              //               ],
-              //             ),
-              //           ),
-              //           IconButton(
-              //             icon: Icon(
-              //               ttsProvider.isPlaying
-              //                   ? Icons.pause
-              //                   : Icons.play_arrow,
-              //               color: Colors.white,
-              //             ),
-              //             onPressed: ttsProvider.togglePlayPause,
-              //           ),
-              //           IconButton(
-              //             icon: const Icon(Icons.close, color: Colors.white),
-              //             onPressed: ttsProvider.stop,
-              //           ),
-              //         ],
-              //       ),
-              //     ),
-              //   ),
             ],
           ),
-          bottomNavigationBar: V2FeatureFlags.v2Chrome(config) ||
-                  V2FeatureFlags.homeReader(config)
-              ? _buildV2BottomBar()
+          bottomNavigationBar: useV2ReadingChrome
+              ? Theme(
+                  data: readingTheme,
+                  child: _buildV2BottomBar(),
+                )
               : _buildLegacyBottomBar(theme, config),
+        ),
         );
       },
     );
@@ -340,7 +316,14 @@ class _HomeScreenState extends State<HomeScreen> {
         forYouLabel: LocalizationHelper.forYou(context),
         bookmarksLabel: LocalizationHelper.bookmarks(context),
         searchLabel: LocalizationHelper.v2Search(context),
-        onHome: () => setState(() => _currentIndex = 0),
+        onHome: () {
+          if (_currentIndex == 0) {
+            final refresh = _v2ReaderHomeKey.currentState?.refreshHome();
+            if (refresh != null) unawaited(refresh);
+            return;
+          }
+          setState(() => _currentIndex = 0);
+        },
         onForYou: () {
           if (!ensureLoggedInForAccountFeature(context)) return;
           setState(() => _currentIndex = 1);
@@ -350,6 +333,31 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _currentIndex = 2);
         },
         onSearch: () => setState(() => _currentIndex = 3),
+      ),
+    );
+  }
+
+  void _handleSystemBack(RemoteConfigModel config) {
+    final useV2Tabs = V2FeatureFlags.v2Chrome(config) ||
+        V2FeatureFlags.homeReader(config);
+    if (useV2Tabs && _currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      return;
+    }
+
+    final now = DateTime.now();
+    final last = _lastBackAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackAt = now;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('Press again to exit'),
+        duration: Duration(seconds: 2),
       ),
     );
   }

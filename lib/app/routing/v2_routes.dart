@@ -9,7 +9,7 @@ import '../../features/news_detail/presentation/v2_article_detail_screen.dart';
 import '../../features/publishers/presentation/publisher_page.dart';
 import '../../providers/remote_config_provider.dart';
 import '../../screens/categories/categories_tab.dart';
-import '../../screens/drawer_widgets/notification.dart';
+import '../../features/notifications/presentation/v2_notification_inbox_screen.dart';
 import '../../screens/news_detail/news_detail_screen.dart';
 
 /// Central navigation helpers for V2 surfaces (flag-aware).
@@ -175,11 +175,11 @@ abstract final class V2Routes {
     );
   }
 
-  /// Opens the existing notification inbox screen.
+  /// Opens the V2 notification inbox screen.
   static Future<void> openNotificationInbox(BuildContext context) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const NotificationView(),
+        builder: (_) => const V2NotificationInboxScreen(),
         settings: const RouteSettings(name: '/notifications'),
       ),
     );

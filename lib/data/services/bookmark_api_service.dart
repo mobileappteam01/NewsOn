@@ -48,6 +48,55 @@ class BookmarkListResponse {
       data: articles,
     );
   }
+
+  /// `GET /api/v2/bookmarks` body: `{ items, page, limit, hasNextPage }`.
+  ///
+  /// Returns null when `items` is missing so callers treat it as a failed
+  /// refresh and keep the visible list (never a false empty wipe).
+  static BookmarkListResponse? tryFromV2Data(Map<String, dynamic> json) {
+    if (!json.containsKey('items')) return null;
+    final rawItems = json['items'];
+    if (rawItems is! List) return null;
+    return BookmarkListResponse.fromV2Data(json);
+  }
+
+  /// `GET /api/v2/bookmarks` body: `{ items, page, limit, hasNextPage }`.
+  factory BookmarkListResponse.fromV2Data(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    final dataList = rawItems is List ? rawItems : const <dynamic>[];
+    final articles = dataList.map((item) {
+      if (item is! Map) {
+        return NewsArticle.fromJson(const <String, dynamic>{});
+      }
+      final map = Map<String, dynamic>.from(item);
+      final id = map['articleId'] ?? map['newsId'] ?? map['_id'];
+      map['_id'] ??= id;
+      map['article_id'] ??= id;
+      map['articleId'] ??= id;
+      map['image_url'] ??= map['image'];
+      map['pubDate'] ??= map['publishedAt'];
+      map['isBookmarked'] = true;
+      return NewsArticle.fromJson(map);
+    }).where((a) {
+      final hasId = a.newsId != null && a.newsId!.trim().isNotEmpty;
+      final hasTitle = a.title.trim().isNotEmpty && a.title != 'No Title';
+      return hasId || hasTitle;
+    }).toList();
+
+    final page = json['page'] is int ? json['page'] as int : 1;
+    final limit = json['limit'] is int ? json['limit'] as int : 20;
+    final hasNext = json['hasNextPage'] == true;
+    return BookmarkListResponse(
+      message: 'success',
+      pagination: PaginationInfo(
+        total: articles.length,
+        page: page < 1 ? 1 : page,
+        limit: limit < 1 ? 20 : limit,
+        totalPages: hasNext ? page + 1 : page,
+      ),
+      data: articles,
+    );
+  }
 }
 
 /// Pagination info model
@@ -232,6 +281,106 @@ class BookmarkApiService {
       if (raw is String) return int.tryParse(raw);
     }
     return null;
+  }
+
+  /// Persists a V2 bookmark. `POST /api/v2/bookmarks` body `{ newsId }`.
+  ///
+  /// Bearer auth. 201 creates a row; 200 means this user already bookmarked
+  /// that article. Both write the MongoDB `bookmarks` collection read by
+  /// `GET /api/v2/bookmarks`.
+  Future<void> addV2Bookmark(String newsId) async {
+    final token = _userService.getToken();
+    if (token == null || token.isEmpty) {
+      debugPrint('[V2Bookmark] add failed');
+      throw Exception('User not authenticated. Please sign in.');
+    }
+    final id = newsId.trim();
+    if (id.isEmpty) {
+      debugPrint('[V2Bookmark] add failed');
+      throw Exception('Cannot bookmark: missing article id');
+    }
+    debugPrint('[V2Bookmark] add request started');
+    final response = await _apiService.postByPath(
+      '/api/v2/bookmarks',
+      body: {'newsId': id},
+      bearerToken: token,
+      useV2Host: true,
+    );
+    if (!response.success) {
+      debugPrint('[V2Bookmark] add failed');
+      throw Exception(response.error ?? 'Failed to bookmark article');
+    }
+    debugPrint('[V2Bookmark] add success');
+  }
+
+  /// Removes a V2 bookmark. `DELETE /api/v2/bookmarks/{newsId}` on the V2 host.
+  Future<void> deleteV2Bookmark(String newsId) async {
+    final token = _userService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('User not authenticated. Please sign in.');
+    }
+    final id = newsId.trim();
+    if (id.isEmpty) {
+      throw Exception('Cannot remove bookmark: missing article id');
+    }
+    final response = await _apiService.deleteByPath(
+      '/api/v2/bookmarks/$id',
+      bearerToken: token,
+      useV2Host: true,
+    );
+    if (!response.success) {
+      throw Exception(response.error ?? 'Failed to remove bookmark');
+    }
+  }
+
+  /// V2 bookmark list. `GET /api/v2/bookmarks` on the V2 host.
+  ///
+  /// Returns null when the route is missing or the call fails so callers can
+  /// keep the list confirmed by a successful bookmark write. Never falls
+  /// back to the V1 bookmark catalog.
+  Future<BookmarkListResponse?> tryGetV2BookmarkList({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final token = _userService.getToken();
+    if (token == null || token.isEmpty) return null;
+    try {
+      final response = await _apiService.getByPath(
+        '/api/v2/bookmarks',
+        queryParameters: {
+          'page': page.toString(),
+          'limit': limit.toString(),
+        },
+        bearerToken: token,
+        useV2Host: true,
+      );
+      if (!response.success || response.data == null) return null;
+      final raw = response.data;
+      Map<String, dynamic>? map;
+      if (raw is Map<String, dynamic>) {
+        map = raw;
+      } else if (raw is Map) {
+        map = Map<String, dynamic>.from(raw);
+      }
+      if (map == null) return null;
+      final data = map['data'];
+      BookmarkListResponse? parsed;
+      if (data is Map<String, dynamic>) {
+        parsed = BookmarkListResponse.tryFromV2Data(data);
+      } else if (data is Map) {
+        parsed = BookmarkListResponse.tryFromV2Data(
+          Map<String, dynamic>.from(data),
+        );
+      } else if (data is List) {
+        parsed = BookmarkListResponse.fromJson(map);
+      }
+      if (parsed == null) return null;
+      debugPrint('[V2Bookmark] list success count=${parsed.data.length}');
+      return parsed;
+    } catch (e) {
+      debugPrint('ℹ️ V2 bookmark list unavailable: $e');
+      return null;
+    }
   }
 
   /// Get bookmark list

@@ -84,6 +84,34 @@ void main() {
       );
       expect(DeepLinkConstants.isV2ArticleDeepLink(uri), isFalse);
     });
+
+    test('custom-scheme V2 URI parses and enqueues (WhatsApp fallback)', () {
+      final svc = DeepLinkService.instance;
+      final uri = DeepLinkConstants.buildV2AppDeepLink(
+        '6ab6a6e7261c38e362b06a23',
+      );
+      expect(uri.toString(), 'newson://v2/news/6ab6a6e7261c38e362b06a23');
+      expect(DeepLinkConstants.parseV2ArticleId(uri), '6ab6a6e7261c38e362b06a23');
+      svc.debugEnqueueUri(uri, coldStart: true);
+      expect(svc.pendingArticleId, '6ab6a6e7261c38e362b06a23');
+      expect(svc.debugPendingLinkKey, 'v2:6ab6a6e7261c38e362b06a23');
+    });
+
+    test('malformed V2 path does not enqueue', () {
+      final svc = DeepLinkService.instance;
+      svc.debugEnqueueUri(Uri.parse('https://v2-api.newson.app/v2/news/'));
+      expect(svc.hasPendingArticle, isFalse);
+      svc.debugEnqueueUri(Uri.parse('https://v2-api.newson.app/v2/other/abc'));
+      expect(svc.hasPendingArticle, isFalse);
+    });
+
+    test('V2 open path wraps navigation in try/catch (no crash on push fail)', () {
+      final src = File(
+        'lib/data/services/deep_link_service.dart',
+      ).readAsStringSync();
+      expect(src.contains('V2 detail navigation failed'), isTrue);
+      expect(src.contains('V2ArticleDetailScreen(articleId: articleId)'), isTrue);
+    });
   });
 
   group('V2 bookmark / share source contracts', () {
@@ -106,12 +134,11 @@ void main() {
       expect(src.contains('v2: true'), isTrue);
     });
 
-    test('V2 For You / Search / Home / Publisher use toggleBookmarkV2', () {
+    test('V2 For You / Search / Home use toggleBookmarkV2', () {
       const paths = [
         'lib/features/for_you/presentation/v2_for_you_tab.dart',
         'lib/features/search/presentation/v2_search_tab.dart',
         'lib/features/home/presentation/v2_home_screen.dart',
-        'lib/features/publishers/presentation/publisher_page.dart',
       ];
       for (final path in paths) {
         final src = File(path).readAsStringSync();
@@ -120,7 +147,7 @@ void main() {
       }
     });
 
-    test('toggleBookmarkV2 never calls BookmarkApiService', () {
+    test('toggleBookmarkV2 persists with POST /api/v2/bookmarks', () {
       final src = File(
         'lib/providers/bookmark_provider.dart',
       ).readAsStringSync();
@@ -132,9 +159,12 @@ void main() {
           ? end
           : (end2 > start ? end2 : src.length);
       final method = src.substring(start, cut);
-      expect(method.contains('_requireBookmarkApi'), isFalse);
-      expect(method.contains('ensureBookmarkTracked'), isTrue);
-      expect(method.contains('InteractionService'), isTrue);
+      final addAt = method.indexOf('addV2Bookmark');
+      final trackAt = method.indexOf('ensureBookmarkTracked');
+      expect(addAt, greaterThan(0));
+      expect(trackAt, greaterThan(addAt));
+      expect(method.contains('deleteV2Bookmark'), isTrue);
+      expect(method.contains('/api/interaction'), isFalse);
       expect(method.contains('api.newson.app'), isFalse);
     });
   });

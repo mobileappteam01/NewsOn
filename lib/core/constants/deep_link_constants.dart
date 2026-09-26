@@ -8,14 +8,21 @@ class DeepLinkConstants {
   /// Custom scheme — opens the app when installed (Android & iOS).
   static const String customScheme = 'newson';
 
-  /// Host used in share HTTPS links (App Links when verified on api.newson.app).
+  /// Host used in V1 share HTTPS links (App Links on api.newson.app).
   static const String httpsHost = 'api.newson.app';
+
+  /// Host that serves public V2 HTML share pages (`GET /v2/news/:id`).
+  /// Browser opens of V2 shares must hit this host — not [httpsHost].
+  static const String v2HttpsHost = 'v2-api.newson.app';
 
   static const String articleIdQueryKey = 'articleId';
 
-  /// Path segments for V2 article shares: `/v2/article/{articleId}`.
+  /// Path segments for V2 article shares: `/v2/news/{articleId}`
+  /// (public HTML resolver on the V2 host). Legacy `/v2/article/...` is still
+  /// accepted when parsing inbound deep links.
   static const String v2PathSegment = 'v2';
-  static const String v2ArticleSegment = 'article';
+  static const String v2ArticleSegment = 'news';
+  static const String v2LegacyArticleSegment = 'article';
 
   /// Builds: newson://news?articleId=...
   static Uri buildAppDeepLink(String articleId) {
@@ -35,7 +42,7 @@ class DeepLinkConstants {
     );
   }
 
-  /// Builds: newson://v2/article/{articleId}
+  /// Builds: newson://v2/news/{articleId}
   static Uri buildV2AppDeepLink(String articleId) {
     return Uri(
       scheme: customScheme,
@@ -44,11 +51,14 @@ class DeepLinkConstants {
     );
   }
 
-  /// Builds: https://api.newson.app/v2/article/{articleId}
+  /// Builds: https://v2-api.newson.app/v2/news/{articleId}
+  ///
+  /// Canonical public share URL — resolves on the V2 process that mounts
+  /// `openV2SharedNewsPage`. Do not use [httpsHost] (V1) for V2 shares.
   static Uri buildV2HttpsDeepLink(String articleId) {
     return Uri(
       scheme: 'https',
-      host: httpsHost,
+      host: v2HttpsHost,
       pathSegments: [v2PathSegment, v2ArticleSegment, articleId],
     );
   }
@@ -58,25 +68,32 @@ class DeepLinkConstants {
     return parseV2ArticleId(uri) != null;
   }
 
+  static bool _isV2ArticlePathSegment(String segment) =>
+      segment == v2ArticleSegment || segment == v2LegacyArticleSegment;
+
+  static bool _isV2HttpsHost(String host) =>
+      host == v2HttpsHost || host == httpsHost;
+
   /// Parses Mongo ObjectId from V2 share links only (never V1 `/news/...`).
   static String? parseV2ArticleId(Uri uri) {
     final segments = uri.pathSegments;
 
-    // newson://v2/article/{id}
+    // newson://v2/news/{id}  or  newson://v2/article/{id} (legacy)
     if (uri.scheme == customScheme &&
         uri.host == v2PathSegment &&
         segments.length >= 2 &&
-        segments[0] == v2ArticleSegment) {
+        _isV2ArticlePathSegment(segments[0])) {
       final id = segments[1].trim();
       return id.isEmpty ? null : id;
     }
 
-    // https://api.newson.app/v2/article/{id}
+    // https://v2-api.newson.app/v2/news/{id}
+    // also accept legacy https://api.newson.app/v2/news|article/{id}
     if (uri.scheme == 'https' &&
-        uri.host == httpsHost &&
+        _isV2HttpsHost(uri.host) &&
         segments.length >= 3 &&
         segments[0] == v2PathSegment &&
-        segments[1] == v2ArticleSegment) {
+        _isV2ArticlePathSegment(segments[1])) {
       final id = segments[2].trim();
       return id.isEmpty ? null : id;
     }
@@ -127,6 +144,9 @@ class DeepLinkConstants {
     if (uri.scheme == customScheme) return true;
     if (uri.scheme == 'https' && uri.host == httpsHost) {
       return parseArticleId(uri) != null;
+    }
+    if (uri.scheme == 'https' && uri.host == v2HttpsHost) {
+      return parseV2ArticleId(uri) != null;
     }
     return false;
   }

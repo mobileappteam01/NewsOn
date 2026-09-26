@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:newson/core/utils/shared_functions.dart';
@@ -12,6 +14,9 @@ import '../../data/services/storage_service.dart';
 import '../../data/services/user_service.dart';
 import '../../data/services/profile_service.dart';
 import '../../data/services/api_service.dart';
+import '../../features/home_v2/data/v2_home_api.dart';
+import '../../features/home_v2/domain/v2_category_selection_identity.dart';
+import '../../features/home_v2/domain/v2_home_metadata.dart';
 import '../../providers/remote_config_provider.dart';
 import '../home/home_screen.dart';
 
@@ -20,7 +25,15 @@ class CategorySelectionScreen extends StatefulWidget {
   /// Whether this screen is opened from side menu (existing user updating preferences)
   final bool isFromSideMenu;
 
-  const CategorySelectionScreen({super.key, this.isFromSideMenu = false});
+  /// When true, load categories from `GET /api/v2/categories` (full catalog).
+  /// Default false keeps the V1 `getCategoriesMobile` pagination path unchanged.
+  final bool useV2Catalog;
+
+  const CategorySelectionScreen({
+    super.key,
+    this.isFromSideMenu = false,
+    this.useV2Catalog = false,
+  });
 
   @override
   State<CategorySelectionScreen> createState() =>
@@ -56,11 +69,16 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   /// Check if some (but not all) categories are selected
   bool get _isSomeSelected {
     if (_categories.isEmpty) return false;
-    final selectedCount = _categories
-        .where((cat) => _selectedCategoryIds.contains(cat.id))
-        .length;
+    final selectedCount = _visualSelectedCount;
     return selectedCount > 0 && selectedCount < _categories.length;
   }
+
+  /// Count of checked cards — must always equal the header "X of Y" number.
+  int get _visualSelectedCount =>
+      V2CategorySelectionIdentity.visualSelectedCount(
+        selectedIds: _selectedCategoryIds,
+        catalog: _categories,
+      );
 
   /// Select all categories
   void _selectAll() {
@@ -90,14 +108,27 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCategories();
-    // If coming from side menu, load user's existing categories
-    if (widget.isFromSideMenu) {
-      _loadUserCategories();
+    // V2: catalog must finish before preference hydration so count and cards
+    // share one normalized ObjectId set (never race stale V1 ids into the UI).
+    if (widget.useV2Catalog) {
+      unawaited(_bootstrapV2CatalogAndPreferences());
+    } else {
+      _loadCategories();
+      if (widget.isFromSideMenu) {
+        _loadUserCategories();
+      }
     }
 
     // Add scroll listener for infinite scroll
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _bootstrapV2CatalogAndPreferences() async {
+    await _loadCategories();
+    if (!mounted) return;
+    if (widget.isFromSideMenu) {
+      await _hydrateV2UserCategories();
+    }
   }
 
   @override
@@ -137,6 +168,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     });
 
     try {
+      if (widget.useV2Catalog) {
+        await _loadV2Categories();
+        return;
+      }
+
       final response = await _categoryApiService.getCategories(
         page: 1,
         limit: _limit,
@@ -174,8 +210,30 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
+  /// V2 catalog: single `GET /api/v2/categories` — full active list, no V1 pages.
+  Future<void> _loadV2Categories() async {
+    final options = await V2HomeMetadataApi().fetchCategories();
+    // Replace (never append) so repeated loads cannot duplicate UI items.
+    final models = options
+        .map(categoryModelFromV2Option)
+        .where((c) => c.id.isNotEmpty && c.isActive && !c.isDeleted)
+        .toList();
+    if (!mounted) return;
+    setState(() {
+      _categories = models;
+      _isLoading = false;
+      _currentPage = 1;
+      _total = models.length;
+      // Full catalog in one response — no pagination / no page-boundary duplicates.
+      _hasMorePages = false;
+    });
+  }
+
   /// Load more categories for pagination
   Future<void> _loadMoreCategories() async {
+    // V2 catalog is loaded in full — never page the V1 endpoint.
+    if (widget.useV2Catalog) return;
+
     // Prevent loading if already loading, no more pages, or already loaded all items
     if (_isLoadingMore ||
         !_hasMorePages ||
@@ -233,7 +291,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
-  /// Load user's existing categories and pre-select them
+  /// Load user's existing categories and pre-select them (V1 profile path).
   Future<void> _loadUserCategories() async {
     try {
       // Check if API Service is initialized
@@ -274,6 +332,57 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
+  /// V2: hydrate selection from `/api/v2/me/categories` (+ local fallback),
+  /// then normalize against the loaded V2 catalog so count == visual cards.
+  Future<void> _hydrateV2UserCategories() async {
+    if (!widget.useV2Catalog || _categories.isEmpty) return;
+
+    List<String> tokens = const [];
+    try {
+      final api = ApiService();
+      if (!api.isInitialized) {
+        await api.initialize();
+      }
+      final token = _userService.getToken();
+      if (token != null && token.isNotEmpty) {
+        final response = await api.getByPath(
+          '/api/v2/me/categories',
+          bearerToken: token,
+          useV2Host: true,
+        );
+        if (response.success && response.data != null) {
+          tokens = V2CategorySelectionIdentity.parsePreferenceTokens(
+            response.data,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('ℹ️ V2 me/categories hydrate failed: $e');
+    }
+
+    if (tokens.isEmpty) {
+      tokens = V2CategorySelectionIdentity.parsePreferenceTokens({
+        'category': _userService.getUserData()?['category'],
+      });
+    }
+
+    final normalized = V2CategorySelectionIdentity.normalizeSelectedIds(
+      savedTokens: tokens,
+      catalog: _categories,
+    );
+
+    debugPrint(
+      '📦 V2 category hydrate: raw=${tokens.length} → visual=${normalized.length}',
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _selectedCategoryIds
+        ..clear()
+        ..addAll(normalized);
+    });
+  }
+
   /// Persist submitted category IDs into local user data (source of truth for Home chips).
   Future<void> _persistSelectedCategoryIds(
       List<String> selectedCategoryIds) async {
@@ -294,8 +403,34 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     }
   }
 
+  Future<bool> _saveV2CategoryPreferences(List<String> selectedCategoryIds) async {
+    final api = ApiService();
+    if (!api.isInitialized) {
+      await api.initialize();
+    }
+    final token = _userService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('User data not found. Please sign in again.');
+    }
+    final response = await api.putByPath(
+      '/api/v2/me/categories',
+      body: {'categoryIds': selectedCategoryIds},
+      bearerToken: token,
+      useV2Host: true,
+    );
+    if (!response.success) {
+      throw Exception(response.error ?? 'Failed to update categories');
+    }
+    await _persistSelectedCategoryIds(selectedCategoryIds);
+    return true;
+  }
+
   Future<void> _selectCategories() async {
-    if (_selectedCategoryIds.isEmpty) return;
+    // V2 side-menu allows clearing all saved preferences (0 selected).
+    if (_selectedCategoryIds.isEmpty &&
+        !(widget.useV2Catalog && widget.isFromSideMenu)) {
+      return;
+    }
 
     // Show loading indicator
     showDialog(
@@ -314,11 +449,41 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
     );
 
     try {
-      // Get selected category IDs as array
-      final selectedCategoryIds = _selectedCategoryIds.toList();
+      // Only persist IDs that are currently visible in the catalog.
+      final selectedCategoryIds = _categories
+          .where((cat) => _selectedCategoryIds.contains(cat.id))
+          .map((cat) => cat.id)
+          .toList();
 
       // If coming from side menu, update profile with new categories
       if (widget.isFromSideMenu) {
+        if (widget.useV2Catalog) {
+          try {
+            await _saveV2CategoryPreferences(selectedCategoryIds);
+            if (!mounted) return;
+            Navigator.of(context).pop(); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ Categories updated successfully'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            Navigator.of(context).pop(true);
+          } catch (e) {
+            if (!mounted) return;
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ $e'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
         // Check if API Service is initialized
         final apiService = ApiService();
         if (!apiService.isInitialized) {
@@ -377,6 +542,37 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
         }
       } else {
         // New user flow — account already created at sign-in; save categories.
+        if (widget.useV2Catalog) {
+          try {
+            await _saveV2CategoryPreferences(selectedCategoryIds);
+            if (!mounted) return;
+            Navigator.of(context).pop();
+            await _userService.clearTempGoogleAccount();
+            final selectedCategoryNames = _categories
+                .where((cat) => _selectedCategoryIds.contains(cat.id))
+                .map((cat) => cat.categoryName)
+                .toList();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => HomeScreen(
+                  selectedCategories: selectedCategoryNames,
+                ),
+              ),
+            );
+          } catch (e) {
+            if (!mounted) return;
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ $e'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
         final userData = _userService.getUserData();
         if (userData == null) {
           throw Exception('User data not found. Please sign in again.');
@@ -542,7 +738,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                                 child: Text(
                                   LocalizationHelper.categoriesSelectedCount(
                                       context,
-                                      _selectedCategoryIds.length,
+                                      _visualSelectedCount,
                                       _categories.length),
                                   style: GoogleFonts.roboto(
                                     color: theme.colorScheme.tertiary,
@@ -684,7 +880,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen> {
                   label: widget.isFromSideMenu
                       ? LocalizationHelper.updatePreferences(context)
                       : LocalizationHelper.continueText(context),
-                  onTap: _selectedCategoryIds.isEmpty
+                  onTap: (_visualSelectedCount == 0 &&
+                          !(widget.useV2Catalog && widget.isFromSideMenu))
                       ? null
                       : () async {
                           // Call selectCategories API before navigating
@@ -798,4 +995,21 @@ class _BottomCta extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Maps V2 `/api/v2/categories` options into the shared [CategoryModel] UI shape.
+CategoryModel categoryModelFromV2Option(V2CategoryOption option) {
+  final id = (option.id ?? '').trim();
+  final name = option.name.trim().isNotEmpty ? option.name.trim() : option.slug;
+  final image = option.imageUrl?.trim();
+  final media = option.mediaUrl?.trim();
+  return CategoryModel(
+    id: id.isNotEmpty ? id : option.slug,
+    categoryName: name,
+    name: option.slug.isNotEmpty ? option.slug : name,
+    imageUrl: (image != null && image.isNotEmpty) ? image : null,
+    mediaUrl: (media != null && media.isNotEmpty) ? media : null,
+    isActive: true,
+    isDeleted: false,
+  );
 }

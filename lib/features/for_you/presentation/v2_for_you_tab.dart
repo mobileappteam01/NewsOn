@@ -328,6 +328,8 @@ class _V2ForYouTabState extends State<V2ForYouTab>
               final feedIndex = ForYouFeedLayout.feedIndexOf(all, article);
               _open(article, feedIndex >= 0 ? feedIndex : 0);
             },
+            onBookmark: (article, _) => _bookmark(article),
+            onShare: (article, _) => _share(article),
           ),
         ),
       );

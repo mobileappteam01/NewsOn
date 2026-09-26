@@ -5,6 +5,7 @@ import '../../core/utils/shared_functions.dart';
 import '../../core/utils/localization_helper.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/services/storage_service.dart';
+import '../../features/home_v2/presentation/v2_news_text_scale.dart';
 import '../../providers/remote_config_provider.dart';
 
 class TextSizeSettings extends StatefulWidget {
@@ -35,6 +36,7 @@ class _TextSizeSettingsState extends State<TextSizeSettings> {
 
   Future<void> _saveTextSize() async {
     await StorageService.saveSetting(AppConstants.textSizeKey, _textSize);
+    V2NewsTextScale.instance.apply(_textSize);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(LocalizationHelper.textSizeSaved(context))),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +18,17 @@ import '../../../providers/language_provider.dart';
 import '../../../providers/region_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../home/presentation/widgets/home_header.dart';
+import '../data/v2_home_api.dart';
+import '../domain/v2_effective_categories.dart';
+import 'v2_home_filter_controller.dart';
+import 'v2_news_text_scale.dart';
 import 'v2_reader_controller.dart';
+import 'v2_reader_ad_placement.dart';
+import 'v2_reader_display_page.dart';
 import 'v2_reader_demo_pages.dart';
 import 'widgets/v2_article_page.dart';
+import 'widgets/v2_reader_ad_page.dart';
+import 'widgets/v2_home_filter_sheet.dart';
 import 'widgets/v2_page_turn.dart';
 import 'widgets/v2_vintage_paper_background.dart';
 
@@ -32,18 +42,22 @@ class V2ReaderHome extends StatefulWidget {
   final VoidCallback? onOpenForYouTab;
 
   @override
-  State<V2ReaderHome> createState() => _V2ReaderHomeState();
+  State<V2ReaderHome> createState() => V2ReaderHomeState();
 }
 
-class _V2ReaderHomeState extends State<V2ReaderHome>
-    with AutomaticKeepAliveClientMixin {
+class V2ReaderHomeState extends State<V2ReaderHome>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   late final V2ReaderController _controller;
+  late final V2HomeFilterController _filters;
+  late final V2HomeApi _homeApi;
   late final PageFlipController _pageFlipController;
   bool _bootstrapped = false;
   String? _lastSummaryTrackedId;
   /// Bumped on full feed reload so TurnablePage resets without resetting on loadMore.
   int _feedEpoch = 0;
+  int _displayIndex = 0;
   V2ReaderStatus? _lastStatus;
+  DateTime? _lastResumeAt;
 
   @override
   bool get wantKeepAlive => true;
@@ -51,14 +65,49 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AnalyticsService.instance.ensureSessionStarted();
     _pageFlipController = PageFlipController();
+    _filters = V2HomeFilterController();
+    _homeApi = V2HomeApi();
     _controller = V2ReaderController(
       newsLanguageCode: () => context.read<LanguageProvider>().newsLanguageCode,
       appliedRegion: () => context.read<RegionProvider>().appliedRegion,
+      homeFilter: () => _filters.requestFilter,
+      homeLoader: ({
+        required page,
+        required limit,
+        required language,
+        required filter,
+      }) =>
+          _homeApi.fetch(
+            filter: filter,
+            language: language,
+            page: page,
+            limit: limit,
+          ),
     );
     _controller.addListener(_onControllerTick);
+    V2CategoryPreferenceResolver.revision
+        .addListener(_onSavedPreferencesChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  /// Public Home re-tap / intentional refresh entry point.
+  Future<void> refreshHome() => _controller.refresh(keepVisible: true);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!_bootstrapped || !mounted) return;
+    final now = DateTime.now();
+    final last = _lastResumeAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      return;
+    }
+    if (_controller.refreshInFlight) return;
+    _lastResumeAt = now;
+    unawaited(_controller.refresh(keepVisible: false));
   }
 
   void _onControllerTick() {
@@ -66,6 +115,7 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
     if (_lastStatus == V2ReaderStatus.loading &&
         (status == V2ReaderStatus.ready || status == V2ReaderStatus.empty)) {
       _feedEpoch++;
+      _displayIndex = 0;
       // Update before demo expand — replaceArticlesForDisplay notifies again.
       _lastStatus = status;
       if (status == V2ReaderStatus.ready) {
@@ -93,13 +143,47 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
       await region.initialize();
     }
     if (!mounted) return;
+    // Wait for preference awareness + server category sync before the first
+    // Home request so we never flash an accidental empty constrained feed.
+    await _filters.syncSavedPreferences();
+    if (!mounted) return;
     await _controller.loadInitial();
     _onArticleVisible();
   }
 
+  void _onSavedPreferencesChanged() {
+    if (!mounted) return;
+    unawaited(_reloadForPreferenceChange());
+  }
+
+  Future<void> _reloadForPreferenceChange() async {
+    await _filters.syncSavedPreferences(forceCatalog: true);
+    if (!mounted) return;
+    // Clear is not required — request omits category so backend uses new prefs.
+    // Keep any explicit temporary filter intact.
+    await _controller.refresh();
+  }
+
+  Future<void> _openFilters() async {
+    // Sheet seeds from temporary filter only — never from saved prefs.
+    final draft = await showV2HomeFilterSheet(
+      context,
+      initial: _filters.committed,
+    );
+    if (!mounted || draft == null) return;
+    _filters.apply(draft);
+    await _controller.refresh();
+  }
+
+  Future<void> _onPullToRefresh() => _controller.refresh();
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    V2CategoryPreferenceResolver.revision
+        .removeListener(_onSavedPreferencesChanged);
     _controller.removeListener(_onControllerTick);
+    _filters.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -183,11 +267,20 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
   }
 
   Future<void> _toggleBookmark(NewsArticle article) async {
-    await context.read<BookmarkProvider>().toggleBookmarkV2(article);
-    await AnalyticsService.instance.bookmark(
-      newsId: article.analyticsNewsId,
-      v2Only: true,
-    );
+    try {
+      await context.read<BookmarkProvider>().toggleBookmarkV2(article);
+      await AnalyticsService.instance.bookmark(
+        newsId: article.analyticsNewsId,
+        v2Only: true,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(LocalizationHelper.error(context, e.toString())),
+        ),
+      );
+    }
   }
 
   Future<void> _share(NewsArticle article) async {
@@ -199,8 +292,11 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
     );
   }
 
-  void _goTo(int index) {
-    if (_controller.setIndex(index)) {
+  void _onDisplayPage(List<V2ReaderDisplayPage> pages, int pageIndex) {
+    setState(() => _displayIndex = pageIndex);
+    final articleIndex =
+        V2ReaderDisplayPages.articleIndexAt(pages, pageIndex);
+    if (articleIndex != null && _controller.setIndex(articleIndex)) {
       _onArticleVisible();
     }
   }
@@ -228,7 +324,7 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
     final cutsLabel = V2FeatureFlags.cutsLabel(config);
 
     return ListenableBuilder(
-      listenable: _controller,
+      listenable: Listenable.merge([_controller, _filters]),
       builder: (context, _) {
         final state = _controller.state;
         return Stack(
@@ -240,7 +336,8 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
             Column(
               children: [
                 V2HomeHeader(
-                  onRegionChanged: () => _controller.refresh(),
+                  onOpenFilters: _openFilters,
+                  filtersActive: _filters.isActive,
                   onNewsLanguageChanged: () => _controller.refresh(),
                 ),
                 Expanded(child: _buildBody(state, bookmarks, cutsLabel)),
@@ -257,71 +354,110 @@ class _V2ReaderHomeState extends State<V2ReaderHome>
     BookmarkProvider bookmarks,
     String cutsLabel,
   ) {
-    switch (state.status) {
-      case V2ReaderStatus.idle:
-      case V2ReaderStatus.loading:
-        return const _LoadingState();
-      case V2ReaderStatus.error:
-        return _ErrorState(
+    final content = switch (state.status) {
+      V2ReaderStatus.idle || V2ReaderStatus.loading => const _LoadingState(),
+      V2ReaderStatus.error => _ErrorState(
           message: LocalizationHelper.v2ForYouLoadError(context),
           onRetry: _controller.refresh,
-        );
-      case V2ReaderStatus.empty:
-        return _EmptyState(
-          message: LocalizationHelper.v2ForYouEmpty(context),
+        ),
+      V2ReaderStatus.empty => _EmptyState(
+          message: _filters.hasExplicitCategories
+              ? 'No news found for the selected filters'
+              : LocalizationHelper.v2ForYouEmpty(context),
           onRetry: _controller.refresh,
-        );
-      case V2ReaderStatus.ready:
-        final current = state.current;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            V2PageTurn(
-              key: ValueKey('v2_turn_$_feedEpoch'),
-              controller: _pageFlipController,
-              itemCount: state.articles.length,
-              index: state.index,
-              canGoNext: state.index < state.articles.length - 1,
-              canGoPrevious: state.index > 0,
-              onIndexChanged: _goTo,
-              itemBuilder: (context, i) {
-                final article = state.articles[i];
-                return V2ArticlePage(
-                  article: article,
-                  cutsLabel: cutsLabel,
-                  index: i,
-                  total: state.total,
-                  bookmarked: bookmarks.isBookmarked(article),
-                  onBookmark: () => _toggleBookmark(article),
-                  onShare: () => _share(article),
-                  onViewFullArticle: () => _openFullArticle(article),
-                  onPrevious: _flipPrevious,
-                  onNext: _flipNext,
-                  canPrevious: i > 0,
-                  canNext: i < state.articles.length - 1 || state.hasMore,
-                  // Hosted in this Stack overlay — outside TurnablePage corners.
-                  showHeroActions: false,
-                );
-              },
+        ),
+      V2ReaderStatus.ready => _buildReadyBody(state, bookmarks, cutsLabel),
+    };
+
+    return RefreshIndicator(
+      onRefresh: _onPullToRefresh,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
-            // Top-right of the reading stage (over hero), outside TurnablePage
-            // so taps never compete with the page-curl corner trigger.
-            if (current != null)
-              Positioned(
-                top: 10,
-                right: 18,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: V2ReaderActionButtons(
-                    bookmarked: bookmarks.isBookmarked(current),
-                    onBookmark: () => _toggleBookmark(current),
-                    onShare: () => _share(current),
-                  ),
-                ),
+            child: SizedBox(
+              height: constraints.maxHeight,
+              width: constraints.maxWidth,
+              child: content,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReadyBody(
+    V2ReaderState state,
+    BookmarkProvider bookmarks,
+    String cutsLabel,
+  ) {
+    final pages = V2ReaderDisplayPages.build(
+      state.articles.length,
+      adsEnabled: V2ReaderAdPlacement.adsEnabled,
+    );
+    final safeDisplay = pages.isEmpty
+        ? 0
+        : _displayIndex.clamp(0, pages.length - 1);
+    final articleIndex =
+        V2ReaderDisplayPages.articleIndexAt(pages, safeDisplay);
+    final current = articleIndex == null
+        ? null
+        : state.articles[articleIndex];
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        V2PageTurn(
+          key: ValueKey('v2_turn_$_feedEpoch'),
+          controller: _pageFlipController,
+          itemCount: pages.length,
+          index: safeDisplay,
+          canGoNext: safeDisplay < pages.length - 1 || state.hasMore,
+          canGoPrevious: safeDisplay > 0,
+          onIndexChanged: (pageIndex) => _onDisplayPage(pages, pageIndex),
+          itemBuilder: (context, i) {
+            final page = pages[i];
+            if (page is V2ReaderAdDisplay) {
+              return V2ReaderAdPage(slotIndex: page.slotIndex);
+            }
+            final articlePage = page as V2ReaderArticleDisplay;
+            final article = state.articles[articlePage.articleIndex];
+            return V2NewsTextScope(
+              child: V2ArticlePage(
+                article: article,
+                cutsLabel: cutsLabel,
+                index: articlePage.articleIndex,
+                total: state.total,
+                bookmarked: bookmarks.isBookmarked(article),
+                onBookmark: () => _toggleBookmark(article),
+                onShare: () => _share(article),
+                onViewFullArticle: () => _openFullArticle(article),
+                onPrevious: _flipPrevious,
+                onNext: _flipNext,
+                canPrevious: i > 0,
+                canNext: i < pages.length - 1 || state.hasMore,
+                showAdSlot: false,
+                showHeroActions: false,
               ),
-          ],
-        );
-    }
+            );
+          },
+        ),
+        if (current != null)
+          Positioned(
+            top: 10,
+            right: 18,
+            child: Material(
+              type: MaterialType.transparency,
+              child: V2ReaderActionButtons(
+                bookmarked: bookmarks.isBookmarked(current),
+                onBookmark: () => _toggleBookmark(current),
+                onShare: () => _share(current),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
