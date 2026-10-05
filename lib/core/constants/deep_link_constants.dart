@@ -83,8 +83,7 @@ class DeepLinkConstants {
         uri.host == v2PathSegment &&
         segments.length >= 2 &&
         _isV2ArticlePathSegment(segments[0])) {
-      final id = segments[1].trim();
-      return id.isEmpty ? null : id;
+      return _sanitizeArticleId(segments[1]);
     }
 
     // https://v2-api.newson.app/v2/news/{id}
@@ -94,18 +93,34 @@ class DeepLinkConstants {
         segments.length >= 3 &&
         segments[0] == v2PathSegment &&
         _isV2ArticlePathSegment(segments[1])) {
-      final id = segments[2].trim();
-      return id.isEmpty ? null : id;
+      return _sanitizeArticleId(segments[2]);
     }
 
     // Optional query form: newson://v2?articleId=... or ?v=2
     if (uri.scheme == customScheme && uri.host == v2PathSegment) {
       final qp = uri.queryParameters[articleIdQueryKey] ??
           uri.queryParameters['id'];
-      if (qp != null && qp.trim().isNotEmpty) return qp.trim();
+      if (qp != null) return _sanitizeArticleId(qp);
     }
 
     return null;
+  }
+
+  /// Email clients often append trailing punctuation to shared URLs.
+  static String? _sanitizeArticleId(String raw) {
+    var id = raw.trim();
+    if (id.isEmpty) return null;
+    // Decode percent-encoding when present; ignore illegal sequences.
+    try {
+      id = Uri.decodeComponent(id);
+    } catch (_) {
+      // Already decoded or malformed — keep the trimmed raw token.
+    }
+    id = id.replaceAll(RegExp(r'[\u0000-\u001F\u007F]+'), '');
+    id = id.replaceAll(RegExp(r'''[.,;:!?)\]}>'"…]+$'''), '');
+    id = id.trim();
+    if (id.isEmpty || id.length > 200) return null;
+    return id;
   }
 
   /// Parses article id from V1 app / https share links.

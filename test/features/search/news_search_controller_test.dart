@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newson/data/models/news_article.dart';
 import 'package:newson/data/models/news_response.dart';
-import 'package:newson/data/models/region_model.dart';
 import 'package:newson/features/search/data/search_repository.dart';
 import 'package:newson/features/search/presentation/news_search_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,8 +22,6 @@ void main() {
   NewsSearchController controller(SearchFetcher fetcher) {
     return NewsSearchController(
       repository: SearchRepository(searchFetcher: fetcher),
-      newsLanguageCode: () => 'en',
-      appliedRegion: () => const SavedRegion(),
     );
   }
 
@@ -32,8 +29,8 @@ void main() {
     var calls = 0;
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {
@@ -49,8 +46,8 @@ void main() {
   test('valid query loads results', () async {
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {
@@ -73,8 +70,8 @@ void main() {
   test('empty result is ready with zero items', () async {
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {
@@ -88,8 +85,8 @@ void main() {
   test('API error surfaces error status', () async {
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {
@@ -103,8 +100,8 @@ void main() {
   test('pagination loadMore appends page 2', () async {
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {
@@ -133,8 +130,8 @@ void main() {
     var calls = 0;
     final c = controller(({
       required query,
-      required languageCode,
-      required appliedRegion,
+      required language,
+      required filters,
       required page,
       required limit,
     }) async {

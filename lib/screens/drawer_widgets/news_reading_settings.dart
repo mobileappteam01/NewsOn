@@ -45,7 +45,7 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${LocalizationHelper.settingsSaved(context)} - Mode: ${_getModeDisplayName(mode)}'),
+          content: Text('${LocalizationHelper.settingsSaved(context)} - ${_getModeDisplayName(mode)}'),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
@@ -56,11 +56,11 @@ class _NewsReadingSettingsState extends State<NewsReadingSettings> {
   String _getModeDisplayName(String mode) {
     switch (mode) {
       case AppConstants.readingModeTitleOnly:
-        return 'Title Only';
+        return LocalizationHelper.playTitleOnly(context);
       case AppConstants.readingModeDescriptionOnly:
-        return 'Description Only';
+        return LocalizationHelper.playDescriptionOnly(context);
       case AppConstants.readingModeFullNews:
-        return 'Full News';
+        return LocalizationHelper.playFullNews(context);
       default:
         return mode;
     }

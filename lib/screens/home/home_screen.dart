@@ -36,6 +36,21 @@ import '../search/search_tab.dart';
 import '../../features/search/presentation/v2_search_tab.dart';
 import '../../features/for_you/presentation/v2_for_you_tab.dart';
 
+/// Home tab 0 shows a V2 surface (Reader or News Cuts) instead of the V1 feed.
+bool usesV2HomeSurface(RemoteConfigModel config) =>
+    V2FeatureFlags.homeReader(config) || V2FeatureFlags.newsCuts(config);
+
+/// Startup preload of V1 breaking news (`getActiveNewsMobile`). Only the V1
+/// feed reads [NewsProvider.breakingNews] from it: V2 Reader Home never does,
+/// and V2 News Cuts loads its own in `HomeController.loadInitial`.
+Future<void> preloadHomeBreakingNews(
+  RemoteConfigModel config,
+  NewsProvider newsProvider,
+) async {
+  if (usesV2HomeSurface(config)) return;
+  await newsProvider.fetchBreakingNews();
+}
+
 class HomeScreen extends StatefulWidget {
   final List<String> selectedCategories;
 
@@ -75,13 +90,21 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Initialize other providers
-      await context.read<NewsProvider>().fetchBreakingNews();
+      await preloadHomeBreakingNews(
+        context.read<RemoteConfigProvider>().config,
+        context.read<NewsProvider>(),
+      );
       DeepLinkService.instance.processPendingLink(navigationReady: true);
       V2NotificationService.instance.processPendingOpen(navigationReady: true);
       final bookmarkConfig = context.read<RemoteConfigProvider>().config;
       final v2Bookmarks = V2FeatureFlags.homeReader(bookmarkConfig) ||
           V2FeatureFlags.newArticleDetail(bookmarkConfig);
-      context.read<BookmarkProvider>().loadBookmarks(v2List: v2Bookmarks);
+      final bookmarks = context.read<BookmarkProvider>();
+      if (v2Bookmarks) {
+        bookmarks.ensureV2BookmarksLoaded();
+      } else {
+        bookmarks.loadBookmarks();
+      }
       context.read<CompletedNewsProvider>().loadForCurrentUser();
       context.read<RemoteConfigProvider>().initialize();
 
@@ -206,8 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return Theme(data: lightTheme, child: child);
         }
 
-        final v2Home =
-            V2FeatureFlags.homeReader(config) || V2FeatureFlags.newsCuts(config);
+        final v2Home = usesV2HomeSurface(config);
         final v2ForYou = V2FeatureFlags.forYou(config);
 
         return PopScope(

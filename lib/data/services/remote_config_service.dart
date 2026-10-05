@@ -13,6 +13,9 @@ class RemoteConfigService {
 
   final FirebaseRemoteConfig _remoteConfig = FirebaseRemoteConfig.instance;
 
+  /// Firebase serves cached values for fetches inside this window.
+  static const Duration minimumFetchInterval = Duration(minutes: 1);
+
   /// Safe JSON decode with fallback
   /// Returns default value if string is empty or parsing fails
   dynamic _safeJsonDecode(String jsonString, dynamic defaultValue) {
@@ -43,9 +46,7 @@ class RemoteConfigService {
       await _remoteConfig.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 10),
-          minimumFetchInterval: const Duration(
-            minutes: 1,
-          ), // Fetch new values every hour
+          minimumFetchInterval: minimumFetchInterval,
         ),
       );
 

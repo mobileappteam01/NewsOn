@@ -24,7 +24,7 @@ class FullArticleScreen extends StatefulWidget {
 class _FullArticleScreenState extends State<FullArticleScreen> {
   var _loading = true;
   var _error = false;
-  String? _errorMessage;
+  var _invalidUrl = false;
 
   @override
   void initState() {
@@ -36,7 +36,7 @@ class _FullArticleScreenState extends State<FullArticleScreen> {
     setState(() {
       _loading = true;
       _error = false;
-      _errorMessage = null;
+      _invalidUrl = false;
     });
 
     final uri = Uri.tryParse(widget.url);
@@ -44,7 +44,7 @@ class _FullArticleScreenState extends State<FullArticleScreen> {
       setState(() {
         _loading = false;
         _error = true;
-        _errorMessage = 'Invalid article URL';
+        _invalidUrl = true;
       });
       return;
     }
@@ -56,7 +56,6 @@ class _FullArticleScreenState extends State<FullArticleScreen> {
         setState(() {
           _loading = false;
           _error = true;
-          _errorMessage = 'Unable to open article';
         });
         return;
       }
@@ -64,11 +63,11 @@ class _FullArticleScreenState extends State<FullArticleScreen> {
       // Return to NewsOn after handing off to the browser.
       if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
+      debugPrint('⚠️ Full article open failed errorType=${e.runtimeType}');
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = true;
-        _errorMessage = e.toString();
       });
     }
   }
@@ -119,8 +118,13 @@ class _FullArticleScreenState extends State<FullArticleScreen> {
                         const Icon(Icons.link_off, size: 48),
                         const SizedBox(height: 12),
                         Text(
-                          _errorMessage ??
-                              LocalizationHelper.v2SummaryUnavailable(context),
+                          _invalidUrl
+                              ? LocalizationHelper.v2FullArticleInvalidUrl(
+                                  context,
+                                )
+                              : LocalizationHelper.v2FullArticleOpenError(
+                                  context,
+                                ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),

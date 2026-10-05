@@ -271,6 +271,47 @@ String capitalizeCategoryLabel(String raw) {
   return '${text[0].toUpperCase()}${text.substring(1)}';
 }
 
+/// Presentation-only Title Case for country/state/city names
+/// ("tamil nadu" → "Tamil Nadu"). Never used for slugs or query values.
+///
+/// Words that already start with a capital are kept as written ("McAllen"),
+/// short all-caps words stay acronyms ("UAE", "NCR"), and scripts without
+/// letter case (Tamil, Hindi, …) come back unchanged.
+String formatRegionLabel(String? raw) {
+  final text = raw?.trim() ?? '';
+  if (text.isEmpty) return '';
+  return text
+      .split(RegExp(r'\s+'))
+      .map((word) => word.split('-').map(_titleCaseRegionWord).join('-'))
+      .join(' ');
+}
+
+/// Region options A–Z by displayed label, case-insensitive (slug breaks ties).
+/// Stable regardless of the order the backend returns.
+List<V2RegionOption> sortRegionOptions(Iterable<V2RegionOption> options) {
+  String key(V2RegionOption o) => formatRegionLabel(o.name).toLowerCase();
+  return List<V2RegionOption>.of(options)
+    ..sort((a, b) {
+      final byLabel = key(a).compareTo(key(b));
+      return byLabel != 0 ? byLabel : a.slug.compareTo(b.slug);
+    });
+}
+
+String _titleCaseRegionWord(String word) {
+  if (word.isEmpty) return word;
+  final upper = word.toUpperCase();
+  final lower = word.toLowerCase();
+  if (upper == lower) return word;
+  final first = word[0];
+  final startsUpper = first != first.toLowerCase();
+  if (word == upper) {
+    if (word.length <= 3) return word;
+  } else if (startsUpper) {
+    return word;
+  }
+  return '${first.toUpperCase()}${word.substring(1).toLowerCase()}';
+}
+
 bool isMongoObjectId(String value) =>
     RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(value.trim());
 

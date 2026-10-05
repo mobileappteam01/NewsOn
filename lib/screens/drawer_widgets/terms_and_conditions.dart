@@ -22,7 +22,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
   final ContentApiService _contentApiService = ContentApiService();
   String? _htmlContent;
   bool _isLoading = true;
-  String? _error;
+  String Function(BuildContext)? _error;
   String? _loadedLanguageCode;
 
   @override
@@ -59,14 +59,15 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
           _htmlContent = content;
           _isLoading = false;
           if (content == null || content.isEmpty) {
-            _error = 'Terms and Conditions not available';
+            _error = LocalizationHelper.termsAndConditionsNotAvailable;
           }
         });
       }
     } catch (e) {
+      debugPrint('⚠️ Terms and Conditions load failed: $e');
       if (mounted) {
         setState(() {
-          _error = 'Failed to load Terms and Conditions: $e';
+          _error = LocalizationHelper.failedToLoadTermsAndConditions;
           _isLoading = false;
         });
       }
@@ -111,7 +112,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
                       _isLoading
                           ? _buildShimmerLoader(isDark)
                           : _error != null
-                          ? _buildErrorWidget(_error!, config)
+                          ? _buildErrorWidget(_error!(context), config)
                           : _htmlContent != null
                           ? _buildContent(_htmlContent!, isDark, config)
                           : _buildEmptyWidget(config),
@@ -169,7 +170,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
                 backgroundColor: config.primaryColorValue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Retry'),
+              child: Text(LocalizationHelper.retry(context)),
             ),
           ],
         ),
@@ -187,7 +188,7 @@ class _TermsAndConditionsState extends State<TermsAndConditions> {
             Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'Terms and Conditions not available',
+              LocalizationHelper.termsAndConditionsNotAvailable(context),
               style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 16),
               textAlign: TextAlign.center,
             ),

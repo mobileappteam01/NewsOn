@@ -119,11 +119,12 @@ void main() {
   });
 
   group('home refresh', () {
-    test('a second refresh waits until the first finishes', () async {
+    test('queued refresh after in-flight completes with latest language', () async {
       final gate = Completer<void>();
       var calls = 0;
+      var language = 'en';
       final controller = V2ReaderController(
-        newsLanguageCode: () => 'en',
+        newsLanguageCode: () => language,
         appliedRegion: () => const SavedRegion(),
         homeFilter: () => const HomeFilterState(
           selectedCategorySlugs: ['technology'],
@@ -146,13 +147,15 @@ void main() {
 
       final first = controller.refresh();
       await Future<void>.delayed(Duration.zero);
+      language = 'ta';
       final second = controller.refresh();
       await Future<void>.delayed(Duration.zero);
       expect(calls, 1);
       gate.complete();
       await first;
       await second;
-      expect(calls, 1);
+      // First in-flight may be discarded; queued refresh must still run.
+      expect(calls, greaterThanOrEqualTo(2));
       expect(
         controller.homeFilter?.call().selectedCategorySlugs,
         ['technology'],
@@ -163,7 +166,7 @@ void main() {
   group('share url', () {
     test('one canonical V2 https link, V1 path unchanged', () {
       final v2 = DeepLinkConstants.buildV2HttpsDeepLink('abc123');
-      expect(v2.toString(), 'https://api.newson.app/v2/news/abc123');
+      expect(v2.toString(), 'https://v2-api.newson.app/v2/news/abc123');
       expect(
         DeepLinkConstants.parseV2ArticleId(v2),
         'abc123',

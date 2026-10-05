@@ -7,6 +7,7 @@ import '../../../data/services/user_service.dart';
 import '../../home_v2/data/v2_home_api.dart';
 import '../../home_v2/domain/v2_home_metadata.dart';
 import '../domain/v2_account_profile.dart';
+import '../domain/v2_account_validation.dart';
 
 class V2AccountApi {
   V2AccountApi({
@@ -118,6 +119,24 @@ class V2AccountController extends ChangeNotifier {
   bool _dirty = false;
   bool get isDirty => _dirty;
 
+  int _saveRevision = 0;
+  bool _disposed = false;
+
+  /// Bumped once per successful save, after the profile was reloaded.
+  int get saveRevision => _saveRevision;
+
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void markDirty() {
     if (_dirty) return;
     _dirty = true;
@@ -169,7 +188,8 @@ class V2AccountController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Client-side validation. Returns field errors; empty map means ok.
+  /// Client-side validation. Returns [V2AccountFieldError] codes by field;
+  /// an empty map means ok.
   Map<String, String> validate({
     required String username,
     required String firstName,
@@ -180,27 +200,20 @@ class V2AccountController extends ChangeNotifier {
     String? city,
   }) {
     final errors = <String, String>{};
-    if (username.trim().isEmpty) {
-      errors['username'] = 'Username is required';
+    void put(String field, String? code) {
+      if (code != null) errors[field] = code;
     }
-    if (firstName.trim().isEmpty) {
-      errors['firstName'] = 'First name is required';
-    }
-    final mobile = mobileNumber.trim();
-    if (mobile.isNotEmpty &&
-        !RegExp(r'^\+?[0-9][0-9\s\-()]{6,20}$').hasMatch(mobile)) {
-      errors['mobileNumber'] = 'Enter a valid mobile number';
-    }
-    if (dateOfBirthYmd != null &&
-        dateOfBirthYmd.isNotEmpty &&
-        !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOfBirthYmd)) {
-      errors['dateOfBirth'] = 'Use a valid date';
-    }
+
+    put('username', V2AccountValidation.username(username));
+    put('firstName', V2AccountValidation.firstName(firstName));
+    put('lastName', V2AccountValidation.lastName(lastName));
+    put('mobileNumber', V2AccountValidation.mobileNumber(mobileNumber));
+    put('dateOfBirth', V2AccountValidation.dateOfBirth(dateOfBirthYmd));
     if (country != null &&
         country.isNotEmpty &&
         _countries.isNotEmpty &&
         !_countries.any((c) => c.slug == country || c.name == country)) {
-      errors['country'] = 'Select a country from the list';
+      errors['country'] = V2AccountFieldError.invalidCountry;
     }
     return errors;
   }
@@ -265,6 +278,7 @@ class V2AccountController extends ChangeNotifier {
 
       if (body.isEmpty) {
         _dirty = false;
+        _saveRevision++;
         _state = V2AccountState(
           phase: V2AccountPhase.saved,
           profile: current,
@@ -282,6 +296,7 @@ class V2AccountController extends ChangeNotifier {
         profile = patched;
       }
       _dirty = false;
+      _saveRevision++;
       _state = V2AccountState(
         phase: V2AccountPhase.saved,
         profile: profile,

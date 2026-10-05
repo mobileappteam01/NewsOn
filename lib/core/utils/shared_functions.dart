@@ -356,9 +356,9 @@ showListenButton(
                     Flexible(
                       child: Text(
                         isPlaying
-                            ? 'Playing...'
+                            ? LocalizationHelper.playing(buildContext)
                             : isPaused
-                                ? 'Paused'
+                                ? LocalizationHelper.paused(buildContext)
                                 : LocalizationHelper.listen(buildContext),
                         style: GoogleFonts.playfair(
                           color: Colors.white,

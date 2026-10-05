@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/dynamic_language_provider.dart';
 import '../../providers/remote_config_provider.dart';
-import '../utils/shared_functions.dart';
 import '../utils/localization_helper.dart';
+import '../utils/shared_functions.dart';
 
 /// Whether the dialog is selecting app language (UI) or news language (content only).
 enum LanguageSelectorType {
@@ -101,11 +101,8 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                   ),
                   child: Row(
                     children: [
-                      showImage(
-                        config.languageImg,
-                        BoxFit.contain,
-                        height: 20,
-                        width: 30,
+                      _LanguageDialogLogo(
+                        networkUrl: config.languageImg,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -259,13 +256,18 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                           if (_selectedLanguage != null) {
                             if (_isNews) {
                               await languageProvider.setNewsLanguage(_selectedLanguage!);
-                              if (mounted) {
+                              if (context.mounted) {
+                                final message =
+                                    LocalizationHelper.newsLanguageChangedTo(
+                                  context,
+                                  languageProvider.nativeNameForNewsLanguage(
+                                    _selectedLanguage!,
+                                  ),
+                                );
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                      'News language changed to $_selectedLanguage',
-                                    ),
+                                    content: Text(message),
                                     duration: const Duration(seconds: 2),
                                     backgroundColor: config.primaryColorValue,
                                   ),
@@ -281,13 +283,20 @@ class _LanguageSelectorDialogState extends State<LanguageSelectorDialog> {
                                   .setLanguage(_selectedLanguage!);
                               await languageProvider
                                   .setLanguage(_selectedLanguage!);
-                              if (mounted) {
+                              if (context.mounted) {
+                                final nativeName =
+                                    dynamicProvider.currentLanguage?.nativeName;
+                                final message =
+                                    LocalizationHelper.appLanguageChangedTo(
+                                  context,
+                                  nativeName == null || nativeName.isEmpty
+                                      ? _selectedLanguage!
+                                      : nativeName,
+                                );
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                      'App language changed to $_selectedLanguage',
-                                    ),
+                                    content: Text(message),
                                     duration: const Duration(seconds: 2),
                                     backgroundColor: config.primaryColorValue,
                                   ),
@@ -355,4 +364,47 @@ void showLanguageSelectorDialog(BuildContext context) {
       type: LanguageSelectorType.app,
     ),
   );
+}
+
+/// Language dialog brand mark — prefers bundled asset so shimmer never sticks
+/// when Firebase `languageImg` is empty or fails to load.
+class _LanguageDialogLogo extends StatelessWidget {
+  const _LanguageDialogLogo({this.networkUrl});
+
+  final String? networkUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = networkUrl?.trim() ?? '';
+    final asset = Image.asset(
+      kNewsOnLogoAsset,
+      height: 20,
+      width: 30,
+      fit: BoxFit.contain,
+      color: Colors.white,
+      colorBlendMode: BlendMode.srcIn,
+      errorBuilder: (_, __, ___) => const Icon(
+        Icons.language,
+        color: Colors.white,
+        size: 20,
+      ),
+    );
+
+    if (url.isEmpty) return asset;
+
+    return Image.network(
+      url,
+      height: 20,
+      width: 30,
+      fit: BoxFit.contain,
+      color: Colors.white,
+      colorBlendMode: BlendMode.srcIn,
+      errorBuilder: (_, __, ___) => asset,
+      // Never leave an indefinite shimmer — blank until first frame, then asset.
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) return child;
+        return asset;
+      },
+    );
+  }
 }

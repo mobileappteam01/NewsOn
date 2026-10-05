@@ -51,22 +51,69 @@ class V2HomeApi {
       'category=${query['category'] ?? '-'} '
       'country=${query['country'] ?? '-'} '
       'state=${query['state'] ?? '-'} '
-      'city=${query['city'] ?? '-'}',
+      'city=${query['city'] ?? '-'} '
+      'date=${query['date'] ?? '-'} '
+      'auth=${bearer != null}',
     );
 
+    final started = DateTime.now();
     final response = await _api.getByPath(
       path,
       queryParameters: query,
       bearerToken: bearer,
       useV2Host: true,
     );
+    final ms = DateTime.now().difference(started).inMilliseconds;
+    final status = response.statusCode;
 
     if (!response.success || response.data == null) {
-      throw V2HomeException(response.error ?? 'Failed to load Home');
+      final kind = _classifyFailure(status, response.error);
+      debugPrint(
+        '⚠️ [V2Home] fail page=$safePage language=${query['language']} '
+        'ms=$ms httpStatus=$status kind=$kind error=${response.error}',
+      );
+      throw V2HomeException(
+        response.error ?? 'Failed to load Home',
+        statusCode: status > 0 ? status : null,
+        kind: kind,
+      );
     }
-    final feedPage = V2FeedItemMapper.parseEnvelope(response.data);
-    V2HomeCategoryDebug.logPage(feedPage);
-    return feedPage;
+    try {
+      final feedPage = V2FeedItemMapper.parseEnvelope(response.data);
+      debugPrint(
+        'ℹ️ [V2Home] ok page=$safePage language=${query['language']} '
+        'httpStatus=$status items=${feedPage.articles.length} '
+        'hasMore=${feedPage.hasMore} ms=$ms',
+      );
+      V2HomeCategoryDebug.logPage(feedPage);
+      return feedPage;
+    } catch (e) {
+      debugPrint(
+        '⚠️ [V2Home] parse fail page=$safePage httpStatus=$status ms=$ms error=$e',
+      );
+      throw V2HomeException(
+        'Malformed Home response',
+        statusCode: status > 0 ? status : null,
+        kind: V2HomeFailureKind.parse,
+      );
+    }
+  }
+
+  static V2HomeFailureKind _classifyFailure(int status, String? error) {
+    final err = (error ?? '').toLowerCase();
+    if (status == 429 || err.contains('too many requests')) {
+      return V2HomeFailureKind.rateLimited;
+    }
+    if (status >= 500) return V2HomeFailureKind.server;
+    if (status >= 400) return V2HomeFailureKind.client;
+    if (err.contains('timeout')) return V2HomeFailureKind.timeout;
+    if (err.contains('socket') ||
+        err.contains('connection') ||
+        err.contains('network') ||
+        err.contains('host lookup')) {
+      return V2HomeFailureKind.network;
+    }
+    return V2HomeFailureKind.unknown;
   }
 }
 
@@ -156,8 +203,33 @@ class V2HomeMetadataApi {
 }
 
 class V2HomeException implements Exception {
-  V2HomeException(this.message);
+  V2HomeException(
+    this.message, {
+    this.statusCode,
+    this.kind = V2HomeFailureKind.unknown,
+  });
+
   final String message;
+  final int? statusCode;
+  final V2HomeFailureKind kind;
+
+  bool get isTransient =>
+      kind == V2HomeFailureKind.timeout ||
+      kind == V2HomeFailureKind.network ||
+      kind == V2HomeFailureKind.rateLimited ||
+      kind == V2HomeFailureKind.server;
+
   @override
   String toString() => message;
+}
+
+enum V2HomeFailureKind {
+  timeout,
+  network,
+  rateLimited,
+  client,
+  server,
+  parse,
+  empty,
+  unknown,
 }

@@ -20,14 +20,15 @@ abstract final class V2EffectiveHomeFilter {
   /// Never injects saved preferences into the query. Never emits an empty
   /// `category` parameter.
   static HomeFilterState forRequest(HomeFilterState explicit) {
-    // Location (and any other non-category fields) always come from the
+    // Location, date (and any other non-category fields) always come from the
     // temporary Home filter. Categories only when explicitly applied.
     if (explicit.hasCategories) return explicit;
-    if (!explicit.hasLocation) return explicit;
+    if (!explicit.hasSheetFilters) return explicit;
     return HomeFilterState(
       country: explicit.country,
       state: explicit.state,
       district: explicit.district,
+      date: explicit.date,
     );
   }
 

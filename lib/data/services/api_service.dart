@@ -135,7 +135,7 @@ class ApiService {
 
       // Step 1: Fetch base URL from Realtime Database (with timeout)
       try {
-        await _fetchBaseUrl().timeout(const Duration(seconds: 8));
+        await loadBaseUrl().timeout(const Duration(seconds: 8));
       } catch (e) {
         debugPrint('⚠️ Base URL fetch timed out / failed: $e');
         if (!hadCachedBase) {
@@ -302,6 +302,20 @@ class ApiService {
     const raw = String.fromEnvironment('NEWSON_API_BASE_URL');
     final trimmed = raw.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<String?>? _baseUrlLoad;
+  bool _baseUrlLoaded = false;
+
+  /// Realtime DB `ipAddress`, read at most once per app session: startup
+  /// bootstrap and [initialize] share the read. Failures are not memoized,
+  /// so a later [initialize] retries.
+  Future<String?> loadBaseUrl() {
+    if (_baseUrlLoaded) return Future<String?>.value(_cachedBaseUrl);
+    return _baseUrlLoad ??= _fetchBaseUrl().then((_) {
+      _baseUrlLoaded = true;
+      return _cachedBaseUrl;
+    }).whenComplete(() => _baseUrlLoad = null);
   }
 
   /// Fetch base URL from Firebase Realtime Database

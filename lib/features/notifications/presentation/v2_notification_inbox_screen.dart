@@ -125,7 +125,7 @@ class _V2NotificationInboxScreenState extends State<V2NotificationInboxScreen> {
             hasScrollBody: false,
             child: _ErrorNotifications(
               theme: theme,
-              message: state.error ?? 'Could not load notifications',
+              message: LocalizationHelper.v2InboxLoadFailed(context),
               onRetry: _controller.loadInitial,
             ),
           ),
@@ -168,7 +168,7 @@ class _EmptyNotifications extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No notifications yet',
+              LocalizationHelper.v2InboxEmptyTitle(context),
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 18,
@@ -178,7 +178,7 @@ class _EmptyNotifications extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'When NewsOn has updates for you, they will show up here.',
+              LocalizationHelper.v2InboxEmptyMessage(context),
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 14,

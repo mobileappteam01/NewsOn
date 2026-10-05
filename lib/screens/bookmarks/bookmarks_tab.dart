@@ -470,6 +470,8 @@ class _BookmarksTabState extends State<BookmarksTab>
   }
 
   void _showClearConfirmation(BuildContext context, BookmarkProvider provider) {
+    final useV2 = _v2Bookmarks(context);
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder:
@@ -485,6 +487,11 @@ class _BookmarksTabState extends State<BookmarksTab>
               ),
               TextButton(
                 onPressed: () {
+                  if (useV2) {
+                    Navigator.pop(context);
+                    _clearAllV2(provider, messenger);
+                    return;
+                  }
                   provider.clearAllBookmarks();
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -497,6 +504,26 @@ class _BookmarksTabState extends State<BookmarksTab>
               ),
             ],
           ),
+    );
+  }
+
+  Future<void> _clearAllV2(
+    BookmarkProvider provider,
+    ScaffoldMessengerState messenger,
+  ) async {
+    final cleared = await provider.clearAllBookmarksV2();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          cleared
+              ? LocalizationHelper.allBookmarksCleared(context)
+              : LocalizationHelper.error(
+                  context,
+                  provider.error ?? LocalizationHelper.unknownError(context),
+                ),
+        ),
+      ),
     );
   }
 

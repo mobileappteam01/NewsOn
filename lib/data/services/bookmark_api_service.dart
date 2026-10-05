@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../features/bookmarks/data/v2_bookmark_sync.dart';
 import '../services/api_service.dart';
 import '../services/user_service.dart';
 import '../models/news_article.dart';
@@ -127,7 +128,7 @@ class PaginationInfo {
 
 /// Service for handling bookmark API operations.
 /// [newsId] must be the news article MongoDB `_id` — never `article_id`.
-class BookmarkApiService {
+class BookmarkApiService implements V2BookmarkRemote {
   static final BookmarkApiService _instance = BookmarkApiService._internal();
   factory BookmarkApiService() => _instance;
   BookmarkApiService._internal();
@@ -288,6 +289,7 @@ class BookmarkApiService {
   /// Bearer auth. 201 creates a row; 200 means this user already bookmarked
   /// that article. Both write the MongoDB `bookmarks` collection read by
   /// `GET /api/v2/bookmarks`.
+  @override
   Future<void> addV2Bookmark(String newsId) async {
     final token = _userService.getToken();
     if (token == null || token.isEmpty) {
@@ -314,6 +316,10 @@ class BookmarkApiService {
   }
 
   /// Removes a V2 bookmark. `DELETE /api/v2/bookmarks/{newsId}` on the V2 host.
+  ///
+  /// The backend answers 404 "Bookmark not found" when the row is already
+  /// gone. That is the requested end state, so it is not a failure.
+  @override
   Future<void> deleteV2Bookmark(String newsId) async {
     final token = _userService.getToken();
     if (token == null || token.isEmpty) {
@@ -329,8 +335,20 @@ class BookmarkApiService {
       useV2Host: true,
     );
     if (!response.success) {
+      if (isV2BookmarkAlreadyRemoved(response)) {
+        debugPrint('[V2Bookmark] delete: already removed on server');
+        return;
+      }
       throw Exception(response.error ?? 'Failed to remove bookmark');
     }
+  }
+
+  /// 404 from the V2 bookmark service itself, not a missing route.
+  @visibleForTesting
+  static bool isV2BookmarkAlreadyRemoved(ApiResponse response) {
+    if (response.statusCode != 404) return false;
+    final data = response.data;
+    return data is Map && data['message'] == 'Bookmark not found';
   }
 
   /// V2 bookmark list. `GET /api/v2/bookmarks` on the V2 host.
@@ -338,6 +356,7 @@ class BookmarkApiService {
   /// Returns null when the route is missing or the call fails so callers can
   /// keep the list confirmed by a successful bookmark write. Never falls
   /// back to the V1 bookmark catalog.
+  @override
   Future<BookmarkListResponse?> tryGetV2BookmarkList({
     int page = 1,
     int limit = 20,

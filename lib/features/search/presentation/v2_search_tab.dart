@@ -4,23 +4,23 @@ import 'package:provider/provider.dart';
 import '../../../app/routing/v2_routes.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/utils/localization_helper.dart';
-import '../../../core/widgets/language_selector_dialog.dart';
 import '../../../data/models/news_article.dart';
 import '../../../data/services/interaction_service.dart';
 import '../../../data/services/news_share_service.dart';
 import '../../../providers/bookmark_provider.dart';
-import '../../../providers/language_provider.dart';
-import '../../../providers/region_provider.dart';
 import '../../../providers/remote_config_provider.dart';
 import '../../home/presentation/widgets/latest_news_card.dart';
 import '../../news/domain/news_summary.dart';
 import '../../news/presentation/widgets/newson_cut_card.dart';
 import '../data/search_repository.dart';
+import '../domain/search_session.dart';
 import 'news_search_controller.dart';
 
 /// V2 Search tab — validation, recent searches, submit analytics, pagination.
 class V2SearchTab extends StatefulWidget {
-  const V2SearchTab({super.key});
+  const V2SearchTab({super.key, this.repository});
+
+  final SearchRepository? repository;
 
   @override
   State<V2SearchTab> createState() => _V2SearchTabState();
@@ -41,9 +41,7 @@ class _V2SearchTabState extends State<V2SearchTab>
   void initState() {
     super.initState();
     _controller = NewsSearchController(
-      repository: SearchRepository(),
-      newsLanguageCode: () => context.read<LanguageProvider>().newsLanguageCode,
-      appliedRegion: () => context.read<RegionProvider>().appliedRegion,
+      repository: widget.repository ?? SearchRepository(),
     );
     _scroll.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -76,10 +74,65 @@ class _V2SearchTabState extends State<V2SearchTab>
     final state = _controller.state;
     if (state.status == SearchStatus.ready) {
       await AnalyticsService.instance.search(
-        query: state.query,
+        query: state.submittedQuery,
         v2Only: true,
       );
     }
+  }
+
+  Future<void> _setLanguage(String? code) async {
+    _impressedIds.clear();
+    await _controller.setSearchLanguage(code);
+  }
+
+  void _clear() {
+    _text.clear();
+    _impressedIds.clear();
+    _controller.clear();
+  }
+
+  Widget _clearButton(SearchState state) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _text,
+      builder: (context, value, _) {
+        if (value.text.isEmpty && state.submittedQuery.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return IconButton(
+          key: const ValueKey('v2_search_clear'),
+          icon: const Icon(Icons.close_rounded),
+          tooltip: LocalizationHelper.clear(context),
+          onPressed: _clear,
+        );
+      },
+    );
+  }
+
+  Widget _languageSelector(ThemeData theme, String? selected) {
+    final options = SearchLanguages.options;
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: options.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final code = i == 0 ? null : options[i - 1].code;
+          return ChoiceChip(
+            key: ValueKey('v2_search_language_${code ?? 'all'}'),
+            label: Text(
+              code == null
+                  ? LocalizationHelper.v2HomeCategoryAll(context)
+                  : options[i - 1].nativeName,
+            ),
+            selected: selected == code,
+            showCheckmark: false,
+            selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+            onSelected: (_) => _setLanguage(code),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _open(NewsArticle article, int index) async {
@@ -116,7 +169,6 @@ class _V2SearchTabState extends State<V2SearchTab>
     final theme = Theme.of(context);
     final config = context.watch<RemoteConfigProvider>().config;
     final bookmarks = context.watch<BookmarkProvider>();
-    final language = context.watch<LanguageProvider>();
 
     return ListenableBuilder(
       listenable: _controller,
@@ -156,10 +208,16 @@ class _V2SearchTabState extends State<V2SearchTab>
                         fillColor: theme.colorScheme.surfaceContainerHighest
                             .withValues(alpha: 0.45),
                         prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.arrow_forward_rounded),
-                          tooltip: LocalizationHelper.v2Search(context),
-                          onPressed: () => _submit(),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _clearButton(state),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_rounded),
+                              tooltip: LocalizationHelper.v2Search(context),
+                              onPressed: () => _submit(),
+                            ),
+                          ],
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -183,26 +241,7 @@ class _V2SearchTabState extends State<V2SearchTab>
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ActionChip(
-                        avatar: const Icon(Icons.translate, size: 18),
-                        label: Text(language.newsLanguageName),
-                        onPressed: () async {
-                          await showDialog<void>(
-                            context: context,
-                            builder: (_) => const LanguageSelectorDialog(
-                              type: LanguageSelectorType.news,
-                            ),
-                          );
-                          if (!mounted) return;
-                          if (state.status == SearchStatus.ready &&
-                              state.query.isNotEmpty) {
-                            await _submit(state.query);
-                          }
-                        },
-                      ),
-                    ),
+                    _languageSelector(theme, state.searchLanguage),
                   ],
                 ),
               ),
@@ -239,12 +278,17 @@ class _V2SearchTabState extends State<V2SearchTab>
                     separatorBuilder: (_, __) => const SizedBox(width: 8),
                     itemBuilder: (context, i) {
                       final s = suggestions[i];
-                      return ActionChip(
+                      return InputChip(
+                        key: ValueKey('v2_recent_search_$s'),
                         label: Text(s),
                         onPressed: () {
                           _text.text = s;
                           _submit(s);
                         },
+                        onDeleted: () => _controller.removeRecent(s),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        deleteButtonTooltipMessage:
+                            LocalizationHelper.v2RemoveRecentSearch(context, s),
                       );
                     },
                   ),
@@ -262,7 +306,7 @@ class _V2SearchTabState extends State<V2SearchTab>
                     ? const Center(child: CircularProgressIndicator())
                     : state.status == SearchStatus.ready &&
                             state.results.isEmpty &&
-                            state.query.isNotEmpty
+                            state.submittedQuery.isNotEmpty
                         ? Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24),
@@ -291,7 +335,7 @@ class _V2SearchTabState extends State<V2SearchTab>
                                 ),
                               )
                             : RefreshIndicator(
-                                onRefresh: () => _submit(state.query),
+                                onRefresh: () => _submit(state.submittedQuery),
                                 child: ListView.builder(
                                   controller: _scroll,
                                   padding:

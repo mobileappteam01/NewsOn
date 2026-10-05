@@ -28,38 +28,37 @@ class NotificationPreferencesApi {
 
   Future<NotificationPreferences> fetchPreferences() async {
     final token = _token;
-    if (token == null) return const NotificationPreferences();
-    try {
-      final response = await _api.getByPath(
-        '/api/notifications/preferences',
-        bearerToken: token,
-        useV2Host: true,
-      );
-      if (!response.success || response.data == null) {
-        return const NotificationPreferences();
-      }
-      final raw = response.data;
-      Map<String, dynamic>? map;
-      if (raw is Map<String, dynamic>) {
-        map = raw;
-      } else if (raw is Map) {
-        map = Map<String, dynamic>.from(raw);
-      }
-      if (map == null) return const NotificationPreferences();
-      final data = map['data'];
-      if (data is Map<String, dynamic>) {
-        return NotificationPreferences.fromJson(data);
-      }
-      if (data is Map) {
-        return NotificationPreferences.fromJson(
-          Map<String, dynamic>.from(data),
-        );
-      }
-      return NotificationPreferences.fromJson(map);
-    } catch (e) {
-      debugPrint('ℹ️ Notification preferences fetch failed: $e');
-      return const NotificationPreferences();
+    if (token == null) {
+      throw StateError('not_authenticated');
     }
+    final response = await _api.getByPath(
+      '/api/notifications/preferences',
+      bearerToken: token,
+      useV2Host: true,
+    );
+    if (!response.success || response.data == null) {
+      throw StateError(response.error ?? 'fetch_failed');
+    }
+    final raw = response.data;
+    Map<String, dynamic>? map;
+    if (raw is Map<String, dynamic>) {
+      map = raw;
+    } else if (raw is Map) {
+      map = Map<String, dynamic>.from(raw);
+    }
+    if (map == null) {
+      throw StateError('invalid_preferences_payload');
+    }
+    final data = map['data'];
+    if (data is Map<String, dynamic>) {
+      return NotificationPreferences.fromJson(data);
+    }
+    if (data is Map) {
+      return NotificationPreferences.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+    }
+    return NotificationPreferences.fromJson(map);
   }
 
   Future<bool> updatePreferences(NotificationPreferences prefs) async {

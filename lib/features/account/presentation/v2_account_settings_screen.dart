@@ -11,6 +11,7 @@ import '../../../screens/auth/auth_screen.dart';
 import '../../home_v2/domain/v2_home_metadata.dart';
 import '../data/v2_account_api.dart';
 import '../domain/v2_account_profile.dart';
+import '../domain/v2_account_validation.dart';
 
 /// V2 Side Menu → Account Settings with real GET/PATCH persistence.
 class V2AccountSettingsScreen extends StatefulWidget {
@@ -19,6 +20,12 @@ class V2AccountSettingsScreen extends StatefulWidget {
     this.controller,
     this.authScreenBuilder,
   });
+
+  static const usernameFieldKey = Key('v2_account_username');
+  static const firstNameFieldKey = Key('v2_account_first_name');
+  static const lastNameFieldKey = Key('v2_account_last_name');
+  static const saveButtonKey = Key('v2_account_save');
+  static const editButtonKey = Key('v2_account_edit');
 
   @visibleForTesting
   final V2AccountController? controller;
@@ -36,28 +43,61 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
   late final V2AccountController _controller;
   late final bool _ownsController;
 
-  final _username = TextEditingController();
-  final _firstName = TextEditingController();
-  final _lastName = TextEditingController();
-  final _mobile = TextEditingController();
-  final _city = TextEditingController();
+  TextEditingController _username = TextEditingController();
+  TextEditingController _firstName = TextEditingController();
+  TextEditingController _lastName = TextEditingController();
+  TextEditingController _mobile = TextEditingController();
+  TextEditingController _city = TextEditingController();
   final _countrySearch = TextEditingController();
+
+  final _usernameFocus = FocusNode();
+  final _firstNameFocus = FocusNode();
+  final _lastNameFocus = FocusNode();
+  final _mobileFocus = FocusNode();
 
   String? _dateOfBirthYmd;
   String? _countrySlug;
 
+  /// View mode (false) is read-only; the AppBar Edit icon switches to edit
+  /// mode, and a successful Save switches back.
+  bool _editing = false;
+
   /// True while applying server profile → controllers (skips markDirty).
   bool _hydrating = false;
   String? _lastHydratedSignature;
+
+  /// Fields the user typed in or left; their errors are validated live.
+  final Set<String> _interacted = <String>{};
+
+  /// Bumped when the form is rebuilt from a freshly saved profile.
+  int _formEpoch = 0;
+  late int _appliedSaveRevision;
 
   @override
   void initState() {
     super.initState();
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? V2AccountController();
+    _appliedSaveRevision = _controller.saveRevision;
     _controller.addListener(_onController);
+    _watchFocus(_usernameFocus, 'username');
+    _watchFocus(_firstNameFocus, 'firstName');
+    _watchFocus(_lastNameFocus, 'lastName');
+    _watchFocus(_mobileFocus, 'mobileNumber');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.load();
+    });
+  }
+
+  void _watchFocus(FocusNode node, String field) {
+    // Enabling a field (entering edit mode) also notifies; only a real
+    // focus → unfocus transition counts as leaving it.
+    var hadFocus = false;
+    node.addListener(() {
+      final left = hadFocus && !node.hasFocus;
+      hadFocus = node.hasFocus;
+      if (!left || !mounted) return;
+      setState(() => _interacted.add(field));
     });
   }
 
@@ -68,6 +108,10 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     }
     final profile = state.profile;
     if (profile != null &&
+        state.phase == V2AccountPhase.saved &&
+        _controller.saveRevision != _appliedSaveRevision) {
+      _resetFormFrom(profile);
+    } else if (profile != null &&
         !_controller.isDirty &&
         (state.phase == V2AccountPhase.loaded ||
             state.phase == V2AccountPhase.saved)) {
@@ -76,17 +120,44 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     if (mounted) setState(() {});
   }
 
+  static String _signatureOf(V2AccountProfile profile) => [
+        profile.id,
+        profile.username,
+        profile.firstName,
+        profile.lastName,
+        profile.mobileNumber,
+        profile.dateOfBirth ?? '',
+        profile.country,
+        profile.city,
+      ].join('|');
+
+  /// After a successful save: drop focus (closes the keyboard), recreate the
+  /// controllers from the reloaded profile and rebuild the form once.
+  void _resetFormFrom(V2AccountProfile profile) {
+    _appliedSaveRevision = _controller.saveRevision;
+    FocusManager.instance.primaryFocus?.unfocus();
+    final previous = [_username, _firstName, _lastName, _mobile, _city];
+    _username = TextEditingController(text: profile.username);
+    _firstName = TextEditingController(text: profile.firstName);
+    _lastName = TextEditingController(text: profile.lastName);
+    _mobile = TextEditingController(text: profile.mobileNumber);
+    _city = TextEditingController(text: profile.city);
+    _dateOfBirthYmd = profile.dateOfBirth;
+    _countrySlug = profile.country.isEmpty ? null : profile.country;
+    _lastHydratedSignature = _signatureOf(profile);
+    _interacted.clear();
+    _formEpoch++;
+    // The old fields still reference these until the rebuilt form replaces
+    // them.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final c in previous) {
+        c.dispose();
+      }
+    });
+  }
+
   void _hydrateFields(V2AccountProfile profile) {
-    final signature = [
-      profile.id,
-      profile.username,
-      profile.firstName,
-      profile.lastName,
-      profile.mobileNumber,
-      profile.dateOfBirth ?? '',
-      profile.country,
-      profile.city,
-    ].join('|');
+    final signature = _signatureOf(profile);
     if (signature == _lastHydratedSignature &&
         _username.text == profile.username &&
         _firstName.text == profile.firstName &&
@@ -148,6 +219,10 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     _mobile.dispose();
     _city.dispose();
     _countrySearch.dispose();
+    _usernameFocus.dispose();
+    _firstNameFocus.dispose();
+    _lastNameFocus.dispose();
+    _mobileFocus.dispose();
     super.dispose();
   }
 
@@ -156,16 +231,16 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text('You have unsaved account changes.'),
+        title: Text(LocalizationHelper.v2AccountDiscardTitle(context)),
+        content: Text(LocalizationHelper.v2AccountDiscardMessage(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
+            child: Text(LocalizationHelper.v2AccountKeepEditing(context)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
+            child: Text(LocalizationHelper.v2AccountDiscard(context)),
           ),
         ],
       ),
@@ -207,11 +282,22 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
 
   String _dobDisplay() {
     final d = _parseYmd(_dateOfBirthYmd);
-    if (d == null) return 'Select date';
+    if (d == null) return LocalizationHelper.v2AccountSelectDate(context);
     return DateFormat.yMMMMd().format(d);
   }
 
+  void _enterEditMode() {
+    final profile = _controller.state.profile;
+    if (profile == null) return;
+    if (!_controller.isDirty) _hydrateFields(profile);
+    setState(() {
+      _interacted.clear();
+      _editing = true;
+    });
+  }
+
   Future<void> _save() async {
+    setState(() => _interacted.addAll(_validatedFields));
     final ok = await _controller.save(
       username: _username.text,
       firstName: _firstName.text,
@@ -223,10 +309,66 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     );
     if (!mounted) return;
     if (ok) {
+      setState(() => _editing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account settings saved')),
+        SnackBar(content: Text(LocalizationHelper.v2AccountSaved(context))),
       );
     }
+  }
+
+  static const _validatedFields = [
+    'username',
+    'firstName',
+    'lastName',
+    'mobileNumber',
+  ];
+
+  Map<String, String> _liveErrors() => _controller.validate(
+        username: _username.text,
+        firstName: _firstName.text,
+        lastName: _lastName.text,
+        mobileNumber: _mobile.text,
+        dateOfBirthYmd: _dateOfBirthYmd,
+        country: _countrySlug,
+        city: _city.text,
+      );
+
+  void _onFieldChanged(String field) {
+    if (_hydrating) return;
+    _controller.markDirty();
+    setState(() => _interacted.add(field));
+  }
+
+  String? _fieldError(
+    String field,
+    Map<String, String> live,
+    Map<String, String> submitted,
+  ) {
+    if (!_editing) return null;
+    final code = _interacted.contains(field) ? live[field] : submitted[field];
+    return code == null ? null : _errorMessage(field, code);
+  }
+
+  String _errorMessage(String field, String code) {
+    switch (code) {
+      case V2AccountFieldError.required:
+        return field == 'username'
+            ? LocalizationHelper.v2AccountUsernameRequired(context)
+            : LocalizationHelper.v2AccountFirstNameRequired(context);
+      case V2AccountFieldError.tooShort:
+        return field == 'username'
+            ? LocalizationHelper.v2AccountUsernameTooShort(context)
+            : LocalizationHelper.v2AccountFirstNameTooShort(context);
+      case V2AccountFieldError.placeholder:
+        return LocalizationHelper.v2AccountUsernamePlaceholder(context);
+      case V2AccountFieldError.invalidMobile:
+        return LocalizationHelper.v2AccountInvalidMobile(context);
+      case V2AccountFieldError.invalidDate:
+        return LocalizationHelper.v2AccountInvalidDate(context);
+      case V2AccountFieldError.invalidCountry:
+        return LocalizationHelper.v2AccountInvalidCountry(context);
+    }
+    return code;
   }
 
   Future<void> _handleLogout() async {
@@ -279,7 +421,9 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
 
   String _countryLabel() {
     final slug = _countrySlug;
-    if (slug == null || slug.isEmpty) return 'Select country';
+    if (slug == null || slug.isEmpty) {
+      return LocalizationHelper.selectCountry(context);
+    }
     for (final c in _controller.countries) {
       if (c.slug == slug || c.name == slug) return c.name;
     }
@@ -320,17 +464,32 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        LocalizationHelper.accountSettings(context),
-                        style: GoogleFonts.playfairDisplay(
-                          color: config.primaryColorValue,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            LocalizationHelper.accountSettings(context),
+                            style: GoogleFonts.playfairDisplay(
+                              color: config.primaryColorValue,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (!_editing)
+                          IconButton(
+                            key: V2AccountSettingsScreen.editButtonKey,
+                            tooltip: LocalizationHelper.v2AccountEdit(context),
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              color: config.primaryColorValue,
+                            ),
+                            onPressed: state.hasProfile && !state.isLoading
+                                ? _enterEditMode
+                                : null,
+                          ),
+                      ],
                     ),
                   ),
                   Expanded(child: _buildBody(theme, state)),
@@ -341,26 +500,31 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: FilledButton(
-                              onPressed: state.isSaving || state.isLoading
-                                  ? null
-                                  : _save,
-                              child: state.isSaving
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('Save'),
+                          if (_editing) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: FilledButton(
+                                key: V2AccountSettingsScreen.saveButtonKey,
+                                onPressed: state.isSaving || state.isLoading
+                                    ? null
+                                    : _save,
+                                child: state.isSaving
+                                    ? SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                          semanticsLabel:
+                                              LocalizationHelper.save(context),
+                                        ),
+                                      )
+                                    : Text(LocalizationHelper.save(context)),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
+                            const SizedBox(height: 12),
+                          ],
                           SizedBox(
                             width: MediaQuery.of(context).size.width * 0.5,
                             height: 48,
@@ -414,7 +578,7 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(state.error ?? 'Could not load profile',
+              Text(LocalizationHelper.v2AccountLoadFailed(context),
                   textAlign: TextAlign.center),
               const SizedBox(height: 12),
               FilledButton(
@@ -428,117 +592,144 @@ class _V2AccountSettingsScreenState extends State<V2AccountSettingsScreen> {
     }
 
     final fieldErrors = state.fieldErrors;
-    return ListView(
+    final live = _liveErrors();
+    final editable = !state.isSaving;
+    final canPick = _editing && editable;
+    final pickerStyle = OutlinedButton.styleFrom(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      disabledForegroundColor: theme.colorScheme.onSurface,
+      backgroundColor: _editing
+          ? null
+          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+    );
+    return KeyedSubtree(
+      key: ValueKey('v2_account_form_$_formEpoch'),
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       children: [
-        if (state.error != null &&
-            (state.phase == V2AccountPhase.apiError ||
-                state.phase == V2AccountPhase.validationError))
+        if (!_editing)
+          const SizedBox.shrink()
+        else if (state.phase == V2AccountPhase.validationError)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              state.error!,
+              LocalizationHelper.v2AccountFixFields(context),
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          )
+        else if (state.error != null &&
+            state.phase == V2AccountPhase.apiError)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              LocalizationHelper.v2AccountSaveFailed(context),
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
         _Field(
-          label: 'Username',
+          fieldKey: V2AccountSettingsScreen.usernameFieldKey,
+          label: LocalizationHelper.v2AccountUsername(context),
           controller: _username,
-          error: fieldErrors['username'],
-          onChanged: (_) {
-            if (!_hydrating) _controller.markDirty();
-          },
+          focusNode: _usernameFocus,
+          editing: _editing,
+          enabled: editable,
+          error: _fieldError('username', live, fieldErrors),
+          onChanged: (_) => _onFieldChanged('username'),
         ),
         _Field(
-          label: 'First Name',
+          fieldKey: V2AccountSettingsScreen.firstNameFieldKey,
+          label: LocalizationHelper.v2AccountFirstName(context),
           controller: _firstName,
-          error: fieldErrors['firstName'],
-          onChanged: (_) {
-            if (!_hydrating) _controller.markDirty();
-          },
+          focusNode: _firstNameFocus,
+          editing: _editing,
+          enabled: editable,
+          error: _fieldError('firstName', live, fieldErrors),
+          onChanged: (_) => _onFieldChanged('firstName'),
         ),
         _Field(
-          label: 'Last Name',
+          fieldKey: V2AccountSettingsScreen.lastNameFieldKey,
+          label: LocalizationHelper.v2AccountLastName(context),
           controller: _lastName,
-          error: fieldErrors['lastName'],
-          onChanged: (_) {
-            if (!_hydrating) _controller.markDirty();
-          },
+          focusNode: _lastNameFocus,
+          editing: _editing,
+          enabled: editable,
+          error: _fieldError('lastName', live, fieldErrors),
+          onChanged: (_) => _onFieldChanged('lastName'),
         ),
         const SizedBox(height: 8),
-        Text('Date of Birth', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        Text(LocalizationHelper.dateOfBirth(context),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         OutlinedButton(
-          onPressed: _pickDob,
-          style: OutlinedButton.styleFrom(
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
+          key: const Key('v2_account_dob'),
+          onPressed: canPick ? _pickDob : null,
+          style: pickerStyle,
           child: Text(_dobDisplay()),
         ),
-        if (fieldErrors['dateOfBirth'] != null)
+        if (_editing && fieldErrors['dateOfBirth'] != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              fieldErrors['dateOfBirth']!,
+              _errorMessage('dateOfBirth', fieldErrors['dateOfBirth']!),
               style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
             ),
           ),
         const SizedBox(height: 12),
         _Field(
-          label: 'Mobile Number',
+          label: LocalizationHelper.v2AccountMobileNumber(context),
           controller: _mobile,
+          focusNode: _mobileFocus,
+          editing: _editing,
+          enabled: editable,
           keyboardType: TextInputType.phone,
-          error: fieldErrors['mobileNumber'],
-          onChanged: (_) {
-            if (!_hydrating) _controller.markDirty();
-          },
+          error: _fieldError('mobileNumber', live, fieldErrors),
+          onChanged: (_) => _onFieldChanged('mobileNumber'),
         ),
         _Field(
-          label: 'City',
+          label: LocalizationHelper.v2AccountCity(context),
           controller: _city,
-          error: fieldErrors['city'],
-          onChanged: (_) {
-            if (!_hydrating) _controller.markDirty();
-          },
+          editing: _editing,
+          enabled: editable,
+          onChanged: (_) => _onFieldChanged('city'),
         ),
         const SizedBox(height: 8),
-        Text('Country', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        Text(LocalizationHelper.regionCountry(context),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         OutlinedButton(
-          onPressed: _openCountryPicker,
-          style: OutlinedButton.styleFrom(
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
+          key: const Key('v2_account_country'),
+          onPressed: canPick ? _openCountryPicker : null,
+          style: pickerStyle,
           child: Row(
             children: [
               Expanded(child: Text(_countryLabel())),
-              if (_controller.countriesLoading)
+              if (_editing && _controller.countriesLoading)
                 const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              else
+              else if (_editing)
                 const Icon(Icons.expand_more),
             ],
           ),
         ),
-        if (fieldErrors['country'] != null)
+        if (_editing && fieldErrors['country'] != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              fieldErrors['country']!,
+              _errorMessage('country', fieldErrors['country']!),
               style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
             ),
           ),
-        if (_controller.countriesError != null)
+        if (_editing && _controller.countriesError != null)
           TextButton(
             onPressed: _controller.loadCountries,
-            child: Text(_controller.countriesError!),
+            child: Text(LocalizationHelper.v2AccountCountriesLoadFailed(context)),
           ),
       ],
+      ),
     );
   }
 }
@@ -547,29 +738,55 @@ class _Field extends StatelessWidget {
   const _Field({
     required this.label,
     required this.controller,
+    this.fieldKey,
+    this.focusNode,
+    this.editing = true,
+    this.enabled = true,
     this.error,
     this.onChanged,
     this.keyboardType,
   });
 
+  final Key? fieldKey;
   final String label;
   final TextEditingController controller;
+  final FocusNode? focusNode;
+
+  /// False in view mode: the field is disabled (not focusable) and styled
+  /// as read-only.
+  final bool editing;
+
+  /// False while saving in edit mode: the field stays enabled but read-only.
+  final bool enabled;
   final String? error;
   final ValueChanged<String>? onChanged;
   final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
+        key: fieldKey,
         controller: controller,
+        focusNode: focusNode,
+        enabled: editing,
+        readOnly: !enabled,
         keyboardType: keyboardType,
         onChanged: onChanged,
+        style: editing ? null : TextStyle(color: scheme.onSurface),
         decoration: InputDecoration(
           labelText: label,
           errorText: error,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: !editing,
+          fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          border: OutlineInputBorder(borderRadius: radius),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: scheme.outlineVariant),
+          ),
         ),
       ),
     );
@@ -614,7 +831,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           children: [
             const SizedBox(height: 10),
             Text(
-              'Select country',
+              LocalizationHelper.selectCountry(context),
               style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
             ),
             Padding(
@@ -622,7 +839,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               child: TextField(
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Search countries',
+                  hintText: LocalizationHelper.v2AccountSearchCountries(context),
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -640,13 +857,17 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 child: Center(
                   child: TextButton(
                     onPressed: widget.onRetry,
-                    child: Text(widget.error!),
+                    child: Text(
+                      LocalizationHelper.v2AccountCountriesLoadFailed(context),
+                    ),
                   ),
                 ),
               )
             else if (filtered.isEmpty)
-              const Expanded(
-                child: Center(child: Text('No countries found')),
+              Expanded(
+                child: Center(
+                  child: Text(LocalizationHelper.noResultsFound(context)),
+                ),
               )
             else
               Expanded(
@@ -655,7 +876,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return ListTile(
-                        title: const Text('Clear'),
+                        title: Text(LocalizationHelper.clear(context)),
                         onTap: () => Navigator.pop(context, ''),
                       );
                     }

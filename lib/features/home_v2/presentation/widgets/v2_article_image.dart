@@ -16,6 +16,18 @@ class V2ArticleImage extends StatelessWidget {
   final double aspectRatio;
   final double borderRadius;
 
+  /// Decode width of hero images in the memory cache.
+  static const int decodeWidth = 1200;
+
+  /// The image provider [V2ArticleImage] shows for [url]. Precaching this
+  /// exact provider fills the cache entry the page reads instead of decoding
+  /// the image a second time at full size.
+  static ImageProvider provider(String url) => ResizeImage.resizeIfNeeded(
+        decodeWidth,
+        null,
+        CachedNetworkImageProvider(url),
+      );
+
   @override
   Widget build(BuildContext context) {
     final url = imageUrl?.trim() ?? '';
@@ -49,7 +61,7 @@ class V2ArticleImage extends StatelessWidget {
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
-                    memCacheWidth: 1200,
+                    memCacheWidth: decodeWidth,
                     fadeInDuration: const Duration(milliseconds: 200),
                     placeholder: (_, __) => Center(
                       child: SizedBox(

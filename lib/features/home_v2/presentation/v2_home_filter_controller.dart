@@ -32,6 +32,8 @@ class V2HomeFilterController extends ChangeNotifier {
   List<String> _savedCategoryTokens = const [];
   List<V2CategoryOption> _catalog = const [];
   bool _catalogLoaded = false;
+  bool _catalogLoading = false;
+  bool _catalogFailed = false;
   bool _preferencesReady = false;
 
   /// Explicit sheet Apply state only (never includes saved preferences).
@@ -47,6 +49,12 @@ class V2HomeFilterController extends ChangeNotifier {
   List<String> get savedCategoryTokens => _savedCategoryTokens;
 
   List<V2CategoryOption> get catalog => _catalog;
+
+  /// `/api/v2/categories` has not answered yet (Home shows placeholders).
+  bool get catalogPending => !_catalogLoaded && !_catalogFailed;
+
+  /// Last catalog request failed and nothing is loaded.
+  bool get catalogFailed => _catalogFailed && !_catalogLoaded;
 
   /// True after bootstrap finished syncing local/server preference awareness.
   bool get preferencesReady => _preferencesReady;
@@ -70,6 +78,18 @@ class V2HomeFilterController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Home category row tap: toggles [slug] in the temporary filter (the same
+  /// multi-select toggle the sheet chips used). Location is kept.
+  void toggleCategory(String slug) => apply(_committed.toggleCategory(slug));
+
+  /// Home "All": clears temporary categories only; location is kept and
+  /// saved preferences apply again. Returns false when nothing changed.
+  bool clearCategories() {
+    if (!_committed.hasCategories) return false;
+    apply(_committed.copyWith(selectedCategorySlugs: const []));
+    return true;
+  }
+
   /// Clears the temporary Home filter. Saved preferences remain server-side
   /// and apply again because `category` is omitted on the next request.
   void clearAndApply() {
@@ -81,23 +101,45 @@ class V2HomeFilterController extends ChangeNotifier {
   /// latest `/api/v2/me/categories` into [UserService] when logged in.
   Future<void> syncSavedPreferences({bool forceCatalog = false}) async {
     if (!_catalogLoaded || forceCatalog) {
-      try {
-        _catalog = await _metadata.fetchCategories();
-        _catalogLoaded = true;
-      } catch (e) {
-        debugPrint('ℹ️ V2HomeFilter: category catalog load failed: $e');
-      }
+      await _loadCatalog();
     }
 
     await _refreshServerCategoryPreferences();
 
+    _resolveSavedTokens();
+    _preferencesReady = true;
+    notifyListeners();
+  }
+
+  /// Retries only the category catalog (Home category row retry).
+  Future<void> reloadCatalog() async {
+    if (_catalogLoading) return;
+    await _loadCatalog();
+    _resolveSavedTokens();
+    notifyListeners();
+  }
+
+  Future<void> _loadCatalog() async {
+    _catalogLoading = true;
+    _catalogFailed = false;
+    notifyListeners();
+    try {
+      _catalog = await _metadata.fetchCategories();
+      _catalogLoaded = true;
+    } catch (e) {
+      _catalogFailed = true;
+      debugPrint('ℹ️ V2HomeFilter: category catalog load failed: $e');
+    } finally {
+      _catalogLoading = false;
+    }
+  }
+
+  void _resolveSavedTokens() {
     final raw = V2CategoryPreferenceResolver.rawTokensFromUserData(
       _users.getUserData(),
     );
     _savedCategoryTokens =
         V2CategoryPreferenceResolver.tokensForHomeQuery(raw, _catalog);
-    _preferencesReady = true;
-    notifyListeners();
   }
 
   Future<void> _refreshServerCategoryPreferences() async {

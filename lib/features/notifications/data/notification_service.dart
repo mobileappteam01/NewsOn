@@ -28,8 +28,32 @@ Future<void> v2FirebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// V2 notification lifecycle + allowlisted deep-link navigation.
 class V2NotificationService {
-  V2NotificationService._();
+  V2NotificationService._({
+    bool Function()? isLoggedIn,
+    String? Function()? authToken,
+    Future<String?> Function()? fcmToken,
+    Future<bool> Function(String fcmToken)? registerDevice,
+  })  : _isLoggedInOverride = isLoggedIn,
+        _authTokenOverride = authToken,
+        _fcmTokenOverride = fcmToken,
+        _registerOverride = registerDevice;
+
   static final V2NotificationService instance = V2NotificationService._();
+
+  /// Device-registration seams for VM tests (no Firebase / HTTP).
+  @visibleForTesting
+  factory V2NotificationService.forTest({
+    required bool Function() isLoggedIn,
+    required String? Function() authToken,
+    required Future<String?> Function() fcmToken,
+    required Future<bool> Function(String fcmToken) registerDevice,
+  }) =>
+      V2NotificationService._(
+        isLoggedIn: isLoggedIn,
+        authToken: authToken,
+        fcmToken: fcmToken,
+        registerDevice: registerDevice,
+      );
 
   /// Lazily resolved so constructing the singleton in VM unit tests does not
   /// require Firebase.initializeApp().
@@ -39,6 +63,17 @@ class V2NotificationService {
 
   final NotificationPreferencesApi _prefsApi = NotificationPreferencesApi();
   final UserService _users = UserService();
+
+  final bool Function()? _isLoggedInOverride;
+  final String? Function()? _authTokenOverride;
+  final Future<String?> Function()? _fcmTokenOverride;
+  final Future<bool> Function(String fcmToken)? _registerOverride;
+
+  /// `auth|fcm` pair the backend last stored, so app start and Home open
+  /// register once; a new login or a rotated FCM token registers again.
+  String? _registeredKey;
+  String? _registeringKey;
+  Future<void>? _registering;
 
   bool _initialized = false;
   bool _navigationReady = false;
@@ -118,13 +153,38 @@ class V2NotificationService {
 
   Future<void> _maybeRegisterDevice() async {
     try {
-      if (!_users.isLoggedIn) return;
-      final token = await FcmService().getToken();
+      final loggedIn = _isLoggedInOverride?.call() ?? _users.isLoggedIn;
+      if (!loggedIn) return;
+      final token = await (_fcmTokenOverride?.call() ?? FcmService().getToken());
       if (token == null || token.isEmpty) return;
-      await _prefsApi.registerDevice(fcmToken: token);
+      final auth = _authTokenOverride != null
+          ? _authTokenOverride()
+          : _users.getToken();
+      final key = '${auth ?? ''}|$token';
+      if (key == _registeredKey) return;
+      final inFlight = _registering;
+      if (inFlight != null && key == _registeringKey) return await inFlight;
+
+      final attempt = _register(key, token);
+      _registering = attempt;
+      _registeringKey = key;
+      try {
+        await attempt;
+      } finally {
+        if (identical(_registering, attempt)) {
+          _registering = null;
+          _registeringKey = null;
+        }
+      }
     } catch (_) {
       // Soft
     }
+  }
+
+  Future<void> _register(String key, String fcmToken) async {
+    final ok = await (_registerOverride?.call(fcmToken) ??
+        _prefsApi.registerDevice(fcmToken: fcmToken));
+    if (ok) _registeredKey = key;
   }
 
   /// Re-register after login when V2 notifications are enabled.

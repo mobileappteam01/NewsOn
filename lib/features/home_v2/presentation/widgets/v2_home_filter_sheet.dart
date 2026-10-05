@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/utils/localization_helper.dart';
+import '../../../../data/services/dynamic_localization_service.dart';
 import '../../data/v2_home_api.dart';
 import '../../domain/home_filter_state.dart';
+import '../../domain/v2_home_date_window.dart';
 import '../../domain/v2_home_metadata.dart';
 
-/// Opens the V2 Home filter sheet.
+/// Opens the V2 Home filter sheet (location + date). Categories live in the
+/// Home category row; the draft carries the current categories through
+/// unchanged.
 ///
 /// Returns the draft only when the user taps Apply. Dismiss returns null
 /// and must not change the live feed.
@@ -30,10 +35,14 @@ class V2HomeFilterSheet extends StatefulWidget {
     super.key,
     required this.initial,
     this.metadataApi,
+    this.clock,
   });
 
   final HomeFilterState initial;
   final V2HomeMetadataApi? metadataApi;
+
+  /// Current instant for the Asia/Kolkata date window. Tests only.
+  final DateTime Function()? clock;
 
   @override
   State<V2HomeFilterSheet> createState() => _V2HomeFilterSheetState();
@@ -43,26 +52,24 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
   late HomeFilterState _draft;
   late final V2HomeMetadataApi _api;
 
-  List<V2CategoryOption> _categories = const [];
   List<V2RegionOption> _countries = const [];
   List<V2RegionOption> _states = const [];
   List<V2RegionOption> _cities = const [];
 
-  bool _loadingCategories = true;
   bool _loadingCountries = true;
   bool _loadingStates = false;
   bool _loadingCities = false;
-  String? _categoryError;
-  String? _countryError;
-  String? _stateError;
-  String? _cityError;
+  bool _countryError = false;
+  bool _stateError = false;
+  bool _cityError = false;
+
+  DateTime get _now => widget.clock?.call() ?? DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _draft = widget.initial;
     _api = widget.metadataApi ?? V2HomeMetadataApi();
-    _loadCategories();
     _loadCountries();
     final country = _draft.country;
     final state = _draft.state;
@@ -77,31 +84,10 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
     }
   }
 
-  Future<void> _loadCategories() async {
-    setState(() {
-      _loadingCategories = true;
-      _categoryError = null;
-    });
-    try {
-      final items = await _api.fetchCategories();
-      if (!mounted) return;
-      setState(() {
-        _categories = items;
-        _loadingCategories = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loadingCategories = false;
-        _categoryError = 'Could not load categories';
-      });
-    }
-  }
-
   Future<void> _loadCountries() async {
     setState(() {
       _loadingCountries = true;
-      _countryError = null;
+      _countryError = false;
     });
     try {
       final items = await _api.fetchCountries();
@@ -114,7 +100,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
       if (!mounted) return;
       setState(() {
         _loadingCountries = false;
-        _countryError = 'Could not load countries';
+        _countryError = true;
       });
     }
   }
@@ -122,7 +108,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
   Future<void> _loadStates(String country) async {
     setState(() {
       _loadingStates = true;
-      _stateError = null;
+      _stateError = false;
       _states = const [];
     });
     try {
@@ -136,7 +122,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
       if (!mounted) return;
       setState(() {
         _loadingStates = false;
-        _stateError = 'Could not load states';
+        _stateError = true;
       });
     }
   }
@@ -144,7 +130,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
   Future<void> _loadCities(String country, String state) async {
     setState(() {
       _loadingCities = true;
-      _cityError = null;
+      _cityError = false;
       _cities = const [];
     });
     try {
@@ -158,7 +144,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
       if (!mounted) return;
       setState(() {
         _loadingCities = false;
-        _cityError = 'Could not load cities';
+        _cityError = true;
       });
     }
   }
@@ -186,29 +172,40 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
     }
   }
 
-  String? _labelFor(List<V2RegionOption> options, String? slug) {
-    if (slug == null || slug.isEmpty) return null;
-    for (final option in options) {
-      if (option.slug == slug) return option.name;
-    }
-    return slug;
+  Future<void> _pickDate() async {
+    final now = _now;
+    final dynamicL10n = DynamicLocalizationService();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: V2HomeDateWindow.initialPickerDay(_draft.date, now: now),
+      firstDate: V2HomeDateWindow.firstDay(now: now),
+      lastDate: V2HomeDateWindow.today(now: now),
+      currentDate: V2HomeDateWindow.today(now: now),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      locale: V2HomeDateWindow.pickerLocale(
+        dynamicL10n.isInitialized ? dynamicL10n.currentLanguageCode : null,
+        Localizations.localeOf(context),
+      ),
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      _draft = _draft.selectDate(V2HomeDateWindow.format(picked));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    final countryName = _labelFor(_countries, _draft.country);
-    final stateName = _labelFor(_states, _draft.state);
-    final cityName = _labelFor(_cities, _draft.district);
+    final optionsError = LocalizationHelper.v2FilterOptionsError(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.82,
+        initialChildSize: 0.66,
         minChildSize: 0.45,
-        maxChildSize: 0.94,
+        maxChildSize: 0.9,
         builder: (context, scrollController) {
           return Material(
             color: theme.colorScheme.surface,
@@ -230,7 +227,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Filters',
+                          LocalizationHelper.v2FilterTitle(context),
                           style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -240,12 +237,17 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                       ),
                       TextButton(
                         onPressed: () {
-                          // Clear All removes the temporary filter and returns
-                          // immediately so Home reloads with saved preferences.
-                          Navigator.of(context).pop(const HomeFilterState());
+                          // Clears this sheet's filters (location + date) and
+                          // returns immediately. Home row categories are kept.
+                          Navigator.of(context).pop(
+                            HomeFilterState(
+                              selectedCategorySlugs:
+                                  widget.initial.selectedCategorySlugs,
+                            ),
+                          );
                         },
                         child: Text(
-                          'Clear All',
+                          LocalizationHelper.v2FilterClearAll(context),
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.primary,
@@ -255,70 +257,20 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                     ],
                   ),
                 ),
-                if (_draft.isActive)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        [
-                          if (_draft.hasCategories)
-                            'Categories  ${_draft.categoryCount} selected',
-                          if (countryName != null) countryName,
-                          if (stateName != null) stateName,
-                          if (cityName != null) cityName,
-                        ].join('\n'),
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          height: 1.35,
-                          color: theme.hintColor,
-                        ),
-                      ),
-                    ),
-                  ),
                 Expanded(
                   child: ListView(
                     controller: scrollController,
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                     children: [
-                      const _SectionTitle(text: 'Categories'),
-                      const SizedBox(height: 8),
-                      if (_loadingCategories)
-                        const _InlineLoading()
-                      else if (_categoryError != null)
-                        _RetryLine(
-                          message: _categoryError!,
-                          onRetry: _loadCategories,
-                        )
-                      else if (_categories.isEmpty)
-                        const _Hint('No categories available')
-                      else
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final category in _categories)
-                              FilterChip(
-                                label: Text(
-                                  capitalizeCategoryLabel(category.name),
-                                ),
-                                selected: _draft.selectedCategorySlugs
-                                    .contains(category.slug),
-                                onSelected: (_) {
-                                  setState(() {
-                                    _draft = _draft.toggleCategory(category.slug);
-                                  });
-                                },
-                              ),
-                          ],
-                        ),
-                      const SizedBox(height: 20),
-                      const _SectionTitle(text: 'Location'),
+                      _SectionTitle(
+                        text: LocalizationHelper.v2FilterLocation(context),
+                      ),
                       const SizedBox(height: 8),
                       _LocationField(
-                        label: 'Country',
+                        key: const ValueKey('v2_filter_country'),
+                        label: LocalizationHelper.v2FilterCountry(context),
                         loading: _loadingCountries,
-                        error: _countryError,
+                        error: _countryError ? optionsError : null,
                         onRetry: _loadCountries,
                         value: _draft.country,
                         options: _countries,
@@ -327,9 +279,10 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                       ),
                       const SizedBox(height: 10),
                       _LocationField(
-                        label: 'State',
+                        key: const ValueKey('v2_filter_state'),
+                        label: LocalizationHelper.v2FilterState(context),
                         loading: _loadingStates,
-                        error: _stateError,
+                        error: _stateError ? optionsError : null,
                         onRetry: _draft.country == null
                             ? null
                             : () => _loadStates(_draft.country!),
@@ -340,9 +293,10 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                       ),
                       const SizedBox(height: 10),
                       _LocationField(
-                        label: 'City / District',
+                        key: const ValueKey('v2_filter_city'),
+                        label: LocalizationHelper.v2FilterCity(context),
                         loading: _loadingCities,
-                        error: _cityError,
+                        error: _cityError ? optionsError : null,
                         onRetry: (_draft.country == null || _draft.state == null)
                             ? null
                             : () => _loadCities(_draft.country!, _draft.state!),
@@ -352,6 +306,20 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                         onChanged: (slug) {
                           setState(() => _draft = _draft.selectDistrict(slug));
                         },
+                      ),
+                      const SizedBox(height: 18),
+                      _SectionTitle(
+                        text: LocalizationHelper.v2FilterDate(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _DateField(
+                        label: LocalizationHelper.v2FilterDate(context),
+                        value: _draft.date,
+                        now: _now,
+                        onTap: _pickDate,
+                        onClear: () => setState(
+                          () => _draft = _draft.selectDate(null),
+                        ),
                       ),
                     ],
                   ),
@@ -366,7 +334,7 @@ class _V2HomeFilterSheetState extends State<V2HomeFilterSheet> {
                       child: FilledButton(
                         onPressed: () => Navigator.of(context).pop(_draft),
                         child: Text(
-                          'Apply Filters',
+                          LocalizationHelper.v2FilterApply(context),
                           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -399,41 +367,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _InlineLoading extends StatelessWidget {
-  const _InlineLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-    );
-  }
-}
-
-class _Hint extends StatelessWidget {
-  const _Hint(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: GoogleFonts.inter(
-        fontSize: 13,
-        color: Theme.of(context).hintColor,
-      ),
-    );
-  }
-}
-
 class _RetryLine extends StatelessWidget {
   const _RetryLine({required this.message, required this.onRetry});
   final String message;
@@ -449,7 +382,10 @@ class _RetryLine extends StatelessWidget {
             style: GoogleFonts.inter(fontSize: 13),
           ),
         ),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+        TextButton(
+          onPressed: onRetry,
+          child: Text(LocalizationHelper.retry(context)),
+        ),
       ],
     );
   }
@@ -457,6 +393,7 @@ class _RetryLine extends StatelessWidget {
 
 class _LocationField extends StatelessWidget {
   const _LocationField({
+    super.key,
     required this.label,
     required this.loading,
     required this.error,
@@ -478,10 +415,21 @@ class _LocationField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (error != null && onRetry != null) {
+    final selected = value?.trim();
+    final hasSelection = selected != null && selected.isNotEmpty;
+    final showRetry = error != null && onRetry != null;
+    if (showRetry && !hasSelection) {
       return _RetryLine(message: error!, onRetry: onRetry!);
     }
-    return InputDecorator(
+    // A saved value missing from the loaded list (deactivated region, failed
+    // load) stays visible instead of falling back to "Any".
+    final items = sortRegionOptions([
+      ...options,
+      if (hasSelection && !options.any((o) => o.slug == selected))
+        V2RegionOption(slug: selected, name: selected),
+    ]);
+    final any = LocalizationHelper.v2FilterAny(context);
+    final field = InputDecorator(
       decoration: InputDecoration(
         labelText: label,
         isDense: true,
@@ -502,18 +450,22 @@ class _LocationField extends StatelessWidget {
           : DropdownButtonHideUnderline(
               child: DropdownButton<String?>(
                 isExpanded: true,
-                value: options.any((o) => o.slug == value) ? value : null,
-                hint: Text(enabled ? 'Any' : 'Select above'),
+                value: hasSelection ? selected : null,
+                hint: Text(
+                  enabled
+                      ? any
+                      : LocalizationHelper.v2FilterSelectAbove(context),
+                ),
                 items: [
-                  const DropdownMenuItem<String?>(
+                  DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Any'),
+                    child: Text(any),
                   ),
-                  for (final option in options)
+                  for (final option in items)
                     DropdownMenuItem<String?>(
                       value: option.slug,
                       child: Text(
-                        option.name,
+                        formatRegionLabel(option.name),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -521,6 +473,85 @@ class _LocationField extends StatelessWidget {
                 onChanged: enabled ? onChanged : null,
               ),
             ),
+    );
+    if (!showRetry) return field;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        field,
+        _RetryLine(message: error!, onRetry: onRetry!),
+      ],
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.now,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  final String label;
+  final String? value;
+  final DateTime now;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  String _display(BuildContext context, DateTime day) {
+    final today = V2HomeDateWindow.today(now: now);
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
+    final formatted = MaterialLocalizations.of(context).formatMediumDate(day);
+    if (DateUtils.isSameDay(day, today)) {
+      return '${LocalizationHelper.today(context)} · $formatted';
+    }
+    if (DateUtils.isSameDay(day, yesterday)) {
+      return '${LocalizationHelper.yesterday(context)} · $formatted';
+    }
+    return formatted;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final day = V2HomeDateWindow.parse(value);
+    final text = day != null
+        ? _display(context, day)
+        : LocalizationHelper.v2FilterAnyDate(context);
+    return InkWell(
+      key: const ValueKey('v2_filter_date'),
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: day != null
+              ? IconButton(
+                  key: const ValueKey('v2_filter_date_clear'),
+                  tooltip: LocalizationHelper.v2FilterClearDate(context),
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: onClear,
+                )
+              : const Icon(Icons.calendar_today_outlined, size: 18),
+        ),
+        child: SizedBox(
+          height: 28,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: day == null
+                  ? theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor)
+                  : theme.textTheme.bodyLarge,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/news_response.dart';
-import '../../../data/models/region_model.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/user_service.dart';
 import '../../news/data/v2_feed_item_mapper.dart';
 import '../domain/search_query_validator.dart';
+import '../domain/search_session.dart';
 
 class SearchException implements Exception {
   SearchException(this.code, [this.message]);
@@ -17,8 +17,8 @@ class SearchException implements Exception {
 
 typedef SearchFetcher = Future<NewsResponse> Function({
   required String query,
-  required String languageCode,
-  required SavedRegion appliedRegion,
+  required String? language,
+  required SearchFilters filters,
   required int page,
   required int limit,
 });
@@ -44,10 +44,29 @@ class SearchRepository {
 
   static const path = '/api/v2/search';
 
+  /// Query params for `GET /api/v2/search`. A null/empty [language] searches
+  /// all languages; only explicit [filters] add location params.
+  static Map<String, String> queryParametersFor({
+    required String query,
+    String? language,
+    SearchFilters filters = const SearchFilters(),
+    required int page,
+    required int limit,
+  }) {
+    final lang = SearchLanguages.normalize(language);
+    return {
+      'q': query,
+      'page': '$page',
+      'limit': '$limit',
+      if (lang != null) 'language': lang,
+      ...filters.toQueryParameters(),
+    };
+  }
+
   Future<NewsResponse> search({
     required String query,
-    String languageCode = '',
-    SavedRegion appliedRegion = const SavedRegion(),
+    String? language,
+    SearchFilters filters = const SearchFilters(),
     int page = 1,
     int limit = SearchQueryValidator.defaultLimit,
   }) async {
@@ -63,35 +82,20 @@ class SearchRepository {
     if (injected != null) {
       return injected(
         query: q,
-        languageCode: languageCode,
-        appliedRegion: appliedRegion,
+        language: SearchLanguages.normalize(language),
+        filters: filters,
         page: safePage,
         limit: clampedLimit,
       );
     }
 
-    final queryParameters = <String, String>{
-      'q': q,
-      'page': '$safePage',
-      'limit': '$clampedLimit',
-    };
-
-    final lang = languageCode.trim();
-    if (lang.isNotEmpty) {
-      queryParameters['language'] = lang;
-    }
-    final country = appliedRegion.country?.trim();
-    final state = appliedRegion.state?.trim();
-    final district = appliedRegion.district?.trim();
-    if (country != null && country.isNotEmpty) {
-      queryParameters['country'] = country;
-    }
-    if (state != null && state.isNotEmpty) {
-      queryParameters['state'] = state;
-    }
-    if (district != null && district.isNotEmpty) {
-      queryParameters['district'] = district;
-    }
+    final queryParameters = queryParametersFor(
+      query: q,
+      language: language,
+      filters: filters,
+      page: safePage,
+      limit: clampedLimit,
+    );
 
     String? bearerToken;
     if (_users.isLoggedIn) {

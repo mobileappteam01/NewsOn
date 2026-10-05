@@ -71,7 +71,9 @@ dependencies:
   flutter_svg: ^2.0.9
   # ^3.x required so turnable_page (via pdfrx → archive ^4) can resolve.
   lottie: ^3.3.3
-  turnable_page: ^1.1.0
+  # Exact pin: lib/features/home_v2/presentation/widgets/v2_turn_engine.dart
+  # extends this version's internal classes.
+  turnable_page: 1.1.0
 
   # Utilities
   intl: ^0.20.2

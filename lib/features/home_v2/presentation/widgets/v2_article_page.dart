@@ -6,9 +6,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../app/routing/v2_routes.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/localization_helper.dart';
 import '../../../../data/models/news_article.dart';
 import '../../../../providers/language_provider.dart';
 import '../../../news/domain/news_summary.dart';
+import '../../domain/v2_category_badge.dart';
 import '../v2_reader_ad_placement.dart';
 import 'v2_article_actions.dart';
 import 'v2_article_image.dart';
@@ -36,6 +38,7 @@ class V2ArticlePage extends StatelessWidget {
     /// When false, bookmark/share are omitted from the hero (hosted by
     /// [V2ReaderHome] chrome outside TurnablePage instead).
     this.showHeroActions = true,
+    this.activeCategoryKeys = const {},
   });
 
   final NewsArticle article;
@@ -53,6 +56,9 @@ class V2ArticlePage extends StatelessWidget {
   final bool? showAdSlot;
   final bool showHeroActions;
 
+  /// [V2HomeCategoryFilters.matchKeys] of the feed this article came from.
+  final Set<String> activeCategoryKeys;
+
   String _relativeTime(String? pubDate) {
     final dt = DateFormatter.parseApiDate(pubDate);
     if (dt == null) return '';
@@ -62,13 +68,9 @@ class V2ArticlePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categories = article.category
-            ?.map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList() ??
-        const <String>[];
     final primaryCategory =
-        categories.isNotEmpty ? categories.first.toUpperCase() : null;
+        v2HomeBadgeCategory(article.category, activeCategoryKeys)
+            ?.toUpperCase();
     final time = _relativeTime(article.pubDate);
     final showAd =
         showAdSlot ?? V2ReaderAdPlacement.shouldShowAdOnArticle(index);
@@ -232,21 +234,28 @@ class _HeroBlock extends StatelessWidget {
   }
 }
 
-/// Bookmark + share chrome used by the V2 reader (hero or shell overlay).
+/// Bookmark + share (+ optional overflow) chrome used by the V2 reader.
 class V2ReaderActionButtons extends StatelessWidget {
   const V2ReaderActionButtons({
     super.key,
     required this.bookmarked,
     required this.onBookmark,
     required this.onShare,
+    this.onMore,
   });
+
+  static const moreButtonKey = ValueKey('v2_card_more');
 
   final bool bookmarked;
   final VoidCallback onBookmark;
   final VoidCallback onShare;
 
+  /// Opens the article overflow menu. The button is omitted when null.
+  final VoidCallback? onMore;
+
   @override
   Widget build(BuildContext context) {
+    final onMore = this.onMore;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -261,6 +270,16 @@ class V2ReaderActionButtons extends StatelessWidget {
           icon: Icons.ios_share_rounded,
           onPressed: onShare,
         ),
+        if (onMore != null) ...[
+          const SizedBox(width: 8),
+          _OverlayIconButton(
+            key: moreButtonKey,
+            tooltip: LocalizationHelper.v2FeedbackMoreOptions(context),
+            icon: Icons.more_vert_rounded,
+            onPressed: onMore,
+            semanticButton: true,
+          ),
+        ],
       ],
     );
   }
@@ -337,6 +356,7 @@ class _PublisherOverlay extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: icon,
                       fit: BoxFit.cover,
+                      memCacheWidth: 128,
                       errorWidget: (_, __, ___) => const ColoredBox(
                         color: Color(0x33FFFFFF),
                         child: Icon(
@@ -432,18 +452,23 @@ class _PublisherOverlay extends StatelessWidget {
 
 class _OverlayIconButton extends StatelessWidget {
   const _OverlayIconButton({
+    super.key,
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.semanticButton = false,
   });
 
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
 
+  /// Exposes the control as one labelled button to screen readers.
+  final bool semanticButton;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final button = Material(
       color: Colors.black.withValues(alpha: 0.45),
       shape: const CircleBorder(),
       child: InkWell(
@@ -458,6 +483,14 @@ class _OverlayIconButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!semanticButton) return button;
+    return Semantics(
+      button: true,
+      label: tooltip,
+      onTap: onPressed,
+      excludeSemantics: true,
+      child: button,
     );
   }
 }

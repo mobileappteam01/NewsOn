@@ -176,14 +176,25 @@ class _NotificationToggleState extends State<_NotificationToggle> {
       listenable: _controller,
       builder: (context, _) {
         final enabled = _controller.prefs.notificationsEnabled;
-        final busy = _controller.loading || _controller.updating;
+        // Block only during initial GET — optimistic updates stay interactive
+        // so rapid ON/OFF taps coalesce via the controller queue.
+        final busy = _controller.loading;
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
-            'Notifications',
+            LocalizationHelper.notifications(context),
             style: GoogleFonts.poppins(
               fontSize: 16,
               color: theme.colorScheme.secondary,
+            ),
+          ),
+          subtitle: Text(
+            enabled
+                ? LocalizationHelper.notificationsEnabled(context)
+                : LocalizationHelper.notificationsDisabled(context),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: theme.colorScheme.tertiary,
             ),
           ),
           value: enabled,

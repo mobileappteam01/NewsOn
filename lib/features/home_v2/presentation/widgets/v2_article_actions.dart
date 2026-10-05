@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/utils/localization_helper.dart';
+
 /// Compact centered editorial CTA — opens V2 article detail.
 class V2ArticleActions extends StatelessWidget {
   const V2ArticleActions({
@@ -14,10 +16,9 @@ class V2ArticleActions extends StatelessWidget {
   /// Unused — retained so existing call sites keep compiling.
   final String? publisherName;
 
-  static const String label = 'Read Full Article';
-
   @override
   Widget build(BuildContext context) {
+    final label = LocalizationHelper.v2ReadFullArticle(context);
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;

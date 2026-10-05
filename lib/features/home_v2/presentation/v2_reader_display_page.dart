@@ -46,4 +46,15 @@ abstract final class V2ReaderDisplayPages {
     if (page is V2ReaderArticleDisplay) return page.articleIndex;
     return null;
   }
+
+  /// Display page showing [articleIndex]; 0 when it is not in [pages].
+  static int displayIndexOf(List<V2ReaderDisplayPage> pages, int articleIndex) {
+    for (var i = 0; i < pages.length; i++) {
+      final page = pages[i];
+      if (page is V2ReaderArticleDisplay && page.articleIndex == articleIndex) {
+        return i;
+      }
+    }
+    return 0;
+  }
 }

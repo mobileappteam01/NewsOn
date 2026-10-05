@@ -172,17 +172,12 @@ class LocalizationHelper {
   }
 
   /// Get localized string for sign in failed
-  static String signInFailed(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.signInFailed(error);
-      } catch (e) {
-        return 'Sign-in failed: $error';
-      }
-    }
-    return 'Sign-in failed: $error';
-  }
+  static String signInFailed(BuildContext context, String error) => _getString(
+        context,
+        (l10n) => l10n.signInFailed('{error}'),
+        'Sign-in failed: {error}',
+        key: 'signInFailed',
+      ).replaceAll('{error}', error);
 
   /// Get localized string for skip
   static String skip(BuildContext context) {
@@ -440,17 +435,12 @@ class LocalizationHelper {
   }
 
   /// Get localized string for error
-  static String error(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.error(error);
-      } catch (e) {
-        return 'Error: $error';
-      }
-    }
-    return 'Error: $error';
-  }
+  static String error(BuildContext context, String error) => _getString(
+        context,
+        (l10n) => l10n.error('{error}'),
+        'Error: {error}',
+        key: 'error',
+      ).replaceAll('{error}', error);
 
   /// Get localized string for text size saved
   static String textSizeSaved(BuildContext context) {
@@ -510,6 +500,26 @@ class LocalizationHelper {
         key: 'notifications');
   }
 
+  /// Subtitle when the master notification preference is ON.
+  static String notificationsEnabled(BuildContext context) {
+    return _getString(
+      context,
+      (_) => 'Notifications enabled',
+      'Notifications enabled',
+      key: 'notificationsEnabled',
+    );
+  }
+
+  /// Subtitle when the master notification preference is OFF.
+  static String notificationsDisabled(BuildContext context) {
+    return _getString(
+      context,
+      (_) => 'Notifications disabled',
+      'Notifications disabled',
+      key: 'notificationsDisabled',
+    );
+  }
+
   /// Get localized string for privacy policy
   static String privacyPolicy(BuildContext context) {
     return _getString(context, (l10n) => l10n.privacyPolicy, 'Privacy Policy',
@@ -525,6 +535,36 @@ class LocalizationHelper {
       key: 'termsAndConditions',
     );
   }
+
+  static String privacyPolicyNotAvailable(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Privacy Policy not available',
+        'Privacy Policy not available',
+        key: 'privacyPolicyNotAvailable',
+      );
+
+  static String failedToLoadPrivacyPolicy(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Failed to load Privacy Policy',
+        'Failed to load Privacy Policy',
+        key: 'failedToLoadPrivacyPolicy',
+      );
+
+  static String termsAndConditionsNotAvailable(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => 'Terms and Conditions not available',
+        'Terms and Conditions not available',
+        key: 'termsAndConditionsNotAvailable',
+      );
+
+  static String failedToLoadTermsAndConditions(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => 'Failed to load Terms and Conditions',
+        'Failed to load Terms and Conditions',
+        key: 'failedToLoadTermsAndConditions',
+      );
 
   /// Get localized string for language
   static String language(BuildContext context) {
@@ -610,17 +650,13 @@ class LocalizationHelper {
   }
 
   /// Get localized string for failed to refresh
-  static String failedToRefresh(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.failedToRefresh(error);
-      } catch (e) {
-        return 'Failed to refresh: $error';
-      }
-    }
-    return 'Failed to refresh: $error';
-  }
+  static String failedToRefresh(BuildContext context, String error) =>
+      _getString(
+        context,
+        (l10n) => l10n.failedToRefresh('{error}'),
+        'Failed to refresh: {error}',
+        key: 'failedToRefresh',
+      ).replaceAll('{error}', error);
 
   /// Get localized string for welcome title text
   static String welcomeTitleText(BuildContext context) {
@@ -715,6 +751,13 @@ class LocalizationHelper {
     return _getString(context, (l10n) => l10n.contactUs, 'Contact Us',
         key: 'contactUs');
   }
+
+  static String unableToOpenLink(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Unable to open link',
+        'Unable to open link',
+        key: 'unableToOpenLink',
+      );
 
   static String getInTouch(BuildContext context) {
     return _getString(context, (l10n) => l10n.getInTouch, 'Get in Touch',
@@ -1252,25 +1295,21 @@ class LocalizationHelper {
       'This will remove all saved articles. This action cannot be undone.',
       key: 'clearBookmarksMessage');
 
-  static String errorPlayingAudio(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.errorPlayingAudio(error);
-      } catch (_) {}
-    }
-    return 'Error playing audio: $error';
-  }
+  static String errorPlayingAudio(BuildContext context, String error) =>
+      _getString(
+        context,
+        (l10n) => l10n.errorPlayingAudio('{error}'),
+        'Error playing audio: {error}',
+        key: 'errorPlayingAudio',
+      ).replaceAll('{error}', error);
 
-  static String failedToPlayAudio(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.failedToPlayAudio(error);
-      } catch (_) {}
-    }
-    return 'Failed to play audio: $error';
-  }
+  static String failedToPlayAudio(BuildContext context, String error) =>
+      _getString(
+        context,
+        (l10n) => l10n.failedToPlayAudio('{error}'),
+        'Failed to play audio: {error}',
+        key: 'failedToPlayAudio',
+      ).replaceAll('{error}', error);
 
   static String noBreakingNewsAvailable(BuildContext context) => _getString(
       context,
@@ -1310,35 +1349,26 @@ class LocalizationHelper {
       'Try different keywords or check your spelling',
       key: 'tryDifferentKeywords');
 
-  static String sourceLabel(BuildContext context, String source) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.sourceLabel(source);
-      } catch (_) {}
-    }
-    return 'Source: $source';
-  }
+  static String sourceLabel(BuildContext context, String source) => _getString(
+        context,
+        (l10n) => l10n.sourceLabel('{source}'),
+        'Source: {source}',
+        key: 'sourceLabel',
+      ).replaceAll('{source}', source);
 
-  static String authorLabel(BuildContext context, String author) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.authorLabel(author);
-      } catch (_) {}
-    }
-    return 'Author: $author';
-  }
+  static String authorLabel(BuildContext context, String author) => _getString(
+        context,
+        (l10n) => l10n.authorLabel('{author}'),
+        'Author: {author}',
+        key: 'authorLabel',
+      ).replaceAll('{author}', author);
 
-  static String publishedLabel(BuildContext context, String date) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.publishedLabel(date);
-      } catch (_) {}
-    }
-    return 'Published: $date';
-  }
+  static String publishedLabel(BuildContext context, String date) => _getString(
+        context,
+        (l10n) => l10n.publishedLabel('{date}'),
+        'Published: {date}',
+        key: 'publishedLabel',
+      ).replaceAll('{date}', date);
 
   static String justNow(BuildContext context) =>
       _getString(context, (l10n) => l10n.justNow, 'Just now', key: 'justNow');
@@ -1356,15 +1386,15 @@ class LocalizationHelper {
       key: 'updatePreferences');
 
   static String categoriesSelectedCount(
-      BuildContext context, int selected, int total) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.categoriesSelectedCount(selected, total);
-      } catch (_) {}
-    }
-    return '$selected of $total selected';
-  }
+          BuildContext context, int selected, int total) =>
+      _getString(
+        context,
+        (l10n) => l10n.categoriesSelectedCount(selected, total),
+        '{selected} of {total} selected',
+        key: 'categoriesSelectedCount',
+      )
+          .replaceAll('{selected}', '$selected')
+          .replaceAll('{total}', '$total');
 
   static String agreeToTermsPrivacy(BuildContext context) => _getString(
       context,
@@ -1455,21 +1485,37 @@ class LocalizationHelper {
       'Failed to load categories',
       key: 'failedToLoadCategories');
 
-  static String errorLoadingNews(BuildContext context, String error) {
-    final l10n = of(context);
-    if (l10n != null) {
-      try {
-        return l10n.errorLoadingNews(error);
-      } catch (_) {}
-    }
-    return 'Error loading news: $error';
-  }
+  static String errorLoadingNews(BuildContext context, String error) =>
+      _getString(
+        context,
+        (l10n) => l10n.errorLoadingNews('{error}'),
+        'Error loading news: {error}',
+        key: 'errorLoadingNews',
+      ).replaceAll('{error}', error);
 
   static String playing(BuildContext context) =>
       _getString(context, (l10n) => l10n.playing, 'Playing...', key: 'playing');
 
   static String paused(BuildContext context) =>
       _getString(context, (l10n) => l10n.paused, 'Paused', key: 'paused');
+
+  /// [language] is the selected language's display (native) name.
+  static String appLanguageChangedTo(BuildContext context, String language) =>
+      _getString(
+        context,
+        (l10n) => 'App language changed to {language}',
+        'App language changed to {language}',
+        key: 'appLanguageChangedTo',
+      ).replaceAll('{language}', language);
+
+  /// [language] is the selected language's display (native) name.
+  static String newsLanguageChangedTo(BuildContext context, String language) =>
+      _getString(
+        context,
+        (l10n) => 'News language changed to {language}',
+        'News language changed to {language}',
+        key: 'newsLanguageChangedTo',
+      ).replaceAll('{language}', language);
 
   static String voiceFeaturesUnavailable(BuildContext context) => _getString(
       context,
@@ -1620,6 +1666,123 @@ class LocalizationHelper {
         key: 'v2NewsLanguage',
       );
 
+  /// V2 Home category row: no temporary category filter.
+  static String v2HomeCategoryAll(BuildContext context) => _getString(
+        context,
+        (l10n) => 'All',
+        'All',
+        key: 'v2HomeCategoryAll',
+      );
+
+  // —— V2 article feedback (Not Interested / Report) ——
+
+  static String v2FeedbackMoreOptions(BuildContext context) => _getString(
+        context,
+        (l10n) => 'More options',
+        'More options',
+        key: 'v2FeedbackMoreOptions',
+      );
+
+  static String v2FeedbackNotInterested(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Not Interested',
+        'Not Interested',
+        key: 'v2FeedbackNotInterested',
+      );
+
+  static String v2FeedbackReport(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Report',
+        'Report',
+        key: 'v2FeedbackReport',
+      );
+
+  static String v2FeedbackReportTitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Report this news',
+        'Report this news',
+        key: 'v2FeedbackReportTitle',
+      );
+
+  static String v2FeedbackReasonOffensive(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Offensive content',
+        'Offensive content',
+        key: 'v2FeedbackReasonOffensive',
+      );
+
+  static String v2FeedbackReasonHarassment(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Harassment or abuse',
+        'Harassment or abuse',
+        key: 'v2FeedbackReasonHarassment',
+      );
+
+  static String v2FeedbackReasonMisinformation(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => 'Misinformation',
+        'Misinformation',
+        key: 'v2FeedbackReasonMisinformation',
+      );
+
+  static String v2FeedbackReasonSpam(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Spam or misleading',
+        'Spam or misleading',
+        key: 'v2FeedbackReasonSpam',
+      );
+
+  static String v2FeedbackReasonOther(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Other',
+        'Other',
+        key: 'v2FeedbackReasonOther',
+      );
+
+  static String v2FeedbackTellUsMore(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Tell us more',
+        'Tell us more',
+        key: 'v2FeedbackTellUsMore',
+      );
+
+  static String v2FeedbackOtherRequired(BuildContext context) => _getString(
+        context,
+        (l10n) => "Please tell us what's wrong",
+        "Please tell us what's wrong",
+        key: 'v2FeedbackOtherRequired',
+      );
+
+  static String v2FeedbackSubmit(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Submit',
+        'Submit',
+        key: 'v2FeedbackSubmit',
+      );
+
+  static String v2FeedbackReportSubmitted(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Report submitted',
+        'Report submitted',
+        key: 'v2FeedbackReportSubmitted',
+      );
+
+  static String v2FeedbackReportFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => "Couldn't submit your report. Please try again.",
+        "Couldn't submit your report. Please try again.",
+        key: 'v2FeedbackReportFailed',
+      );
+
+  static String v2FeedbackNotInterestedFailed(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => "Couldn't hide this story. Please try again.",
+        "Couldn't hide this story. Please try again.",
+        key: 'v2FeedbackNotInterestedFailed',
+      );
+
   // —— V2.0.0 Publisher pages ——
 
   static String v2VisitPublisher(BuildContext context) => _getString(
@@ -1701,6 +1864,235 @@ class LocalizationHelper {
         key: 'v2ClearAll',
       );
 
+  /// Tooltip / semantics for the per-term delete button. The translation
+  /// carries a `{query}` placeholder for the term.
+  static String v2RemoveRecentSearch(BuildContext context, String term) =>
+      _getString(
+        context,
+        (l10n) => 'Remove {query} from recent searches',
+        'Remove {query} from recent searches',
+        key: 'v2RemoveRecentSearch',
+      ).replaceAll('{query}', term);
+
+  static String v2ReadFullArticle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Read Full Article',
+        'Read Full Article',
+        key: 'v2ReadFullArticle',
+      );
+
+  static String v2FullArticleInvalidUrl(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Invalid article URL',
+        'Invalid article URL',
+        key: 'v2FullArticleInvalidUrl',
+      );
+
+  static String v2FullArticleOpenError(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Unable to open article',
+        'Unable to open article',
+        key: 'v2FullArticleOpenError',
+      );
+
+  static String v2AccountUsernameRequired(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Username is required',
+        'Username is required',
+        key: 'v2AccountUsernameRequired',
+      );
+
+  static String v2AccountUsernameTooShort(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Username must be at least 3 characters',
+        'Username must be at least 3 characters',
+        key: 'v2AccountUsernameTooShort',
+      );
+
+  static String v2AccountUsernamePlaceholder(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => 'Enter your real username',
+        'Enter your real username',
+        key: 'v2AccountUsernamePlaceholder',
+      );
+
+  static String v2AccountFirstNameRequired(BuildContext context) => _getString(
+        context,
+        (l10n) => 'First name is required',
+        'First name is required',
+        key: 'v2AccountFirstNameRequired',
+      );
+
+  static String v2AccountFirstNameTooShort(BuildContext context) => _getString(
+        context,
+        (l10n) => 'First name must be at least 3 characters',
+        'First name must be at least 3 characters',
+        key: 'v2AccountFirstNameTooShort',
+      );
+
+  static String v2AccountInvalidMobile(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Enter a valid mobile number',
+        'Enter a valid mobile number',
+        key: 'v2AccountInvalidMobile',
+      );
+
+  static String v2AccountInvalidDate(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Use a valid date',
+        'Use a valid date',
+        key: 'v2AccountInvalidDate',
+      );
+
+  static String v2AccountInvalidCountry(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Select a country from the list',
+        'Select a country from the list',
+        key: 'v2AccountInvalidCountry',
+      );
+
+  static String v2AccountFixFields(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Please fix the highlighted fields',
+        'Please fix the highlighted fields',
+        key: 'v2AccountFixFields',
+      );
+
+  static String v2AccountSaved(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Account settings saved',
+        'Account settings saved',
+        key: 'v2AccountSaved',
+      );
+
+  static String v2AccountEdit(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Edit profile',
+        'Edit profile',
+        key: 'v2AccountEdit',
+      );
+
+  static String v2AccountUsername(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Username',
+        'Username',
+        key: 'v2AccountUsername',
+      );
+
+  static String v2AccountFirstName(BuildContext context) => _getString(
+        context,
+        (l10n) => 'First Name',
+        'First Name',
+        key: 'v2AccountFirstName',
+      );
+
+  static String v2AccountLastName(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Last Name',
+        'Last Name',
+        key: 'v2AccountLastName',
+      );
+
+  static String v2AccountMobileNumber(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Mobile Number',
+        'Mobile Number',
+        key: 'v2AccountMobileNumber',
+      );
+
+  static String v2AccountCity(BuildContext context) => _getString(
+        context,
+        (l10n) => 'City',
+        'City',
+        key: 'v2AccountCity',
+      );
+
+  static String v2AccountSelectDate(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Select date',
+        'Select date',
+        key: 'v2AccountSelectDate',
+      );
+
+  static String v2AccountSearchCountries(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Search countries',
+        'Search countries',
+        key: 'v2AccountSearchCountries',
+      );
+
+  static String v2AccountDiscardTitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Discard changes?',
+        'Discard changes?',
+        key: 'v2AccountDiscardTitle',
+      );
+
+  static String v2AccountDiscardMessage(BuildContext context) => _getString(
+        context,
+        (l10n) => 'You have unsaved account changes.',
+        'You have unsaved account changes.',
+        key: 'v2AccountDiscardMessage',
+      );
+
+  static String v2AccountKeepEditing(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Keep editing',
+        'Keep editing',
+        key: 'v2AccountKeepEditing',
+      );
+
+  static String v2AccountDiscard(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Discard',
+        'Discard',
+        key: 'v2AccountDiscard',
+      );
+
+  static String v2AccountLoadFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Could not load profile',
+        'Could not load profile',
+        key: 'v2AccountLoadFailed',
+      );
+
+  static String v2AccountSaveFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Could not save your changes. Please try again.',
+        'Could not save your changes. Please try again.',
+        key: 'v2AccountSaveFailed',
+      );
+
+  static String v2AccountCountriesLoadFailed(BuildContext context) =>
+      _getString(
+        context,
+        (l10n) => 'Could not load countries',
+        'Could not load countries',
+        key: 'v2AccountCountriesLoadFailed',
+      );
+
+  static String v2InboxLoadFailed(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Could not load notifications',
+        'Could not load notifications',
+        key: 'v2InboxLoadFailed',
+      );
+
+  static String v2InboxEmptyTitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No notifications yet',
+        'No notifications yet',
+        key: 'v2InboxEmptyTitle',
+      );
+
+  static String v2InboxEmptyMessage(BuildContext context) => _getString(
+        context,
+        (l10n) => 'When NewsOn has updates for you, they will show up here.',
+        'When NewsOn has updates for you, they will show up here.',
+        key: 'v2InboxEmptyMessage',
+      );
+
   static String v2SearchTooShort(BuildContext context) => _getString(
         context,
         (l10n) => 'Enter at least 2 characters',
@@ -1741,6 +2133,120 @@ class LocalizationHelper {
         (l10n) => 'No stories available right now. Check back soon.',
         'No stories available right now. Check back soon.',
         key: 'v2ForYouEmpty',
+      );
+
+  // —— V2 Home filter ——
+
+  static String v2FilterTitle(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Filters',
+        'Filters',
+        key: 'v2FilterTitle',
+      );
+
+  static String v2FilterClearAll(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Clear All',
+        'Clear All',
+        key: 'v2FilterClearAll',
+      );
+
+  static String v2FilterLocation(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Location',
+        'Location',
+        key: 'v2FilterLocation',
+      );
+
+  static String v2FilterCountry(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Country',
+        'Country',
+        key: 'v2FilterCountry',
+      );
+
+  static String v2FilterState(BuildContext context) => _getString(
+        context,
+        (l10n) => 'State',
+        'State',
+        key: 'v2FilterState',
+      );
+
+  static String v2FilterCity(BuildContext context) => _getString(
+        context,
+        (l10n) => 'City / District',
+        'City / District',
+        key: 'v2FilterCity',
+      );
+
+  static String v2FilterAny(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Any',
+        'Any',
+        key: 'v2FilterAny',
+      );
+
+  static String v2FilterSelectAbove(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Select above',
+        'Select above',
+        key: 'v2FilterSelectAbove',
+      );
+
+  static String v2FilterDate(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Date',
+        'Date',
+        key: 'v2FilterDate',
+      );
+
+  static String v2FilterAnyDate(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Any date',
+        'Any date',
+        key: 'v2FilterAnyDate',
+      );
+
+  static String v2FilterClearDate(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Clear date',
+        'Clear date',
+        key: 'v2FilterClearDate',
+      );
+
+  static String v2FilterApply(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Apply Filters',
+        'Apply Filters',
+        key: 'v2FilterApply',
+      );
+
+  static String v2FilterOptionsError(BuildContext context) => _getString(
+        context,
+        (l10n) => "Couldn't load this list",
+        "Couldn't load this list",
+        key: 'v2FilterOptionsError',
+      );
+
+  static String v2FilterLoading(BuildContext context) => _getString(
+        context,
+        (l10n) => 'Loading stories…',
+        'Loading stories…',
+        key: 'v2FilterLoading',
+      );
+
+  static String v2FilterNoResults(BuildContext context) => _getString(
+        context,
+        (l10n) => 'No stories available for the selected filters.',
+        'No stories available for the selected filters.',
+        key: 'v2FilterNoResults',
+      );
+
+  static String v2FilterLoadError(BuildContext context) => _getString(
+        context,
+        (l10n) => "Couldn't load stories for the selected filters.",
+        "Couldn't load stories for the selected filters.",
+        key: 'v2FilterLoadError',
       );
 
   // —— V2.0.0 Audio ——

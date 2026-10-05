@@ -15,15 +15,33 @@ class RemoteConfigProvider extends ChangeNotifier {
   bool _isInitialized = false;
   final bool _firebaseDisabled;
 
-  RemoteConfigProvider() : _firebaseDisabled = false;
+  RemoteConfigProvider()
+      : _firebaseDisabled = false,
+        _now = DateTime.now;
 
   /// Test-only: seed config without touching Firebase Remote Config.
   @visibleForTesting
   RemoteConfigProvider.forTest(RemoteConfigModel config)
-      : _firebaseDisabled = true {
+      : _firebaseDisabled = true,
+        _now = DateTime.now {
     _applyConfig(config);
     _isInitialized = true;
   }
+
+  /// Test-only: real init/refresh flow against a fake [RemoteConfigService].
+  @visibleForTesting
+  RemoteConfigProvider.withService(
+    RemoteConfigService service, {
+    DateTime Function()? now,
+  })  : _remoteConfigService = service,
+        _firebaseDisabled = false,
+        _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
+
+  /// Startup init runs once; app start (twice) and Home open share it.
+  Future<void>? _initialization;
+  DateTime? _lastFetchAt;
 
   RemoteConfigService get _service =>
       _remoteConfigService ??= RemoteConfigService();
@@ -51,9 +69,29 @@ class RemoteConfigProvider extends ChangeNotifier {
   }
 
   /// Initialize Remote Config
-  /// Loads cached data immediately, then tries to fetch new data
-  Future<void> initialize() async {
-    if (_firebaseDisabled) return;
+  /// Loads cached data immediately, then tries to fetch new data.
+  ///
+  /// Concurrent calls share one run. Later calls only fetch again once
+  /// [RemoteConfigService.minimumFetchInterval] has passed, which is when
+  /// Firebase would have returned fresh values anyway.
+  Future<void> initialize() {
+    if (_firebaseDisabled) return Future<void>.value();
+    final started = _initialization;
+    if (started == null) return _initialization = _initializeOnce();
+    return started.then((_) => _refreshIfStale());
+  }
+
+  Future<void> _refreshIfStale() async {
+    final last = _lastFetchAt;
+    if (last != null &&
+        _now().difference(last) < RemoteConfigService.minimumFetchInterval) {
+      return;
+    }
+    _lastFetchAt = _now();
+    await fetchAndUpdate();
+  }
+
+  Future<void> _initializeOnce() async {
     try {
       // Step 1: Try to load cached config first for immediate UI update
       try {
@@ -83,6 +121,7 @@ class RemoteConfigProvider extends ChangeNotifier {
       }
 
       // Step 2: Try to initialize and fetch new data (works offline with Firebase defaults)
+      _lastFetchAt = _now();
       await _service.initialize();
       _applyConfig(_service.getConfig());
       _isInitialized = true;
@@ -131,6 +170,7 @@ class RemoteConfigProvider extends ChangeNotifier {
   Future<void> forceRefresh() async {
     if (_firebaseDisabled) return;
     try {
+      _lastFetchAt = _now();
       final updated = await _service.forceFetchConfig();
       if (updated) {
         _applyConfig(_service.getConfig());

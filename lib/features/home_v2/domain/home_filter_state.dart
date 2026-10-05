@@ -6,6 +6,7 @@ class HomeFilterState {
     this.country,
     this.state,
     this.district,
+    this.date,
   });
 
   final List<String> selectedCategorySlugs;
@@ -15,12 +16,20 @@ class HomeFilterState {
   /// City / district slug. Query param is `city`.
   final String? district;
 
+  /// Single Asia/Kolkata calendar day, `YYYY-MM-DD`. Null = no date filter.
+  final String? date;
+
   bool get hasCategories => selectedCategorySlugs.isNotEmpty;
 
   bool get hasLocation =>
       _filled(country) || _filled(state) || _filled(district);
 
-  bool get isActive => hasCategories || hasLocation;
+  bool get hasDate => _filled(date);
+
+  /// Filters owned by the filter sheet (location and date).
+  bool get hasSheetFilters => hasLocation || hasDate;
+
+  bool get isActive => hasCategories || hasLocation || hasDate;
 
   int get categoryCount => selectedCategorySlugs.length;
 
@@ -29,9 +38,11 @@ class HomeFilterState {
     String? country,
     String? state,
     String? district,
+    String? date,
     bool clearCountry = false,
     bool clearState = false,
     bool clearDistrict = false,
+    bool clearDate = false,
   }) {
     return HomeFilterState(
       selectedCategorySlugs:
@@ -39,6 +50,7 @@ class HomeFilterState {
       country: clearCountry ? null : (country ?? this.country),
       state: clearState ? null : (state ?? this.state),
       district: clearDistrict ? null : (district ?? this.district),
+      date: clearDate ? null : (date ?? this.date),
     );
   }
 
@@ -89,6 +101,12 @@ class HomeFilterState {
     return copyWith(district: next);
   }
 
+  HomeFilterState selectDate(String? day) {
+    final next = day?.trim();
+    if (next == null || next.isEmpty) return copyWith(clearDate: true);
+    return copyWith(date: next);
+  }
+
   HomeFilterState cleared() => const HomeFilterState();
 
   /// Query map for `GET /api/v2/home`. Omits empty values.
@@ -123,7 +141,22 @@ class HomeFilterState {
     if (_filled(country)) query['country'] = country!.trim();
     if (_filled(state)) query['state'] = state!.trim();
     if (_filled(district)) query['city'] = district!.trim();
+    if (_filled(date)) query['date'] = date!.trim();
     return query;
+  }
+
+  /// Which feed this filter selects (categories as a set + location + date),
+  /// from the same normalization as [toQueryParameters]. Language/page excluded.
+  String get feedKey {
+    final query = toQueryParameters(language: '', page: 1, limit: 1);
+    final categories = (query['category']?.split(',') ?? <String>[])..sort();
+    return [
+      categories.join(','),
+      query['country'] ?? '',
+      query['state'] ?? '',
+      query['city'] ?? '',
+      query['date'] ?? '',
+    ].join('|');
   }
 
   static bool _filled(String? v) => v != null && v.trim().isNotEmpty;

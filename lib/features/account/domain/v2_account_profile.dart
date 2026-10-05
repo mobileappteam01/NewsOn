@@ -54,7 +54,11 @@ class V2AccountProfile {
 
     return V2AccountProfile(
       id: _readString(json['id'] ?? json['_id']) ?? '',
-      username: _readString(json['username'] ?? json['nickName']) ?? '',
+      username: sanitizeUsername(
+        _readString(json['username'] ?? json['nickName']) ?? '',
+        firstName: _readString(json['firstName']) ?? '',
+        email: _readString(json['email']) ?? '',
+      ),
       firstName: _readString(json['firstName']) ?? '',
       lastName: _readString(json['lastName'] ?? json['secondName']) ?? '',
       email: _readString(json['email']) ?? '',
@@ -64,10 +68,49 @@ class V2AccountProfile {
           ) ??
           '',
       country: _readString(json['country'] ?? personalMap?['country']) ?? '',
-      city: _readString(json['city'] ?? personalMap?['city']) ?? '',
+      city: capitalizeCity(_readString(json['city'] ?? personalMap?['city']) ?? ''),
       pincode: _readString(json['pincode'] ?? personalMap?['pincode']) ?? '',
       categoryIds: categories,
     );
+  }
+
+  /// True when a username looks like an environment / demo label, not a person.
+  static bool isPlaceholderUsername(String value) {
+    final n = value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (n.isEmpty) return true;
+    if (n == 'v2 staging' || n == 'v2-staging' || n == 'v2staging') return true;
+    if (n == 'staging' || n == 'newson staging') return true;
+    if (n.contains('v2') && n.contains('staging')) return true;
+    return false;
+  }
+
+  /// Prefer a real person name over environment placeholders like "V2 staging".
+  static String sanitizeUsername(
+    String raw, {
+    String firstName = '',
+    String email = '',
+  }) {
+    final trimmed = raw.trim();
+    if (!isPlaceholderUsername(trimmed)) return trimmed;
+    final first = firstName.trim();
+    if (first.isNotEmpty && !isPlaceholderUsername(first)) return first;
+    final at = email.trim().indexOf('@');
+    if (at > 0) {
+      final local = email.trim().substring(0, at);
+      if (local.isNotEmpty && !isPlaceholderUsername(local)) return local;
+    }
+    return '';
+  }
+
+  /// First character uppercase; remaining characters preserved as typed.
+  static String capitalizeCity(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    final runes = trimmed.runes.toList();
+    if (runes.isEmpty) return '';
+    final first = String.fromCharCodes([runes.first]).toUpperCase();
+    if (runes.length == 1) return first;
+    return '$first${String.fromCharCodes(runes.skip(1))}';
   }
 
   static V2AccountProfile? parseResponse(dynamic raw) {
@@ -131,12 +174,16 @@ class V2AccountProfile {
     required String? nextCity,
   }) {
     final body = <String, dynamic>{};
-    final usernameValue = nextUsername.trim();
+    final usernameValue = sanitizeUsername(
+      nextUsername,
+      firstName: nextFirstName,
+      email: email,
+    );
     final firstNameValue = nextFirstName.trim();
     final lastNameValue = nextLastName.trim();
     final mobileValue = nextMobileNumber.trim();
     final countryValue = (nextCountry ?? '').trim();
-    final cityValue = (nextCity ?? '').trim();
+    final cityValue = capitalizeCity(nextCity ?? '');
     final dobValue = (nextDateOfBirthYmd == null || nextDateOfBirthYmd.isEmpty)
         ? null
         : nextDateOfBirthYmd;

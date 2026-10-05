@@ -132,7 +132,13 @@ abstract final class V2FeedItemMapper {
     final out = <NewsArticle>[];
     final seen = <String>{};
     for (final item in items) {
-      final article = fromItem(item);
+      NewsArticle? article;
+      try {
+        article = fromItem(item);
+      } catch (e) {
+        debugPrint('⚠️ V2FeedItemMapper: skipping malformed item: $e');
+        continue;
+      }
       if (article == null) continue;
       final id = article.newsId ?? article.articleId;
       if (id == null || id.isEmpty || seen.contains(id)) continue;
@@ -262,6 +268,7 @@ class V2HomeCategoryFilters {
   const V2HomeCategoryFilters({
     required this.source,
     this.categories = const [],
+    this.aliases = const [],
   });
 
   /// `explicit` | `saved_preferences` | `default`
@@ -270,6 +277,24 @@ class V2HomeCategoryFilters {
   /// Display tokens (slug preferred, else name).
   final List<String> categories;
 
+  /// Other identifiers of the same categories (name, id).
+  final List<String> aliases;
+
+  /// Normalized identifiers of the categories the backend filtered by.
+  /// Empty for the default feed.
+  Set<String> get matchKeys {
+    if (source == 'default') return const {};
+    return {
+      for (final token in [...categories, ...aliases]) matchKey(token),
+    }..remove('');
+  }
+
+  /// Slug-style key shared by filter tokens and article category names.
+  static String matchKey(String raw) => raw
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\s_-]+'), '-');
+
   static V2HomeCategoryFilters? parse(dynamic raw) {
     if (raw is! Map) return null;
     final map = Map<String, dynamic>.from(raw);
@@ -277,6 +302,7 @@ class V2HomeCategoryFilters {
     if (source == null || source.isEmpty) return null;
 
     final tokens = <String>[];
+    final aliases = <String>[];
     final seen = <String>{};
     final list = map['categories'];
     if (list is List) {
@@ -285,6 +311,10 @@ class V2HomeCategoryFilters {
         if (item is Map) {
           final m = Map<String, dynamic>.from(item);
           token = (m['slug'] ?? m['name'] ?? m['id'])?.toString();
+          for (final alias in [m['name'], m['id']]) {
+            final text = alias?.toString().trim() ?? '';
+            if (text.isNotEmpty) aliases.add(text);
+          }
         } else if (item != null) {
           token = item.toString();
         }
@@ -294,7 +324,11 @@ class V2HomeCategoryFilters {
         tokens.add(trimmed);
       }
     }
-    return V2HomeCategoryFilters(source: source, categories: tokens);
+    return V2HomeCategoryFilters(
+      source: source,
+      categories: tokens,
+      aliases: aliases,
+    );
   }
 }
 
@@ -319,6 +353,20 @@ abstract final class V2HomeCategoryDebug {
     return out;
   }
 
+  /// Articles on [page] with no category in the backend's active filter.
+  /// Always empty for the default feed.
+  static List<String> unmatchedArticleIds(V2FeedPage page) {
+    final keys = page.categoryFilters?.matchKeys ?? const <String>{};
+    if (keys.isEmpty) return const [];
+    return [
+      for (final article in page.articles)
+        if (!(article.category ?? const <String>[]).any(
+          (c) => keys.contains(V2HomeCategoryFilters.matchKey(c)),
+        ))
+          article.articleId ?? article.newsId ?? '',
+    ];
+  }
+
   static void logPage(V2FeedPage page) {
     final filters = page.categoryFilters;
     if (filters == null) return;
@@ -330,5 +378,12 @@ abstract final class V2HomeCategoryDebug {
       // ignore: avoid_print — intentional V2 Home category diagnostics
       debugPrint(line);
     }
+    if (filters.source == 'default') return;
+    final unmatched = unmatchedArticleIds(page);
+    debugPrint(
+      '[V2HomeCategory] matched=${page.articles.length - unmatched.length}'
+      '/${page.articles.length}'
+      '${unmatched.isEmpty ? '' : ' UNMATCHED=${unmatched.join(',')}'}',
+    );
   }
 }

@@ -8,12 +8,24 @@ import '../data/services/user_service.dart';
 /// Local Hive storage is the primary source for instant UI updates.
 /// Firestore syncs in the background for cross-device persistence.
 class CompletedNewsProvider with ChangeNotifier {
-  CompletedNewsProvider() {
+  CompletedNewsProvider({
+    CompletedNewsService? completedService,
+    String? Function()? currentUserId,
+  })  : _serviceOverride = completedService,
+        _currentUserIdOverride = currentUserId {
     _userService = UserService();
   }
 
   late final UserService _userService;
-  final CompletedNewsService _completedService = CompletedNewsService.instance;
+  final CompletedNewsService? _serviceOverride;
+  final String? Function()? _currentUserIdOverride;
+  CompletedNewsService get _completedService =>
+      _serviceOverride ?? CompletedNewsService.instance;
+
+  String? _currentUserId() =>
+      _currentUserIdOverride != null
+          ? _currentUserIdOverride()
+          : _userService.getUserId();
 
   String? _userId;
   String? get userId => _userId;
@@ -61,9 +73,10 @@ class CompletedNewsProvider with ChangeNotifier {
     }
   }
 
-  /// Call on app start and after login.
+  /// Call on app start and after login. Safe to call repeatedly (app start
+  /// and every Home open): one Firestore listener per signed-in user.
   Future<void> loadForCurrentUser() async {
-    final id = _userService.getUserId();
+    final id = _currentUserId();
     debugPrint(
         '🔄 [CompletedNewsProvider] loadForCurrentUser userId=${id ?? "null"}');
 
@@ -73,28 +86,27 @@ class CompletedNewsProvider with ChangeNotifier {
     }
     if (_userId == id) return;
 
-    await _clearUser();
+    // Claim the user before awaiting so a concurrent call returns above.
+    final previous = _streamSubscription;
+    _streamSubscription = null;
     _userId = id;
+    _completedNewsIds = {};
     _isLoading = true;
     notifyListeners();
+    await previous?.cancel();
 
     // Load from local storage first (instant)
-    _completedNewsIds = await _loadLocal(id);
+    final local = await _loadLocal(id);
+    if (_userId != id) return;
+    _completedNewsIds = local;
     _isLoading = false;
     debugPrint(
         '✅ [CompletedNewsProvider] local load count=${_completedNewsIds.length}');
     notifyListeners();
 
-    // Then try Firestore in background
+    // Then Firestore in background. The listener's first snapshot is the
+    // full collection, so no separate one-off get() is needed.
     try {
-      final firestoreIds = await _completedService.getCompletedNewsOnce(id);
-      if (firestoreIds.isNotEmpty) {
-        _completedNewsIds = {..._completedNewsIds, ...firestoreIds};
-        await _saveLocal(id, _completedNewsIds);
-        notifyListeners();
-      }
-
-      _streamSubscription?.cancel();
       _streamSubscription =
           _completedService.getCompletedNewsStream(id).listen(
                 (ids) {
@@ -131,7 +143,7 @@ class CompletedNewsProvider with ChangeNotifier {
 
   /// Marks news as completed: updates local storage immediately, then writes to Firestore.
   Future<bool> markNewsCompleted(String newsId, String category) async {
-    final id = _userId ?? _userService.getUserId();
+    final id = _userId ?? _currentUserId();
     if (id == null || id.isEmpty) {
       debugPrint('❌ [CompletedNewsProvider] markNewsCompleted: no userId');
       return false;
@@ -161,7 +173,7 @@ class CompletedNewsProvider with ChangeNotifier {
   }
 
   Future<bool> removeCompletedNews(String newsId) async {
-    final id = _userId ?? _userService.getUserId();
+    final id = _userId ?? _currentUserId();
     if (id == null || id.isEmpty) return false;
     if (newsId.isEmpty) return false;
 
@@ -175,5 +187,12 @@ class CompletedNewsProvider with ChangeNotifier {
   bool isCompleted(String newsId) {
     if (newsId.isEmpty) return false;
     return _completedNewsIds.contains(newsId);
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    super.dispose();
   }
 }

@@ -41,6 +41,8 @@ class _V2ForYouTabState extends State<V2ForYouTab>
   bool _bootstrapped = false;
   RegionProvider? _region;
   String? _lastRegionKey;
+  LanguageProvider? _language;
+  String? _lastNewsLanguage;
 
   @override
   bool get wantKeepAlive => true;
@@ -65,6 +67,10 @@ class _V2ForYouTabState extends State<V2ForYouTab>
       _region = region;
       _lastRegionKey = _regionKey(region.appliedRegion);
       region.addListener(_onRegionChanged);
+      final language = context.read<LanguageProvider>();
+      _language = language;
+      _lastNewsLanguage = language.newsLanguageCode;
+      language.addListener(_onNewsLanguageChanged);
       await _controller.refresh();
     });
   }
@@ -72,6 +78,7 @@ class _V2ForYouTabState extends State<V2ForYouTab>
   @override
   void dispose() {
     _region?.removeListener(_onRegionChanged);
+    _language?.removeListener(_onNewsLanguageChanged);
     _scroll.dispose();
     _controller.dispose();
     super.dispose();
@@ -84,6 +91,18 @@ class _V2ForYouTabState extends State<V2ForYouTab>
     final key = _regionKey(_region!.appliedRegion);
     if (key == _lastRegionKey) return;
     _lastRegionKey = key;
+    _impressedIds.clear();
+    _sectionImpressed = false;
+    _controller.refresh();
+  }
+
+  /// App UI language changes also notify [LanguageProvider]; only a news
+  /// language change is a different For You feed.
+  void _onNewsLanguageChanged() {
+    if (!mounted || _language == null) return;
+    final code = _language!.newsLanguageCode;
+    if (code == _lastNewsLanguage) return;
+    _lastNewsLanguage = code;
     _impressedIds.clear();
     _sectionImpressed = false;
     _controller.refresh();

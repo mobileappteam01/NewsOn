@@ -151,14 +151,18 @@ class ContactUsScreen extends StatelessWidget {
       );
       if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to open link')),
+          SnackBar(
+            content: Text(LocalizationHelper.unableToOpenLink(context)),
+          ),
         );
       }
     } catch (e) {
       debugPrint('❌ Error launching contact URI: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to open link')),
+          SnackBar(
+            content: Text(LocalizationHelper.unableToOpenLink(context)),
+          ),
         );
       }
     }

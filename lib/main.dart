@@ -514,12 +514,34 @@ class _CompletedNewsBridgeState extends State<_CompletedNewsBridge> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Cache-first `ipAddress`, like [fetchDBData], but the Realtime DB read is
+/// shared with [ApiService.initialize] so it happens once per session.
+Future<dynamic> _bootstrapBaseUrl() async {
+  final refresh = ApiService().loadBaseUrl();
+  final cached = StorageService.getRealtimeDbCache('ipAddress');
+  if (cached != null) {
+    unawaited(
+      refresh.catchError((Object e) {
+        debugPrint('⚠️ Background fetch failed for ipAddress: $e');
+        return null;
+      }),
+    );
+    return cached;
+  }
+  try {
+    return await refresh.timeout(const Duration(seconds: 8));
+  } catch (e) {
+    debugPrint('⚠️ ipAddress fetch failed: $e');
+    return null;
+  }
+}
+
 /// Fetch all DB configurations in parallel to optimize startup time
 Future<void> fetchAllDBData() async {
   debugPrint('Fetching API keys and configurations...');
 
   final results = await Future.wait([
-    fetchDBData('ipAddress'),
+    _bootstrapBaseUrl(),
     fetchDBData('newsDataAPIKey'),
     fetchDBData('elevenLabsKey'),
     fetchDBData('elevenLabsVoiceId'),

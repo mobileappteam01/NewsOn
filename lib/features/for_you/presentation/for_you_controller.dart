@@ -68,27 +68,55 @@ class ForYouController extends ChangeNotifier {
 
   bool _refreshInFlight = false;
   bool _loadMoreInFlight = false;
+  bool _disposed = false;
 
   /// Monotonic generation — ignore stale refresh responses after a newer refresh.
   int _refreshGeneration = 0;
 
+  /// [feedIdentity] of the articles on screen.
+  String? _displayedIdentity;
+
+  /// News language plus applied region. Pages of different identities are
+  /// never merged.
+  static String feedIdentity(String language, SavedRegion region) =>
+      '${language.trim().toLowerCase()}|${region.toQueryParams()}';
+
+  String _currentIdentity() =>
+      feedIdentity(_newsLanguageCode(), _appliedRegion());
+
+  /// Fetches page 1 again from the server and replaces the feed with it.
+  /// Any in-flight page (refresh or load-more) is discarded.
   Future<void> refresh() async {
     final generation = ++_refreshGeneration;
     _refreshInFlight = true;
-    _set(_state.copyWith(status: ForYouStatus.loading, clearError: true));
+    // A load-more started before this refresh can no longer finish itself.
+    _loadMoreInFlight = false;
+    final language = _newsLanguageCode();
+    final region = _appliedRegion();
+    final identity = feedIdentity(language, region);
+    final sameFeed = identity == _displayedIdentity;
+    _set(_state.copyWith(
+      status: ForYouStatus.loading,
+      clearError: true,
+      // Another language/region: the old articles are not this feed.
+      articles: sameFeed ? null : const [],
+      hasMore: false,
+      page: 1,
+    ));
     try {
       final page = await _repo.fetchPage(
         page: 1,
-        newsLanguageCode: _newsLanguageCode(),
-        appliedRegion: _appliedRegion(),
+        newsLanguageCode: language,
+        appliedRegion: region,
         allowColdStart: true,
       );
       if (generation != _refreshGeneration) return;
+      _displayedIdentity = identity;
       _set(_state.copyWith(
         articles: page.articles,
         source: page.source,
         hasMore: page.hasMore && page.source != ForYouFeedSource.empty,
-        page: page.page,
+        page: page.page > 0 ? page.page : 1,
         status: ForYouStatus.ready,
         clearError: true,
       ));
@@ -115,6 +143,9 @@ class ForYouController extends ChangeNotifier {
         _state.source == ForYouFeedSource.empty) {
       return;
     }
+    // Language/region changed since page 1: page 2 of the new feed must not
+    // be appended to the old one (its refresh is on the way).
+    if (_currentIdentity() != _displayedIdentity) return;
     final generation = _refreshGeneration;
     _loadMoreInFlight = true;
     _set(_state.copyWith(status: ForYouStatus.loadingMore));
@@ -151,7 +182,14 @@ class ForYouController extends ChangeNotifier {
     }
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void _set(ForYouState next) {
+    if (_disposed) return;
     _state = next;
     notifyListeners();
   }

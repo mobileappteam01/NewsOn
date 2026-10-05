@@ -48,19 +48,17 @@ class V2VintagePaperBackground extends StatelessWidget {
           ColoredBox(
             color: isDark ? darkStageBase : lightStageBase,
           ),
-          Opacity(
-            opacity: textureOpacity,
-            child: Image.asset(
-              assetPath,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              filterQuality: FilterQuality.medium,
-              color: isDark
-                  ? const Color(0xFF8B7F6C)
-                  : const Color(0xFFD4C4A8),
-              colorBlendMode: BlendMode.modulate,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
+          // Image.opacity paints with alpha directly; an Opacity widget would
+          // allocate an offscreen layer per sheet on every turn frame.
+          Image.asset(
+            assetPath,
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            filterQuality: FilterQuality.medium,
+            opacity: AlwaysStoppedAnimation<double>(textureOpacity),
+            color: isDark ? const Color(0xFF8B7F6C) : const Color(0xFFD4C4A8),
+            colorBlendMode: BlendMode.modulate,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           ),
           // Soft vignette / edge depth — keeps paper from looking flat/digital.
           DecoratedBox(

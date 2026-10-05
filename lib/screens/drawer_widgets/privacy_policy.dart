@@ -22,7 +22,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
   final ContentApiService _contentApiService = ContentApiService();
   String? _htmlContent;
   bool _isLoading = true;
-  String? _error;
+  String Function(BuildContext)? _error;
   String? _loadedLanguageCode;
 
   @override
@@ -59,14 +59,15 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
           _htmlContent = content;
           _isLoading = false;
           if (content == null || content.isEmpty) {
-            _error = 'Privacy Policy not available';
+            _error = LocalizationHelper.privacyPolicyNotAvailable;
           }
         });
       }
     } catch (e) {
+      debugPrint('⚠️ Privacy Policy load failed: $e');
       if (mounted) {
         setState(() {
-          _error = 'Failed to load Privacy Policy: $e';
+          _error = LocalizationHelper.failedToLoadPrivacyPolicy;
           _isLoading = false;
         });
       }
@@ -111,7 +112,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
                       _isLoading
                           ? _buildShimmerLoader(isDark)
                           : _error != null
-                          ? _buildErrorWidget(_error!, config)
+                          ? _buildErrorWidget(_error!(context), config)
                           : _htmlContent != null
                           ? _buildContent(_htmlContent!, isDark, config)
                           : _buildEmptyWidget(config),
@@ -169,7 +170,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
                 backgroundColor: config.primaryColorValue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Retry'),
+              child: Text(LocalizationHelper.retry(context)),
             ),
           ],
         ),
@@ -187,7 +188,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
             Icon(Icons.privacy_tip_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'Privacy Policy not available',
+              LocalizationHelper.privacyPolicyNotAvailable(context),
               style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 16),
               textAlign: TextAlign.center,
             ),
